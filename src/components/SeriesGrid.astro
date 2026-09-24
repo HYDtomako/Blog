@@ -1,0 +1,29 @@
+---
+import Icon from './Icon.astro';
+import { getSeriesEntries, seriesNumber, seriesOrder } from '../lib/articles';
+import { getSiteCopy } from '../lib/site-copy';
+import { localeFromPath, localizedHref } from '../lib/locale';
+
+const locale = localeFromPath(Astro.url.pathname);
+const copy = getSiteCopy(locale);
+const UI = copy.ui;
+
+const allSeries = await getSeriesEntries();
+const seriesSlugs = seriesOrder(locale) as readonly string[];
+const seriesList = seriesSlugs
+	.map((slug) => ({ slug, entry: allSeries.find((entry) => entry.id === `${locale}/${slug}`) }))
+	.filter(({ entry }) => entry);
+---
+
+{seriesList.length > 0 && (
+	<div class="pillars">
+		{seriesList.map(({ slug, entry }) => entry && (
+			<a class="pillar" href={localizedHref(locale, `/writing/${slug}/`)}>
+				<div class="pillar-no">{seriesNumber(slug, locale)} / {UI.writing.seriesLabel}</div>
+				<div class="pillar-name">{entry.data.title}</div>
+				<div class="pillar-desc">{entry.data.description}</div>
+				<div class="pillar-foot">{UI.writing.enterSeries} <Icon name="arrow-right" size={15} /></div>
+			</a>
+		))}
+	</div>
+)}

@@ -1,0 +1,125 @@
+---
+import Icon from './Icon.astro';
+import { alternateLocale, localeFromPath, localeLabel, localePath, stripLocalePrefix } from '../lib/locale';
+import { localeSwitchPath } from '../lib/locale-routes';
+import { withBase } from '../lib/paths';
+import { getSiteCopy } from '../lib/site-copy';
+
+const pathname = new URL(Astro.request.url).pathname;
+const locale = localeFromPath(pathname);
+const copy = getSiteCopy(locale);
+const UI = copy.ui;
+const currentPath = stripLocalePrefix(pathname).replace(/\/$/, '');
+const isHome = currentPath === '';
+const links = [
+	{ href: withBase(localePath(locale, '/writing/')), label: UI.nav.writing, active: currentPath.startsWith('/writing') },
+	{ href: withBase(localePath(locale, '/notes/')), label: UI.nav.notes, active: currentPath.startsWith('/notes') },
+	{ href: withBase(localePath(locale, '/projects/')), label: UI.nav.projects, active: currentPath === '/projects' },
+	{ href: withBase(localePath(locale, '/about/')), label: UI.nav.about, active: currentPath === '/about' },
+];
+const themeLabelsJson = JSON.stringify({
+	light: UI.theme.light,
+	dark: UI.theme.dark,
+	toggleAriaTemplate: UI.theme.toggleAria('__NEXT__'),
+});
+const targetLocale = alternateLocale(locale);
+const switchLabel = localeLabel(targetLocale);
+const switchHref = withBase(await localeSwitchPath(pathname, targetLocale));
+---
+
+<header class:list={['topbar', { 'topbar--home': isHome, 'topbar--anchored': !isHome }]} data-theme-labels={themeLabelsJson}>
+	<div class="topbar-hero-bg" aria-hidden="true"></div>
+	<div class="topbar-glass">
+		<div class="wrap topbar-in">
+			<a href={withBase(localePath(locale, '/'))} class="brand" aria-label={UI.nav.homeAria(copy.brand.wordmark)}>
+				<span class="brand-wordmark">{copy.brand.wordmark}</span>
+			</a>
+			<nav class="nav" aria-label={UI.nav.primaryAria}>
+				{links.map(({ href, label, active }) => <a href={href} aria-current={active ? 'page' : undefined}>{label}</a>)}
+			</nav>
+			<div class="header-actions">
+				<button
+					class="icon-btn ask-btn"
+					type="button"
+					data-open-ask
+					aria-label={UI.ask.openAria}
+					title={UI.ask.openTitle}
+				>
+					<Icon name="spark" size={20} />
+				</button>
+				<a
+					class="icon-btn lang-btn"
+					href={switchHref}
+					hreflang={targetLocale}
+					lang={targetLocale}
+					aria-label={UI.language.switchAria(switchLabel)}
+					title={UI.language.switchTitle}
+				>
+					<span class="lang-btn-label">{switchLabel}</span>
+				</a>
+				<button
+					class="icon-btn theme-toggle"
+					type="button"
+					id="theme-toggle"
+					aria-label={UI.theme.toggleAria(UI.theme.dark)}
+					title={UI.theme.toggleAria(UI.theme.dark)}
+				>
+					<Icon name="sun" size={20} class="theme-icon theme-icon-sun" />
+					<Icon name="moon" size={20} class="theme-icon theme-icon-moon" />
+				</button>
+				<details class="mobile-nav">
+					<summary class="icon-btn" aria-label={UI.nav.openMenuAria}><Icon name="menu" size={20} /></summary>
+					<nav class="mobile-nav-panel" aria-label={UI.nav.mobileAria}>
+						{links.map(({ href, label, active }) => <a href={href} aria-current={active ? 'page' : undefined}>{label}</a>)}
+						<a href={switchHref} hreflang={targetLocale} lang={targetLocale}>{switchLabel}</a>
+					</nav>
+				</details>
+			</div>
+		</div>
+	</div>
+</header>
+
+<script>
+	import { initThemeControl } from '../scripts/theme-control';
+	import { scheduleHeroThemeCrossfadeReady } from '../scripts/hero-theme-bg';
+
+	const root = document.documentElement;
+	const themeTrigger = document.getElementById('theme-toggle');
+	const topbar = document.querySelector('.topbar');
+	const hero = document.querySelector('.heroB');
+
+	const raw = topbar instanceof HTMLElement ? topbar.dataset.themeLabels : undefined;
+	const parsed = raw ? JSON.parse(raw) as {
+		light: string;
+		dark: string;
+		toggleAriaTemplate: string;
+	} : null;
+
+	initThemeControl({
+		documentElement: root,
+		trigger: themeTrigger,
+		labels: {
+			light: parsed?.light ?? 'Light',
+			dark: parsed?.dark ?? 'Dark',
+			toggleAria: (next) =>
+				(parsed?.toggleAriaTemplate ?? 'Switch to __NEXT__ theme').replace('__NEXT__', next),
+		},
+	});
+
+	if (hero) {
+		scheduleHeroThemeCrossfadeReady(root);
+	}
+
+	const syncHomeTopbar = () => {
+		if (!(topbar instanceof HTMLElement) || !(hero instanceof HTMLElement)) return;
+		const topbarHeight = topbar.offsetHeight;
+		const pastHero = hero.getBoundingClientRect().bottom <= topbarHeight + 1;
+		topbar.classList.toggle('topbar--past-hero', pastHero);
+	};
+
+	if (topbar?.classList.contains('topbar--home') && hero) {
+		syncHomeTopbar();
+		window.addEventListener('scroll', syncHomeTopbar, { passive: true });
+		window.addEventListener('resize', syncHomeTopbar, { passive: true });
+	}
+</script>

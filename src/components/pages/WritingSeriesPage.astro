@@ -1,0 +1,135 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import type { CollectionEntry } from 'astro:content';
+import ArticleFeed from '../ArticleFeed.astro';
+import Icon from '../Icon.astro';
+import { formatArticleDate } from '../../lib/articles';
+import { breadcrumbJsonLd, collectionPageJsonLd, docPath, getArticles } from '../../lib/public-data';
+import { withBase } from '../../lib/paths';
+import { localeFromPath, localizedHref, localizedSitePath } from '../../lib/locale';
+import { getSiteCopy } from '../../lib/site-copy';
+
+interface Props {
+  seriesData: CollectionEntry<'series'>['data'];
+  no: string;
+}
+
+const locale = localeFromPath(Astro.url.pathname);
+const copy = getSiteCopy(locale);
+const UI = copy.ui;
+
+const { series } = Astro.params;
+const { seriesData, no } = Astro.props;
+
+const articles = (await getArticles(locale)).filter((entry) => entry.data.series === series);
+
+const featuredSlugs: string[] = seriesData.featured || [];
+let featuredArticles = articles.filter(a => featuredSlugs.includes(a.id));
+if (featuredArticles.length === 0) {
+  featuredArticles = articles.slice(0, 4);
+}
+const seriesPath = localizedSitePath(locale, `/writing/${series}/`);
+const structuredData = [
+  collectionPageJsonLd({
+    path: seriesPath,
+    name: seriesData.title,
+    description: seriesData.intro || seriesData.description,
+    items: featuredArticles.map((article) => ({ name: article.data.title, url: docPath(article) })),
+    locale,
+  }),
+  breadcrumbJsonLd([
+    { name: UI.writing.homeCrumb, path: localizedSitePath(locale, '/') },
+    { name: UI.writing.label, path: localizedSitePath(locale, '/writing/') },
+    { name: seriesData.title, path: seriesPath },
+  ]),
+  ...(seriesData.faq?.length
+    ? [{
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: seriesData.faq.map((item) => ({
+          '@type': 'Question',
+          name: item.question,
+          acceptedAnswer: { '@type': 'Answer', text: item.answer },
+        })),
+      }]
+    : []),
+];
+
+---
+
+<StarlightPage
+  frontmatter={{
+    title: seriesData.title,
+    description: seriesData.intro || '',
+    template: 'splash',
+    contentType: 'page',
+    slug: `writing/${series}`,
+    llmSummary: seriesData.intro || seriesData.title,
+  }}
+>
+  {structuredData.map((value) => (
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(value)} />
+  ))}
+  <div class="wrap page page-writing">
+    <div class="crumbs">
+      <a href={localizedHref(locale, '/')}>{UI.writing.homeCrumb}</a><span class="sep">/</span>
+      <a href={localizedHref(locale, '/writing/')}>{UI.writing.label}</a><span class="sep">/</span><span>{seriesData.title}</span>
+    </div>
+    <p class="eyebrow">{UI.writing.seriesEyebrow(no)}</p>
+    <h1 id="_top" class="display pillar-heading">{seriesData.title}</h1>
+    {seriesData.intro && <p class="lede pillar-lede">{seriesData.intro}</p>}
+
+    {articles.length > 0 && (
+      <>
+        <div class="section-head section-head-large" aria-labelledby="series-featured-heading">
+          <h2 id="series-featured-heading" class="section-title">{UI.writing.featuredHeading}</h2>
+          <span class="mono section-meta">{UI.writing.articlesCount(articles.length)}</span>
+        </div>
+        <div class="feat-grid">
+          {featuredArticles.map(a => (
+            <a class="feat" href={withBase(`/${a.id}/`)}>
+              <div class="feat-meta">
+                <span>{seriesData.title}</span>
+                <span>{formatArticleDate(a.data.pubDate!)}</span>
+              </div>
+              <div class="feat-title">{a.data.title || a.id}</div>
+              <div class="feat-excerpt">{a.data.llmSummary || a.data.description || ''}</div>
+              <div class="pillar-foot related-link">{UI.common.read} <Icon name="arrow-right" size={14} /></div>
+            </a>
+          ))}
+        </div>
+      </>
+    )}
+
+    {seriesData.faq && seriesData.faq.length > 0 && (
+      <>
+        <div class="section-head section-head-large" aria-labelledby="series-faq-heading">
+          <h2 id="series-faq-heading" class="section-title">{UI.writing.faqHeading}</h2>
+          <span class="mono section-meta">{UI.writing.curatedQa}</span>
+        </div>
+        <div class="faq-list">
+          {seriesData.faq.map((it) => (
+            <details class="faq-item">
+              <summary class="faq-q">
+                <span>{it.question}</span> 
+                <Icon name="plus" size={18} />
+              </summary>
+              <div class="faq-a">{it.answer}</div>
+            </details>
+          ))}
+        </div>
+      </>
+    )}
+
+    {articles.length > 0 && (
+      <details class="article-archive">
+        <summary class="btn btn-ghost archive-toggle">
+          <span class="archive-toggle-open">{UI.writing.expandAll(articles.length)}</span>
+          <span class="archive-toggle-close">{UI.writing.collapseAll}</span>
+          <Icon name="chevron-down" size={15} />
+        </summary>
+        <ArticleFeed articles={articles} showSeries={false} />
+      </details>
+    )}
+  </div>
+</StarlightPage>

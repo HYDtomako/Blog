@@ -1,0 +1,12 @@
+---
+import TopicPage from '../../../components/pages/TopicPage.astro';
+import { topicPaths } from '../../../lib/page-paths';
+
+export async function getStaticPaths() {
+  return topicPaths('en');
+}
+
+const props = Astro.props;
+---
+
+<TopicPage {...props} />

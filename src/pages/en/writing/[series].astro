@@ -1,0 +1,12 @@
+---
+import WritingSeriesPage from '../../../components/pages/WritingSeriesPage.astro';
+import { seriesPaths } from '../../../lib/page-paths';
+
+export async function getStaticPaths() {
+  return seriesPaths('en');
+}
+
+const props = Astro.props;
+---
+
+<WritingSeriesPage {...props} />

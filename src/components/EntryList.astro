@@ -1,0 +1,51 @@
+---
+interface Entry {
+	meta: string;
+	title: string;
+	excerpt: string;
+	pill?: string;
+	href?: string;
+	external?: boolean;
+}
+
+interface Props {
+	entries: Entry[];
+}
+
+const { entries } = Astro.props;
+---
+
+<div class="feed">
+	{
+		entries.map((entry) => {
+			const body = (
+				<>
+					<div class="entry-date">{entry.meta}</div>
+					<div class="entry-main">
+						<div class="entry-title">{entry.title}</div>
+						<div class="entry-excerpt">{entry.excerpt}</div>
+					</div>
+					{entry.pill && <div class="entry-pillar">{entry.pill}</div>}
+				</>
+			);
+			return entry.href ? (
+				<a
+					class="entry"
+					href={entry.href}
+					target={entry.external ? '_blank' : undefined}
+					rel={entry.external ? 'noreferrer' : undefined}
+				>
+					{body}
+				</a>
+			) : (
+				<div class="entry entry-static">{body}</div>
+			);
+		})
+	}
+</div>
+
+<style>
+	.entry-static:hover .entry-title {
+		text-decoration: none;
+	}
+</style>

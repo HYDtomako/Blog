@@ -1,0 +1,57 @@
+---
+import { getSiteCopy } from '../lib/site-copy';
+import type { TocItem } from '../lib/article-toc';
+import { localeFromPath } from '../lib/locale';
+
+interface Props {
+	items: TocItem[];
+	part: 'mobile' | 'rail';
+}
+
+const { items, part } = Astro.props;
+const locale = localeFromPath(Astro.url.pathname);
+const copy = getSiteCopy(locale);
+const UI = copy.ui;
+const count = items.length;
+---
+
+{
+	part === 'mobile' ? (
+		<details class="article-toc article-toc-mobile">
+			<summary class="article-toc-summary">
+				<span class="article-toc-summary-label">{UI.common.toc}</span>
+				<span class="mono article-toc-count">{UI.common.tocSections(count)}</span>
+			</summary>
+			<nav class="article-toc-nav" aria-label={UI.common.articleTocAria}>
+				<ol class="article-toc-list">
+					{
+						items.map((item) => (
+							<li class={`article-toc-item is-level-${item.level}`}>
+								<a href={`#${item.slug}`} class="article-toc-link" data-toc-slug={item.slug}>
+									{item.text}
+								</a>
+							</li>
+						))
+					}
+				</ol>
+			</nav>
+		</details>
+	) : (
+		<aside class="article-toc-rail" aria-label={UI.common.articleTocAria}>
+			<p class="eyebrow article-toc-label">{UI.common.toc}</p>
+			<nav class="article-toc-nav">
+				<ol class="article-toc-list">
+					{
+						items.map((item) => (
+							<li class={`article-toc-item is-level-${item.level}`}>
+								<a href={`#${item.slug}`} class="article-toc-link" data-toc-slug={item.slug}>
+									{item.text}
+								</a>
+							</li>
+						))
+					}
+				</ol>
+			</nav>
+		</aside>
+	)
+}

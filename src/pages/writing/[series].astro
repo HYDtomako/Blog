@@ -1,0 +1,13 @@
+---
+import WritingSeriesPage from '../../components/pages/WritingSeriesPage.astro';
+import { seriesPaths } from '../../lib/page-paths';
+import { DEFAULT_LOCALE } from '../../lib/locale';
+
+export async function getStaticPaths() {
+  return seriesPaths(DEFAULT_LOCALE);
+}
+
+const props = Astro.props;
+---
+
+<WritingSeriesPage {...props} />

@@ -1,0 +1,529 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import Icon from '../Icon.astro';
+import AskForm from '../AskForm.astro';
+import { breadcrumbJsonLd, webPageJsonLd } from '../../lib/public-data';
+import { localizedHref, localeFromPath, localePath, localePrefix } from '../../lib/locale';
+import { getSiteCopy, SITE_ORIGIN } from '../../lib/site-copy';
+
+const locale = localeFromPath(Astro.url.pathname);
+const copy = getSiteCopy(locale);
+const UI = copy.ui;
+const homePath = localePath(locale, '/');
+const askPath = localePath(locale, '/ask/');
+const searchIndexHref = localizedHref(locale, '/api/search-index.json');
+
+const askDescription = copy.ask.pageLede;
+const structuredData = [
+  webPageJsonLd({
+    path: askPath,
+    name: copy.ask.pageTitle,
+    description: askDescription,
+    locale,
+  }),
+  breadcrumbJsonLd([
+    { name: UI.common.home, path: homePath },
+    { name: UI.ask.button, path: askPath },
+  ]),
+];
+const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
+/** No remote Ask endpoint at build time means the page is a static-corpus search, not a live agent. */
+const liveAsk = Boolean(import.meta.env.PUBLIC_ASK_URL);
+const askRuntimeJson = JSON.stringify(copy.askRuntime);
+const askSearchLabelsJson = JSON.stringify(UI.askSearch);
+---
+
+<StarlightPage
+  frontmatter={{
+    title: copy.ask.pageTitle,
+    description: askDescription,
+    template: 'splash',
+    contentType: 'page',
+    slug: 'ask',
+    llmSummary: askDescription,
+  }}
+>
+  {structuredData.map((value) => (
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(value)} />
+  ))}
+  <div
+    class="wrap ask-page"
+    data-ask-runtime={askRuntimeJson}
+    data-ask-search-labels={askSearchLabelsJson}
+    data-ask-live={liveAsk ? 'true' : 'false'}
+    data-site-locale={locale}
+    data-site-origin={SITE_ORIGIN}
+    data-ask-index-href={searchIndexHref}
+    data-ask-prefix={localePrefix(locale)}
+  >
+    <div class="crumbs"><a href={localizedHref(locale, '/')}>{UI.common.home}</a><span class="sep">/</span><span>{UI.ask.button}</span></div>
+
+    <section class="ask-stage" aria-labelledby="ask-page-heading">
+      <h1 id="ask-page-heading" class="visually-hidden">{copy.ask.pageTitle}</h1>
+
+      <div class="ask-stage-inner">
+        <AskForm
+          variant="stage"
+          formId="ask-page-form"
+          inputId="ask-page-input"
+          placeholder={copy.ask.pagePlaceholder}
+        />
+      </div>
+    </section>
+
+    <p class="ask-privacy">
+      {liveAsk ? copy.ask.privacyNote : UI.ask.staticNote}
+    </p>
+
+    <section class="ask-agent-panel" id="ask-agent-panel" aria-labelledby="ask-agent-heading" hidden>
+      <div class="ask-agent-head">
+        <span class="agent-note" id="ask-agent-heading"><Icon name="spark" size={13} /> <span id="ask-answer-source">{UI.askRuntime.curatedSource}</span></span>
+        <span class="mono" id="ask-agent-status">{UI.ask.readyStatus}</span>
+      </div>
+      {turnstileSiteKey && (
+        <div
+          id="ask-turnstile"
+          class="ask-turnstile-slot"
+          data-sitekey={turnstileSiteKey}
+          data-action="public-ask"
+          aria-label={UI.askRuntime.turnstileAria}
+          hidden
+        >
+          <div class="ask-turnstile-loading" id="ask-turnstile-loading" hidden>
+            <div class="ask-agent-spinner" role="status">
+              <span class="visually-hidden">{UI.askRuntime.loadingVerify}</span>
+            </div>
+          </div>
+        </div>
+      )}
+      <div class="ask-agent-answer">
+        <div id="ask-agent-pending" class="ask-agent-pending" hidden aria-hidden="true">
+          <div class="ask-agent-spinner" role="status">
+            <span class="visually-hidden">{UI.askRuntime.processingAsk}</span>
+          </div>
+          <p id="ask-agent-pending-text" class="ask-agent-pending-text"></p>
+        </div>
+        <div id="ask-agent-answer" aria-hidden="true"></div>
+        <div id="ask-agent-live" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+      </div>
+      <div class="ask-agent-foot">
+        <span id="ask-answer-foot-primary">{UI.askRuntime.curatedFootPrimary}</span>
+        <span id="ask-answer-foot-secondary">{UI.askRuntime.curatedFootSecondary}</span>
+      </div>
+    </section>
+
+    <div class="ask-page-panel" id="ask-page-panel" aria-busy="false">
+      <div id="ask-page-results" class="ask-page-results" aria-live="polite" aria-atomic="false"></div>
+
+      <div class="ask-page-foot">
+        <span class="agent-note"><Icon name="spark" size={12} /> {UI.ask.relatedPublic}</span>
+        <span class="mono">{UI.ask.dataSource} <a href={searchIndexHref} class="machine-link">{localePath(locale, '/api/search-index.json')}</a></span>
+      </div>
+    </div>
+  </div>
+
+  {turnstileSiteKey && (
+    <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+  )}
+
+  <script>
+	import { askPublicAgent, PublicAskError } from '../../scripts/ask-agent';
+	import { createAskPendingController } from '../../scripts/ask-pending';
+	import { createAskSearch } from '../../scripts/ask-search';
+	import type { AnswerResult } from '../../scripts/ask-search';
+	import { resolveSameOriginSource } from '../../scripts/source-link';
+	import { createTypewriter } from '../../scripts/typewriter';
+	import { createTurnstileChallenge, waitForTurnstile } from '../../scripts/turnstile-client';
+
+	const pageRoot = document.querySelector('.ask-page');
+	const liveAskConfigured = pageRoot instanceof HTMLElement && pageRoot.dataset.askLive === 'true';
+	const rt = JSON.parse((pageRoot instanceof HTMLElement && pageRoot.dataset.askRuntime) || '{}') as {
+		thinkingMessages: string[];
+		verifyingLive: string;
+		curatedSource: string;
+		liveSource: string;
+		curatedFootPrimary: string;
+		liveFootPrimary: string;
+		curatedFootSecondary: string;
+		liveFootSecondary: string;
+		rateLimited: string;
+		timeout: string;
+		unavailable: string;
+		stop: string;
+		ask: string;
+		showingCurated: string;
+		curatedDone: string;
+		findingContent: string;
+		challengeUnavailable: string;
+		challengeScriptFailed: string;
+		organizingAnswer: string;
+		emptyAnswer: string;
+		answerDone: string;
+		stoppedText: string;
+		stoppedStatus: string;
+		temporarilyUnavailable: string;
+		invalidStream: string;
+		invalidStreamEmpty: string;
+		incompleteStream: string;
+		serviceUnavailable: string;
+	};
+	const searchLabels = JSON.parse((pageRoot instanceof HTMLElement && pageRoot.dataset.askSearchLabels) || '{}');
+	const siteLocale = pageRoot instanceof HTMLElement ? pageRoot.dataset.siteLocale || 'en' : 'en';
+	const siteOrigin = pageRoot instanceof HTMLElement ? pageRoot.dataset.siteOrigin || window.location.origin : window.location.origin;
+	const askIndexHref = pageRoot instanceof HTMLElement ? pageRoot.dataset.askIndexHref || undefined : undefined;
+	const askPrefix = pageRoot instanceof HTMLElement ? pageRoot.dataset.askPrefix || '' : '';
+
+	const input = document.getElementById('ask-page-input');
+	const results = document.getElementById('ask-page-results');
+	const form = document.getElementById('ask-page-form');
+	const panel = document.getElementById('ask-page-panel');
+	const agentPanel = document.getElementById('ask-agent-panel');
+	const agentAnswer = document.getElementById('ask-agent-answer');
+	const agentLive = document.getElementById('ask-agent-live');
+	const agentPending = document.getElementById('ask-agent-pending');
+	const agentPendingText = document.getElementById('ask-agent-pending-text');
+	const turnstileLoading = document.getElementById('ask-turnstile-loading');
+	const agentStatus = document.getElementById('ask-agent-status');
+	const answerSource = document.getElementById('ask-answer-source');
+	const answerFootPrimary = document.getElementById('ask-answer-foot-primary');
+	const answerFootSecondary = document.getElementById('ask-answer-foot-secondary');
+	const submitButton = form?.querySelector<HTMLButtonElement>('.ask-send');
+	const turnstileContainer = document.getElementById('ask-turnstile');
+	let turnstileChallenge: ReturnType<typeof createTurnstileChallenge> | null = null;
+	let activeRequest: AbortController | null = null;
+	let answerRun = 0;
+	const typewriter = agentAnswer instanceof HTMLElement
+		? createTypewriter(agentAnswer, agentLive instanceof HTMLElement ? agentLive : undefined)
+		: null;
+	const pending =
+		agentPending instanceof HTMLElement && agentPendingText instanceof HTMLElement
+			? createAskPendingController({
+					root: agentPending,
+					label: agentPendingText,
+					liveRegion: agentLive instanceof HTMLElement ? agentLive : undefined,
+					messages: rt.thinkingMessages ?? [],
+					verifyingLive: rt.verifyingLive,
+				})
+			: null;
+
+	const resizeInput = () => {
+		if (!(input instanceof HTMLTextAreaElement)) return;
+		input.style.height = 'auto';
+		input.style.height = `${input.scrollHeight}px`;
+	};
+
+	const setTurnstileLoading = (loading: boolean) => {
+		if (!(turnstileLoading instanceof HTMLElement)) return;
+		turnstileLoading.hidden = !loading;
+	};
+
+	const syncQueryToUrl = (query: string) => {
+		const url = new URL(window.location.href);
+		if (query) url.searchParams.set('q', query);
+		else url.searchParams.delete('q');
+		history.replaceState(null, '', url);
+	};
+
+	const setActiveChip = (query: string) => {
+		document.querySelectorAll<HTMLElement>('[data-ask-chip]').forEach((chip) => {
+			const active = Boolean(query && chip.dataset.query === query);
+			chip.classList.toggle('is-active', active);
+			chip.setAttribute('aria-pressed', active ? 'true' : 'false');
+		});
+	};
+
+	const pulseResults = () => {
+		if (!(results instanceof HTMLElement)) return;
+		results.classList.remove('ask-results-pulse');
+		void results.offsetWidth;
+		results.classList.add('ask-results-pulse');
+		panel?.classList.add('ask-panel-visible');
+	};
+
+	const renderAnswerLinks = (text: string) => {
+		if (!(agentAnswer instanceof HTMLElement)) return;
+		const answerElement = agentAnswer;
+		answerElement.replaceChildren();
+		
+		const processText = (str: string) => {
+			const boldMatcher = /\*\*(.*?)\*\*/g;
+			let last = 0;
+			for (const bMatch of str.matchAll(boldMatcher)) {
+				const bIndex = bMatch.index ?? 0;
+				if (bIndex > last) {
+					answerElement.appendChild(document.createTextNode(str.slice(last, bIndex)));
+				}
+				const strong = document.createElement('strong');
+				strong.textContent = bMatch[1];
+				answerElement.appendChild(strong);
+				last = bIndex + bMatch[0].length;
+			}
+			if (last < str.length) {
+				answerElement.appendChild(document.createTextNode(str.slice(last)));
+			}
+		};
+
+			const matcher = /\[([^\]]+)\]\(([^)]+)\)|https?:\/\/[^\s)\]}>，。；！]+/g;
+			let offset = 0;
+			for (const match of text.matchAll(matcher)) {
+				const index = match.index ?? 0;
+				processText(text.slice(offset, index));
+				const candidate = match[2] || match[0];
+				const safeUrl = resolveSameOriginSource(candidate, siteOrigin);
+				if (!safeUrl) {
+					processText(match[1] || match[0]);
+					offset = index + match[0].length;
+					continue;
+				}
+				const link = document.createElement('a');
+			link.href = safeUrl.href;
+			link.textContent = match[1] || match[0];
+			link.rel = 'noopener';
+			answerElement.appendChild(link);
+			offset = index + match[0].length;
+		}
+		processText(text.slice(offset));
+	};
+
+	const setAnswerMode = (mode: 'curated' | 'live') => {
+		if (answerSource) answerSource.textContent = mode === 'curated' ? rt.curatedSource : rt.liveSource;
+		if (answerFootPrimary) {
+			answerFootPrimary.textContent = mode === 'curated'
+				? rt.curatedFootPrimary
+				: rt.liveFootPrimary;
+		}
+		if (answerFootSecondary) {
+			answerFootSecondary.textContent = mode === 'curated'
+				? rt.curatedFootSecondary
+				: rt.liveFootSecondary;
+		}
+	};
+
+	const errorMessage = (error: unknown) => {
+		if (error instanceof PublicAskError) {
+			if (error.code.includes('limit') || error.status === 429) return rt.rateLimited;
+			if (error.status === 504 || error.code.includes('timeout')) return rt.timeout;
+			return error.message;
+		}
+		return rt.unavailable;
+	};
+
+	const setGenerating = (generating: boolean) => {
+		panel?.setAttribute('aria-busy', generating ? 'true' : 'false');
+		if (submitButton) {
+			submitButton.classList.toggle('ask-send--icon', !generating);
+			submitButton.setAttribute('aria-label', generating ? rt.stop : rt.ask);
+			const icon = submitButton.querySelector<HTMLElement>('.ask-send-icon');
+			const stop = submitButton.querySelector<HTMLElement>('.ask-send-stop');
+			if (icon) icon.hidden = generating;
+			if (stop) stop.hidden = !generating;
+		}
+		if (input instanceof HTMLTextAreaElement) input.setAttribute('aria-disabled', generating ? 'true' : 'false');
+	};
+
+	const showCuratedAnswer = async (answer: AnswerResult) => {
+		if (!(agentPanel instanceof HTMLElement) || !typewriter) return;
+		activeRequest?.abort();
+		const run = ++answerRun;
+		setAnswerMode('curated');
+		agentPanel.hidden = false;
+		panel?.classList.add('hide-curated-answers');
+		if (agentStatus) agentStatus.textContent = rt.showingCurated;
+		setGenerating(false);
+		const text = answer.full || answer.a;
+		await typewriter.show(text);
+		if (run !== answerRun) return;
+		renderAnswerLinks(text);
+		if (agentStatus) agentStatus.textContent = rt.curatedDone;
+	};
+
+	const runAgent = async (query: string) => {
+		if (!(agentPanel instanceof HTMLElement) || !(agentAnswer instanceof HTMLElement) || !typewriter) return;
+		activeRequest?.abort();
+		const controller = new AbortController();
+		activeRequest = controller;
+		const run = ++answerRun;
+		setAnswerMode('live');
+		agentPanel.hidden = false;
+		panel?.classList.remove('hide-curated-answers');
+		typewriter.reset();
+		const needsTurnstile =
+			turnstileContainer instanceof HTMLElement && Boolean(turnstileContainer.dataset.sitekey);
+		pending?.show(needsTurnstile ? 'verify' : 'think');
+		if (agentStatus) {
+			agentStatus.textContent = needsTurnstile ? `${rt.verifyingLive}…` : rt.findingContent;
+		}
+		setGenerating(true);
+		let answer = '';
+		let receivedDelta = false;
+		try {
+			const getTurnstileToken = async () => {
+				if (!(turnstileContainer instanceof HTMLElement) || !turnstileContainer.dataset.sitekey) {
+					throw new PublicAskError('CHALLENGE_UNAVAILABLE', rt.challengeUnavailable);
+				}
+				pending?.show('verify');
+				turnstileContainer.hidden = false;
+				setTurnstileLoading(true);
+				if (agentStatus) agentStatus.textContent = `${rt.verifyingLive}…`;
+				if (!turnstileChallenge) {
+					let api;
+					try {
+						api = await waitForTurnstile();
+					} catch {
+						throw new PublicAskError(
+							'CHALLENGE_UNAVAILABLE',
+							rt.challengeScriptFailed,
+						);
+					}
+					turnstileChallenge = createTurnstileChallenge({
+						container: turnstileContainer,
+						siteKey: turnstileContainer.dataset.sitekey,
+						api,
+						size: 'compact',
+					});
+					setTurnstileLoading(false);
+				}
+				const token = await turnstileChallenge.getToken();
+				setTurnstileLoading(false);
+				turnstileContainer.hidden = true;
+				pending?.show('think');
+				if (agentStatus) agentStatus.textContent = rt.findingContent;
+				return token;
+			};
+				await askPublicAgent(query, {
+					signal: controller.signal,
+					language: siteLocale,
+				getTurnstileToken,
+				messages: {
+					invalidStream: rt.invalidStream,
+					invalidStreamEmpty: rt.invalidStreamEmpty,
+					incompleteStream: rt.incompleteStream,
+					serviceUnavailable: rt.serviceUnavailable,
+				},
+				onDelta(delta) {
+					if (!receivedDelta) {
+						receivedDelta = true;
+						pending?.hide();
+					}
+					answer += delta;
+					typewriter.append(delta);
+					if (agentStatus) agentStatus.textContent = rt.organizingAnswer;
+				},
+			});
+			const emptyAnswer = rt.emptyAnswer;
+			if (!answer) await typewriter.show(emptyAnswer);
+			await typewriter.finish();
+			if (run !== answerRun) return;
+			renderAnswerLinks(answer || emptyAnswer);
+			if (agentStatus) agentStatus.textContent = rt.answerDone;
+		} catch (error) {
+			if (run !== answerRun) return;
+			pending?.hide();
+			setTurnstileLoading(false);
+			if (turnstileContainer instanceof HTMLElement) turnstileContainer.hidden = true;
+			if (controller.signal.aborted) {
+				await typewriter.show(answer || rt.stoppedText);
+				if (agentStatus) agentStatus.textContent = rt.stoppedStatus;
+			} else {
+				await typewriter.show(errorMessage(error));
+				if (agentStatus) agentStatus.textContent = rt.temporarilyUnavailable;
+			}
+		} finally {
+			if (activeRequest === controller) activeRequest = null;
+			setGenerating(false);
+			if (!receivedDelta) pending?.hide();
+			setTurnstileLoading(false);
+		}
+	};
+
+	if (input instanceof HTMLTextAreaElement && results instanceof HTMLElement) {
+		const search = createAskSearch(input, results, {
+			answersEmpty: 8,
+			answersQuery: 8,
+			articlesEmpty: 8,
+			articlesQuery: 10,
+			onResultsRendered: pulseResults,
+			busyTarget: panel ?? undefined,
+			labels: searchLabels,
+			indexHref: askIndexHref,
+			askPrefix,
+		});
+
+		const renderCuratedFor = async (query: string) => {
+			await search.loadSearchData();
+			const answer = search.getExactAnswer(query);
+			if (!answer) return false;
+			await showCuratedAnswer(answer);
+			return true;
+		};
+
+		const params = new URLSearchParams(window.location.search);
+		const initial = Array.from(params.get('q') ?? '').slice(0, input.maxLength).join('');
+		if (initial) {
+			search.setQuery(initial);
+			resizeInput();
+			setActiveChip(initial);
+			syncQueryToUrl(initial);
+		}
+
+		void search.loadSearchData(true).then(() => {
+			if (initial) void renderCuratedFor(initial);
+		});
+		requestAnimationFrame(() => input.focus({ preventScroll: true }));
+
+		input.addEventListener('input', () => {
+			resizeInput();
+			const query = input.value.trim();
+			const matchesChip = Array.from(document.querySelectorAll<HTMLElement>('[data-ask-chip]')).some(
+				(chip) => chip.dataset.query === query,
+			);
+			if (!matchesChip) setActiveChip('');
+			syncQueryToUrl(query);
+			
+			// 如果有精确匹配的策展答案，则保持或渲染；否则隐藏策展内容框
+			const exactAnswer = search.getExactAnswer(query);
+			if (!exactAnswer) {
+				if (agentPanel) agentPanel.hidden = true;
+				panel?.classList.remove('hide-curated-answers');
+				if (activeRequest) {
+					activeRequest.abort();
+					activeRequest = null;
+				}
+			}
+		});
+		input.addEventListener('keydown', (event) => {
+			if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
+			event.preventDefault();
+			if (form instanceof HTMLFormElement) form.requestSubmit();
+		});
+
+		form?.addEventListener('submit', async (event) => {
+			event.preventDefault();
+			if (activeRequest) {
+				activeRequest.abort();
+				return;
+			}
+			const query = input.value.trim();
+			if (!query) return;
+			search.renderResults(query);
+			setActiveChip(query);
+			syncQueryToUrl(query);
+			if (!(await renderCuratedFor(query)) && liveAskConfigured) void runAgent(query);
+		});
+
+		document.querySelectorAll<HTMLElement>('[data-ask-chip]').forEach((chip) => {
+			chip.setAttribute('aria-pressed', 'false');
+			chip.addEventListener('click', () => {
+				const query = chip.dataset.query ?? '';
+				setActiveChip(query);
+				search.setQuery(query);
+				resizeInput();
+				search.renderResults(query);
+				input.focus();
+				syncQueryToUrl(query);
+				void renderCuratedFor(query);
+			});
+		});
+	}
+  </script>
+</StarlightPage>

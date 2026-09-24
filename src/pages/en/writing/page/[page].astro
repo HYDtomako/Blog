@@ -1,0 +1,12 @@
+---
+import WritingArchivePage from '../../../../components/pages/WritingArchivePage.astro';
+import { articlePagePaths } from '../../../../lib/page-paths';
+
+export async function getStaticPaths() {
+	return articlePagePaths('en');
+}
+
+const props = Astro.props;
+---
+
+<WritingArchivePage {...props} />

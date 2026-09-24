@@ -1,0 +1,91 @@
+---
+import Icon from './Icon.astro';
+import { getSiteCopy, MCP_HEALTH_URL } from '../lib/site-copy';
+import { localeFromPath, localizedHref } from '../lib/locale';
+
+const locale = localeFromPath(Astro.url.pathname);
+const copy = getSiteCopy(locale);
+const UI = copy.ui;
+
+const mcpUi = {
+	copyButton: UI.mcp.copyButton,
+	copied: UI.mcp.copied,
+	copyFailed: UI.mcp.copyFailed,
+};
+---
+
+<dialog id="mcp-overlay" class="overlay mcp-overlay" aria-labelledby="mcp-guide-title">
+	<div class="overlay-panel mcp-guide-panel">
+		<div class="mcp-guide-head">
+			<Icon name="mcp" size={22} />
+			<h2 id="mcp-guide-title" class="mcp-guide-title">{copy.mcp.guideTitle}</h2>
+			<button class="dialog-close" type="button" data-close-mcp aria-label={UI.mcp.closeAria}>
+				<Icon name="close" size={18} />
+			</button>
+		</div>
+		<div class="mcp-guide-body">
+			<p class="mcp-guide-lede">{copy.mcp.guideLede}</p>
+			<div class="mcp-prompt-block">
+				<p class="mcp-prompt-text">{copy.mcp.agentPrompt}</p>
+				<button class="btn btn-solid mcp-copy-btn" type="button" data-copy-prompt>{UI.mcp.copyButton}</button>
+			</div>
+			<p class="mcp-guide-followup">{copy.mcp.guideFollowup}</p>
+			<div class="mcp-guide-resources">
+				<p class="mcp-resources-label">{UI.mcp.resourcesLabel}</p>
+				<ul class="mcp-resources-list">
+					<li>
+						<a href={localizedHref(locale, '/llms.txt')} class="mono machine-link">/llms.txt</a>
+						<span>{UI.mcp.llmsBlurb}</span>
+					</li>
+					<li>
+						<a href={localizedHref(locale, '/openapi.json')} class="mono machine-link">/openapi.json</a>
+						<span>{UI.mcp.openapiBlurb}</span>
+					</li>
+					<li>
+						<a href={MCP_HEALTH_URL} class="mono machine-link" target="_blank" rel="noopener noreferrer">{UI.mcp.healthLabel}</a>
+						<span>{UI.mcp.healthBlurb}</span>
+					</li>
+				</ul>
+			</div>
+		</div>
+	</div>
+</dialog>
+
+<script define:vars={{ mcpPrompt: copy.mcp.agentPrompt, mcpUi }}>
+	const dialog = document.getElementById('mcp-overlay');
+
+	const copyWithFeedback = async (text, button) => {
+		if (!(button instanceof HTMLButtonElement)) return;
+		const original = mcpUi.copyButton;
+		try {
+			await navigator.clipboard.writeText(text);
+			button.textContent = mcpUi.copied;
+			window.setTimeout(() => {
+				button.textContent = original;
+			}, 2000);
+		} catch {
+			button.textContent = mcpUi.copyFailed;
+			window.setTimeout(() => {
+				button.textContent = original;
+			}, 2000);
+		}
+	};
+
+	const openMcp = () => {
+		if (!(dialog instanceof HTMLDialogElement)) return;
+		if (!dialog.open) dialog.showModal();
+	};
+
+	document.querySelectorAll('[data-open-mcp]').forEach((trigger) => {
+		trigger.addEventListener('click', openMcp);
+	});
+	document.querySelectorAll('[data-close-mcp]').forEach((button) => {
+		button.addEventListener('click', () => dialog instanceof HTMLDialogElement && dialog.close());
+	});
+	dialog?.addEventListener('click', (event) => {
+		if (event.target === dialog && dialog instanceof HTMLDialogElement) dialog.close();
+	});
+
+	const promptButton = document.querySelector('[data-copy-prompt]');
+	promptButton?.addEventListener('click', () => copyWithFeedback(mcpPrompt, promptButton));
+</script>

@@ -1,0 +1,27 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import AnswerPage from '../../../components/AnswerPage.astro';
+import { answerPaths } from '../../../lib/page-paths';
+
+export async function getStaticPaths() {
+	return answerPaths('en');
+}
+
+const { entry } = Astro.props;
+---
+
+<StarlightPage
+	frontmatter={{
+		title: entry.data.question ?? entry.data.title,
+		description: entry.data.description,
+		template: 'splash',
+		contentType: 'answer',
+		slug: entry.data.slug,
+		llmSummary: entry.data.llmSummary,
+		tags: entry.data.tags,
+		question: entry.data.question,
+		shortAnswer: entry.data.shortAnswer,
+	}}
+>
+	<AnswerPage entry={entry} />
+</StarlightPage>

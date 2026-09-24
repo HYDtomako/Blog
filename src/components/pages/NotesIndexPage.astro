@@ -1,0 +1,48 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import ArticleCards from '../ArticleCards.astro';
+import { breadcrumbJsonLd, collectionPageJsonLd, docPath, getNotes } from '../../lib/public-data';
+import { localeFromPath, localizedHref, localizedSitePath } from '../../lib/locale';
+import { getSiteCopy } from '../../lib/site-copy';
+
+const locale = localeFromPath(Astro.url.pathname);
+const UI = getSiteCopy(locale).ui;
+
+const notes = await getNotes(locale);
+const notesPath = localizedSitePath(locale, '/notes/');
+const notesSummary = `${UI.notes.indexLede} ${UI.notes.articleCountSuffix(notes.length)}`;
+const structuredData = [
+	collectionPageJsonLd({
+		path: notesPath,
+		name: UI.notes.label,
+		description: UI.notes.indexDescription,
+		items: notes.map((note) => ({ name: note.data.title, url: docPath(note) })),
+		locale,
+	}),
+	breadcrumbJsonLd([
+		{ name: UI.notes.homeCrumb, path: localizedSitePath(locale, '/') },
+		{ name: UI.notes.label, path: notesPath },
+	]),
+];
+---
+
+<StarlightPage
+  frontmatter={{
+    title: UI.notes.label,
+    description: UI.notes.indexDescription,
+    template: 'splash',
+    contentType: 'page',
+    slug: 'notes',
+    llmSummary: notesSummary,
+  }}
+>
+  {structuredData.map((value) => (
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(value)} />
+  ))}
+  <div class="wrap page">
+    <div class="crumbs"><a href={localizedHref(locale, '/')}>{UI.notes.homeCrumb}</a><span class="sep">/</span><span>{UI.notes.label}</span></div>
+    <h1 id="_top" class="display page-heading">{UI.notes.label}</h1>
+    <p class="lede page-lede">{notesSummary}</p>
+    <ArticleCards articles={notes} />
+  </div>
+</StarlightPage>

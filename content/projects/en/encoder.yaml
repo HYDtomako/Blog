@@ -1,0 +1,12 @@
+title: EnCoder
+description: CoreCoder extended with cron scheduling, long-term memory, an agent team, and task/todo management.
+slug: encoder
+status: active
+stars: 0
+url: https://github.com/HYDtomako/EnCoder
+repository: https://github.com/HYDtomako/EnCoder
+tags: [Agent, Python]
+category: oss
+featured: false
+sortRank: 22
+role: Author

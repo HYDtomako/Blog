@@ -1,0 +1,35 @@
+kind: person
+name: HYD
+aliases: [HYD]
+title: 数据科学与大数据技术 · 2024 级
+bio: |-
+  青岛工学院 2024 级数据科学与大数据技术专业在读。比起把知识停在笔记里，我更习惯把它推到能跑起来的那一步——从脚本、小工具，到真正能用的产品。
+  平时在写代码、读论文和做小工具之间来回切换，关注 AI Agent 与 AI Native 的产品形态；喜欢开源、音乐和动漫，想到什么就写进随笔。
+stats: []
+knowsAbout:
+  - 数据科学
+  - AI Agent
+  - AI Native 产品
+  - 开源
+  - 前端工程
+capabilities:
+  - title: 发布
+    description: 面向文章、问答、项目和系列的约定式公开内容规范。
+  - title: Agent
+    description: 由同一份内容生成的 llms.txt、OpenAPI、JSON API 与 MCP 发现信息。
+timeline:
+  - period: "2026"
+    role: 模板发布
+    description: Refined-X 被抽取为可复用的 Astro 模板。
+education: 青岛工学院
+educationHistory:
+  - school: 青岛工学院
+    degree: 工学学士
+    major: 数据科学与大数据技术
+    period: 2024.9-2028.6
+location: 山东 青岛
+qq: "2804956879"
+links:
+  website: https://hydtomako.pages.dev/
+  github: https://github.com/HYDtomako
+  email: mailto:HYDhyd0505@gmail.com

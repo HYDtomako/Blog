@@ -1,0 +1,12 @@
+title: QQbot
+description: A QQ bot with pi as the brain and NapCatQQ as the connection — knowledge Q&A, timetable lookup, group management, scheduled tasks, long-term memory, and hot model switching.
+slug: qqbot
+status: active
+stars: 0
+url: https://github.com/HYDtomako/QQbot
+repository: https://github.com/HYDtomako/QQbot
+tags: [QQ bot, TypeScript, LLM]
+category: oss
+featured: false
+sortRank: 20
+role: Author

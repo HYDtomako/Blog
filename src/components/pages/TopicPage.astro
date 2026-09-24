@@ -1,0 +1,67 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import ArticleFeed from '../ArticleFeed.astro';
+import { breadcrumbJsonLd, collectionPageJsonLd, docPath, type PublicDocEntry } from '../../lib/public-data';
+import { localeFromPath, localizedHref, localizedSitePath } from '../../lib/locale';
+import { getSiteCopy } from '../../lib/site-copy';
+
+interface Props {
+  topic: {
+    slug: string;
+    key: string;
+    name: string;
+    articles: PublicDocEntry[];
+  };
+}
+
+const locale = localeFromPath(Astro.url.pathname);
+const copy = getSiteCopy(locale);
+const UI = copy.ui;
+
+const { topic } = Astro.props;
+const { name, articles } = topic;
+const topicPath = localizedSitePath(locale, `/topics/${topic.slug}/`);
+const structuredData = [
+  collectionPageJsonLd({
+    path: topicPath,
+    name: UI.topics.topicTitle(name),
+    description: UI.topics.topicDescription(name),
+    items: articles.map((article) => ({ name: article.data.title, url: docPath(article) })),
+    locale,
+  }),
+  breadcrumbJsonLd([
+    { name: UI.topics.homeCrumb, path: localizedSitePath(locale, '/') },
+    { name: UI.topics.directory, path: localizedSitePath(locale, '/topics/') },
+    { name, path: topicPath },
+  ]),
+];
+---
+
+<StarlightPage
+  frontmatter={{
+    title: UI.topics.topicTitle(name),
+    description: UI.topics.topicDescription(name),
+    template: 'splash',
+    contentType: 'page',
+    slug: `topics/${topic.slug}`,
+    llmSummary: UI.topics.topicDescription(name),
+    head: articles.length < 3 ? [{ tag: 'meta', attrs: { name: 'robots', content: 'noindex, follow' } }] : []
+  }}
+>
+  {structuredData.map((value) => (
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(value)} />
+  ))}
+  <div class="wrap page">
+    <div class="crumbs"><a href={localizedHref(locale, '/')}>{UI.topics.homeCrumb}</a><span class="sep">/</span><a href={localizedHref(locale, '/topics/')}>{UI.topics.directory}</a><span class="sep">/</span><span>{name}</span></div>
+    
+    <div class="eyebrow">TAG</div>
+    <h1 id="_top" class="display page-heading page-heading-after-label">{name}</h1>
+    <p class="lede page-lede">
+      {UI.topics.articlesCollected(articles.length)}
+    </p>
+
+    <div class="content-list-spaced">
+      <ArticleFeed articles={articles} />
+    </div>
+  </div>
+</StarlightPage>

@@ -1,0 +1,35 @@
+kind: person
+name: HYD
+aliases: [HYD]
+title: Data Science and Big Data Technology · 2024
+bio: |-
+  Class of 2024, Data Science and Big Data Technology at Qingdao Institute of Technology. Rather than leaving what I learn in notes, I like pushing it to the point where it runs — from scripts and small tools to products people can actually use.
+  Most days I move between code, papers, and small tools, with an eye on AI agents and AI-native products. Open source, music, and anime fill the rest; anything worth keeping goes into the notes.
+stats: []
+knowsAbout:
+  - Data Science
+  - AI agents
+  - AI-native products
+  - Open source
+  - Frontend engineering
+capabilities:
+  - title: Publishing
+    description: Opinionated public content schema for articles, answers, projects, and series.
+  - title: Agents
+    description: llms.txt, OpenAPI, JSON APIs, and MCP discovery generated from the same corpus.
+timeline:
+  - period: "2026"
+    role: Starter release
+    description: Refined-X extracted as a reusable Astro template.
+education: Qingdao Institute of Technology
+educationHistory:
+  - school: Qingdao Institute of Technology
+    degree: Bachelor of Engineering
+    major: Data Science and Big Data Technology
+    period: 2024.9-2028.6
+location: Qingdao, Shandong
+qq: "2804956879"
+links:
+  website: https://hydtomako.pages.dev/
+  github: https://github.com/HYDtomako
+  email: mailto:HYDhyd0505@gmail.com
