@@ -11,7 +11,7 @@ llmSummary: 一份来自三个实现的 Agent 工程笔记。CoreCoder 是 Pytho
 读 agent 源码容易陷在两个地方：要么被 CLI 那一层交互细节带跑，要么一直停在"LLM 会调用工具"这个结论上。把三个实现摆在一起看反而清爽——哪些零件是省不掉的，哪些只是实现风格，一比就出来了。
 
 - **[CoreCoder](https://github.com/he-yufeng/CoreCoder)**：Python 手写的最小 agent。loop、tool、context 都从零写一遍，能看清骨架。
-- **Claude Code**：生产实现。值得看的是启动装配、长期存在的会话对象、上下文工程，以及 BashTool 这类工具是怎么被"治理"起来的。
+- **[Claude Code](https://www.xuanyuancode.com/learn-claude-code)**：生产实现，源码拆解在 xuanyuancode 上有完整连载。值得看的是启动装配、长期存在的会话对象、上下文工程，以及 BashTool 这类工具是怎么被"治理"起来的。
 - **[learn-claude-code](https://github.com/shareAI-lab/learn-claude-code)**：教学实现。hook、task、多 agent、memory、MCP 被拆成小块逐个讲。
 
 下面按机制整理，不按项目。
