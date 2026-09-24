@@ -10,6 +10,7 @@
 # local instance overlay (parent monorepo owns the real file)
 # logs
 # macOS-specific files
+.wrangler/
 dist/
 examples/**/.wrangler/
 examples/**/node_modules/

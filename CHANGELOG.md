@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `src/lib/public-surfaces.ts`: the single source of truth for the machine-readable endpoints the footer links (locale-scoped vs site-wide)
+- Root `wrangler.jsonc`: the site deploys as a Cloudflare Worker with static assets (`npm run build`, then `npx wrangler deploy` uploading `./dist`)
 - Header spark button: the ⌘K ask/search overlay now has a trigger on every page (reuses `ask.openAria` / `ask.openTitle`, previously unused copy)
 - `ask.staticNote`, `askSearch.noResults`, and `askSearch.aiFallbackSearch` copy for builds without a remote Ask endpoint
 
@@ -19,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `/api/search-index.json` also indexes notes (new `notes` array, `items[].type: 'note'`), so ⌘K and `/ask` search notes alongside articles and curated answers
 - Disabled Pagefind (`pagefind: false`) — site search is the `/ask` index, so the unused ~850 KB index is no longer built
 - Zero series is a supported state: `content/series/<locale>/series.json` may carry an empty `order`, and no `/writing/<series>/` page, `/writing/` series grid, llms.txt section, or footer link is emitted
-- `site` now points at the instance origin (`https://hydtomako.pages.dev`) instead of the template placeholder
+- `site` now points at the instance origin (`https://blog.hydyd0505.workers.dev`) instead of the template placeholder
 - Footer link list is generated from `public-surfaces.ts` (adds `/llms-full.txt`, `/rss.xml`, `/api/profile.json`, `/api/articles.json`, `/api/topics.json`) and `npm run verify` fails when a listed path is missing from `dist`
 - Footer brand shows `brand[locale].wordmark` (matching the header) and links home; series links carry a prefix so they no longer read as duplicates of the collection above them; the bottom badge moved into the locale copy
 
