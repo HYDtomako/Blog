@@ -34,7 +34,7 @@ const defaults = {
 		/** Compact labels for the header language switch and Starlight locale UI. */
 		labels: { 'zh-CN': '中文', en: 'EN' },
 	},
-	site: 'https://hydtomako.pages.dev',
+	site: 'https://blog.hydyd0505.workers.dev',
 	timeZone: 'UTC',
 	contentRoot: './content',
 	publicDir: './public',
