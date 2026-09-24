@@ -1,8 +1,9 @@
-name: Deploy to GitHub Pages
+name: Deploy to GitHub Pages (Refined-X sample demo)
 
+# Instance note: this workflow publishes the template's sample demo (demo.refined-x.com,
+# built through deploy/github-pages.config.mjs), not this site. This site deploys from
+# Cloudflare Pages, so the job stays manual-only and never runs on push.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
