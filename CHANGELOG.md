@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Header avatar and favicons: the header brand renders `public/asset/avatar.jpg` (30px, round) next to the wordmark, and `favicon.png` / `apple-touch-icon.png` are generated from the same avatar
+- Favicons generated from the avatar: `favicon.png` and `apple-touch-icon.png` are derived from `public/asset/avatar.jpg`, the same image the home hero and About page use
 - Live Ask for this instance: `https://ask.hydblog.xyz` (Cloudflare Worker + AI Search + D1 + Turnstile + DeepSeek) serves `POST /ask`, `POST /mcp`, and `GET /health` for `https://hydblog.xyz`
 - `src/lib/public-surfaces.ts`: the single source of truth for the machine-readable endpoints the footer links (locale-scoped vs site-wide)
 - Root `wrangler.jsonc`: the site deploys as a Cloudflare Worker with static assets (`npm run build`, then `npx wrangler deploy` uploading `./dist`)

@@ -32,14 +32,6 @@ const switchHref = withBase(await localeSwitchPath(pathname, targetLocale));
 	<div class="topbar-glass">
 		<div class="wrap topbar-in">
 			<a href={withBase(localePath(locale, '/'))} class="brand" aria-label={UI.nav.homeAria(copy.brand.wordmark)}>
-				<img
-					class="brand-avatar"
-					src={withBase('/asset/avatar.jpg')}
-					alt=""
-					width="30"
-					height="30"
-					decoding="async"
-				/>
 				<span class="brand-wordmark">{copy.brand.wordmark}</span>
 			</a>
 			<nav class="nav" aria-label={UI.nav.primaryAria}>
