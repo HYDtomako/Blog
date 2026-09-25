@@ -37,7 +37,15 @@ jobs:
       - name: Test comments
         run: npm run test:comments
 
+      - name: Test stats
+        run: npm run test:stats
+
       - name: Build
+        # The build needs the public Turnstile site key once site.config.mjs sets ask.askUrl,
+        # otherwise verify fails on an /ask page without its widget. Set the repository
+        # variable PUBLIC_TURNSTILE_SITE_KEY, or drop this env block for a static-only site.
+        env:
+          PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.PUBLIC_TURNSTILE_SITE_KEY }}
         run: npm run build
 
       - name: Verify
