@@ -1,0 +1,78 @@
+---
+import { getSeriesEntries } from '../lib/articles';
+import { getSiteCopy } from '../lib/site-copy';
+import { SERIES_ORDER_BY_LOCALE } from '../lib/series.mjs';
+import { siteConfig } from '../../site.config.mjs';
+import { localeFromPath, localizedHref } from '../lib/locale';
+import { PUBLIC_SURFACES, publicSurfaceHref, publicSurfaceLabel } from '../lib/public-surfaces';
+
+const locale = localeFromPath(Astro.url.pathname);
+const copy = getSiteCopy(locale);
+const UI = copy.ui;
+
+const allSeries = await getSeriesEntries();
+const seriesSlugs = SERIES_ORDER_BY_LOCALE[locale] as readonly string[];
+const seriesList = seriesSlugs
+	.map((slug) => ({ slug, entry: allSeries.find((entry) => entry.id === `${locale}/${slug}`) }))
+	.filter(({ entry }) => entry);
+const surfaces = PUBLIC_SURFACES;
+const siteHost = (() => {
+	try {
+		return new URL(siteConfig.site).host;
+	} catch {
+		return siteConfig.site;
+	}
+})();
+---
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <div class="footer-brand">
+          <a class="brand" href={localizedHref(locale, '/')} aria-label={UI.nav.homeAria(copy.brand.wordmark)}>
+            <span class="brand-wordmark">{copy.brand.wordmark}</span>
+          </a>
+        </div>
+        {copy.brand.footerTagline && (
+          <p class="footer-description">
+            {copy.brand.footerTagline}
+          </p>
+        )}
+      </div>
+      <div>
+        <h4>{UI.footer.content}</h4>
+        <ul>
+          <li><a href={localizedHref(locale, '/writing/')}>{UI.nav.writing}</a></li>
+          <li><a href={localizedHref(locale, '/notes/')}>{UI.nav.notes}</a></li>
+          {seriesList.map(({ slug, entry }) => entry && (
+            <li><a href={localizedHref(locale, `/writing/${slug}/`)}>{UI.footer.seriesLink(entry.data.title)}</a></li>
+          ))}
+        </ul>
+      </div>
+      <div>
+        <h4>{UI.footer.site}</h4>
+        <ul>
+          <li><a href={localizedHref(locale, '/projects/')}>{UI.nav.projects}</a></li>
+          <li><a href={localizedHref(locale, '/about/')}>{UI.nav.about}</a></li>
+          <li><a href={localizedHref(locale, '/ask/')}>{UI.ask.button}</a></li>
+          <li><a href={localizedHref(locale, '/topics/')}>{UI.footer.topics}</a></li>
+          <li><a href={localizedHref(locale, '/answers/')}>{UI.footer.answers}</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>{UI.footer.agentFriendly}</h4>
+        <ul>
+          {surfaces.map((surface) => (
+            <li>
+              <a href={publicSurfaceHref(locale, surface)} class="mono machine-link">{publicSurfaceLabel(locale, surface)}</a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span class="mono">© {new Date().getFullYear()} {copy.brand.persona} · {siteHost}</span>
+      <span class="mono">{UI.footer.badge}</span>
+    </div>
+  </div>
+</footer>

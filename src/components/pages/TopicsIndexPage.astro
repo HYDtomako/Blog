@@ -1,0 +1,56 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { breadcrumbJsonLd, collectionPageJsonLd, getTopics } from '../../lib/public-data';
+import { localeFromPath, localizedHref, localizedSitePath } from '../../lib/locale';
+import { getSiteCopy } from '../../lib/site-copy';
+
+const locale = localeFromPath(Astro.url.pathname);
+const copy = getSiteCopy(locale);
+const UI = copy.ui;
+
+const topics = await getTopics(locale);
+const topicsDescription = UI.topics.indexDescription;
+const topicsPath = localizedSitePath(locale, '/topics/');
+const structuredData = [
+  collectionPageJsonLd({
+    path: topicsPath,
+    name: UI.topics.allHeading,
+    description: topicsDescription,
+    items: topics.map((topic) => ({ name: topic.name, url: localizedSitePath(locale, `/topics/${topic.slug}/`) })),
+    locale,
+  }),
+  breadcrumbJsonLd([
+    { name: UI.topics.homeCrumb, path: localizedSitePath(locale, '/') },
+    { name: UI.topics.directory, path: topicsPath },
+  ]),
+];
+topics.sort((a, b) => b.articles.length - a.articles.length);
+---
+
+<StarlightPage
+  frontmatter={{
+    title: UI.topics.label,
+    description: topicsDescription,
+    template: 'splash',
+    contentType: 'page',
+    slug: 'topics',
+    llmSummary: topicsDescription,
+  }}
+>
+  {structuredData.map((value) => (
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(value)} />
+  ))}
+  <div class="wrap page">
+    <div class="crumbs"><a href={localizedHref(locale, '/')}>{UI.topics.homeCrumb}</a><span class="sep">/</span><span>{UI.topics.directory}</span></div>
+    <h1 id="_top" class="display page-heading">{UI.topics.allHeading}</h1>
+    <p class="lede page-lede">{UI.topics.indexLede}</p>
+    
+    <div class="tagrow topic-cloud">
+      {topics.map(topic => (
+        <a href={localizedHref(locale, `/topics/${topic.slug}/`)} class="tag topic-tag">
+          {topic.name} <span class="topic-count">{topic.articles.length}</span>
+        </a>
+      ))}
+    </div>
+  </div>
+</StarlightPage>

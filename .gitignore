@@ -1,0 +1,29 @@
+
+.astro/
+.DS_Store
+.env
+.env.production
+.dev.vars
+# build output
+# dependencies
+# environment variables
+# generated types
+# local instance overlay (parent monorepo owns the real file)
+# logs
+# macOS-specific files
+.wrangler/
+dist/
+examples/**/.wrangler/
+examples/**/node_modules/
+examples/**/worker-configuration.d.ts
+examples/public-ask-worker/spike/**/.dry-run/
+examples/public-ask-worker/test/product-clients/.acceptance-base-url
+examples/public-ask-worker/test/product-clients/fixtures/
+examples/public-ask-worker/wrangler.demo.jsonc
+examples/public-ask-worker/wrangler.local.jsonc
+instance.config.mjs
+node_modules/
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*

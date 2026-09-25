@@ -1,0 +1,407 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { getCollection } from 'astro:content';
+import GitHubActivity from '../GitHubActivity.astro';
+import Icon from '../Icon.astro';
+import { breadcrumbJsonLd, collectionPageJsonLd, entryLocale, getPublicProfile } from '../../lib/public-data';
+import { withBase } from '../../lib/paths';
+import { DEFAULT_LOCALE, localeFromPath, localizedHref, localizedSitePath } from '../../lib/locale';
+import { getSiteCopy } from '../../lib/site-copy';
+
+const COURSE_CABINET_SIZE = 3;
+
+const locale = localeFromPath(Astro.url.pathname);
+const copy = getSiteCopy(locale);
+const UI = copy.ui;
+
+const publicProfile = await getPublicProfile(locale);
+const allProjects = (await getCollection('projects'))
+  .filter((entry) => entryLocale(entry.id) === locale)
+  .sort((a, b) =>
+    (a.data.sortRank - b.data.sortRank) || a.data.title.localeCompare(b.data.title, locale),
+  );
+
+const projects = allProjects.filter(p => p.data.category === 'project' || !p.data.category);
+const courses = allProjects.filter(p => p.data.category === 'course');
+const snippets = allProjects.filter(p => p.data.category === 'snippet');
+const oss = allProjects.filter(p => p.data.category === 'oss');
+const featuredProjects = projects.filter(p => p.data.featured);
+const projectIndex = projects.filter(p => !p.data.featured);
+const courseSlots = Array.from({ length: COURSE_CABINET_SIZE }, (_, index) => courses[index] ?? null);
+const heroStats = publicProfile.stats;
+const pageCopy = copy.brand.projects;
+const projectPath = localizedSitePath(locale, '/projects/');
+
+const statusLabels: Record<string, string> = locale === DEFAULT_LOCALE
+  ? { active: '活跃', maintained: '维护中', archived: '已归档', planned: '计划中', unknown: '未知' }
+  : { active: 'Active', maintained: 'Maintained', archived: 'Archived', planned: 'Planned', unknown: 'Project' };
+
+const eyebrows: Record<string, string> = locale === DEFAULT_LOCALE
+  ? { featured: '精选', oss: '开源', courses: '公开课', archive: '归档' }
+  : { featured: 'Featured', oss: 'Open source', courses: 'Open Courses', archive: 'Archive' };
+
+const projectsLlmSummary = locale === DEFAULT_LOCALE
+  ? `${copy.brand.persona} 公开发布的项目、课程与实验。`
+  : `Public projects and experiments by ${copy.brand.persona}.`;
+const projectsDescription = pageCopy.description ?? projectsLlmSummary;
+
+const structuredData = [
+  collectionPageJsonLd({
+    path: projectPath,
+    name: pageCopy.heading,
+    description: projectsDescription,
+    locale,
+    items: allProjects.map(({ data }) => ({
+      name: data.title,
+      url: data.url ?? data.repository ?? projectPath,
+    })),
+  }),
+  breadcrumbJsonLd([
+    { name: UI.common.home, path: localizedSitePath(locale, '/') },
+    { name: pageCopy.heading, path: projectPath },
+  ]),
+];
+---
+
+<StarlightPage
+  frontmatter={{
+    title: pageCopy.titleSuffix,
+    description: projectsDescription,
+    template: 'splash',
+    contentType: 'page',
+    slug: 'projects',
+    llmSummary: projectsLlmSummary,
+  }}
+>
+  {structuredData.map((value) => (
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(value)} />
+  ))}
+  <div class="wrap page">
+    <div class="crumbs"><a href={localizedHref(locale, '/')}>{UI.common.home}</a><span class="sep">/</span><span>{pageCopy.heading}</span></div>
+
+    <section class="projects-hero" aria-labelledby="_top">
+      <div class="projects-hero-copy">
+        <h1 id="_top" class="display page-heading">{pageCopy.heading}</h1>
+        <p class="lede page-lede">
+          {pageCopy.lede}
+        </p>
+        <div class="projects-hero-actions">
+          <a class="btn btn-solid" href={localizedHref(locale, '/about/')}>{UI.nav.about}</a>
+          {publicProfile.github && (
+            <a class="btn btn-ghost" href={publicProfile.github} target="_blank" rel="noreferrer">GitHub</a>
+          )}
+        </div>
+      </div>
+      {heroStats.length > 0 && (
+        <dl class="projects-stats" aria-label={UI.projects.highlightsAria}>
+          {heroStats.map((item) => (
+            <div class="projects-stat">
+              <dt>{item.value}</dt>
+              <dd>{item.label}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </section>
+
+    {featuredProjects.length > 0 && (
+      <section class="projects-showcase" aria-labelledby="featured-projects">
+        <div class="section-head section-head-large projects-section-head">
+          <div>
+            <p class="eyebrow">{eyebrows.featured}</p>
+            <h2 id="featured-projects" class="section-title">{UI.projects.featuredHeading}</h2>
+          </div>
+        </div>
+        <div class="project-feature-grid">
+          {featuredProjects.map(({ data }, index) => {
+            const link = data.url || data.repository || '#';
+            const isExternal = link !== '#' && !link.startsWith('/');
+            return (
+              <a class={`project-feature-card project-feature-card-${index % 3}`} href={link} target={isExternal ? "_blank" : undefined} rel={isExternal ? 'noreferrer' : undefined}>
+                <div class="project-feature-media">
+                  {data.image ? (
+                    <img src={data.image} alt={data.imageAlt ?? UI.projects.projectShotAlt(data.title)} loading={index < 2 ? 'eager' : 'lazy'} />
+                  ) : (
+                    <div class="project-feature-placeholder">{data.title.slice(0, 2)}</div>
+                  )}
+                </div>
+                <div class="project-feature-body">
+                  <div class="project-feature-topline">
+                    <span>{statusLabels[data.status]}</span>
+                    {data.role && <span>{data.role}</span>}
+                  </div>
+                  <h3 class="project-feature-title">{data.title}</h3>
+                  <p class="project-feature-desc">{data.description}</p>
+                  {data.impact && <p class="project-feature-impact">{data.impact}</p>}
+                  {data.proofPoints.length > 0 && (
+                    <ul class="project-proof-list" aria-label={UI.projects.proofAria(data.title)}>
+                      {data.proofPoints.map((point) => <li>{point}</li>)}
+                    </ul>
+                  )}
+                  <div class="project-feature-foot">
+                    <span class="project-tags">{data.tags.slice(0, 3).join(' / ')}</span>
+                    <span class="project-open">{UI.projects.viewProject} {isExternal && <Icon name="external" size={14} class="muted-icon" />}</span>
+                  </div>
+                </div>
+              </a>
+            );
+          })}
+        </div>
+      </section>
+    )}
+
+    <GitHubActivity />
+
+    {oss.length > 0 && (
+      <section class="projects-index" aria-labelledby="oss-index">
+        <div class="section-head section-head-large projects-section-head">
+          <div>
+            <p class="eyebrow">{eyebrows.oss}</p>
+            <h2 id="oss-index" class="section-title">{UI.projects.ossHeading}</h2>
+          </div>
+        </div>
+        <div class="repo-grid">
+          {oss.map(({ data }) => {
+            const link = data.url || data.repository || '#';
+            const isExternal = link !== '#' && !link.startsWith('/');
+            return (
+              <a class="repo-card" href={link} target={isExternal ? '_blank' : undefined} rel={isExternal ? 'noreferrer' : undefined}>
+                <div class="repo-card-head">
+                  <span class="repo-card-name">{data.title}</span>
+                  {isExternal && <span class="repo-card-open"><Icon name="external" size={16} /></span>}
+                </div>
+                <p class="repo-card-desc">{data.description}</p>
+                <div class="repo-card-foot">
+                  <span class="repo-card-tags">{data.tags.slice(0, 3).join(' · ')}</span>
+                  <span class="repo-card-meta">
+                    <span class="repo-card-stars" aria-label={UI.projects.starsAria(data.stars)}>
+                      <Icon name="star" size={13} />
+                      {data.stars}
+                    </span>
+                    <span class="repo-card-sep" aria-hidden="true">·</span>
+                    <span class="repo-card-status">{statusLabels[data.status]}</span>
+                  </span>
+                </div>
+              </a>
+            );
+          })}
+        </div>
+      </section>
+    )}
+
+    {courses.length > 0 && (
+      <section class="course-gallery" aria-labelledby="course-gallery-title">
+        <div class="course-gallery-head">
+          <p class="eyebrow">{eyebrows.courses}</p>
+          <h2 id="course-gallery-title" class="section-title">{UI.projects.coursesHeading}</h2>
+        </div>
+        <div class="course-cabinet" aria-label={UI.projects.coursesAria}>
+          {courseSlots.map((course, index) => {
+            if (!course) {
+              return (
+                <div class="course-exhibit course-exhibit-empty" aria-label={UI.projects.courseEmptyAria}>
+                  <div class="course-object course-object-full">
+                    <img src={withBase('/projects/courses/next-course-cover.png')} alt={UI.projects.courseCoverAlt} loading="lazy" />
+                  </div>
+                  <div class="course-plaque">
+                    <span>{UI.projects.slot(index + 1)}</span>
+                    <strong>{UI.projects.nextCourse}</strong>
+                    <p>{UI.projects.notYetPublic}</p>
+                  </div>
+                </div>
+              );
+            }
+
+            const data = course.data;
+            const link = data.url || data.repository || '#';
+            const isExternal = link !== '#' && !link.startsWith('/');
+            return (
+              <a class="course-exhibit" href={link} target={isExternal ? "_blank" : undefined} rel={isExternal ? 'noreferrer' : undefined}>
+                <div class="course-object course-object-case">
+                  <div class="course-display-content">
+                    {data.image ? (
+                      <img src={data.image} alt={data.imageAlt ?? UI.projects.courseCoverAltTitle(data.title)} loading={index === 0 ? 'eager' : 'lazy'} />
+                    ) : (
+                      <div class="course-object-title">{data.title}</div>
+                    )}
+                  </div>
+                </div>
+                <div class="course-plaque">
+                  <span>{data.role ?? UI.projects.courseAuthorFallback}</span>
+                  <strong>{data.title}</strong>
+                  <p>{data.description}</p>
+                </div>
+              </a>
+            );
+          })}
+        </div>
+      </section>
+    )}
+
+    {projectIndex.length > 0 && (
+      <section class="projects-index" aria-labelledby="project-index">
+        <div class="section-head section-head-large projects-section-head">
+          <div>
+            <p class="eyebrow">{eyebrows.archive}</p>
+            <h2 id="project-index" class="section-title">{UI.projects.moreHeading}</h2>
+          </div>
+        </div>
+        <div class="project-compact-list">
+          {projectIndex.map(({ data }) => {
+            const link = data.url || data.repository || '#';
+            const isExternal = link !== '#' && !link.startsWith('/');
+            return (
+              <a class="proj project-compact" href={link} target={isExternal ? "_blank" : undefined} rel={isExternal ? 'noreferrer' : undefined}>
+                <div class="proj-name">{data.title}</div>
+                <div class="proj-desc">{data.description}</div>
+                <div class="proj-star">
+                  {data.status === 'active' || data.status === 'maintained' ? (
+                    <span class="project-status"><Icon name="star" size={13} /> {UI.projects.maintaining}</span>
+                  ) : ''}
+                </div>
+                {isExternal && <Icon name="external" size={16} class="muted-icon" />}
+              </a>
+            );
+          })}
+        </div>
+      </section>
+    )}
+
+    {snippets.length > 0 && (
+      <section class="projects-index" aria-labelledby="snippet-index">
+        <div class="section-head section-head-large">
+          <h2 id="snippet-index" class="section-title section-title-small">{UI.projects.snippetsHeading}</h2>
+        </div>
+        <div class="project-compact-list">
+          {snippets.map(({ data }) => {
+            const link = data.url || data.repository || '#';
+            const isExternal = link !== '#' && !link.startsWith('/');
+            return (
+              <a class="proj project-compact" href={link} target={isExternal ? "_blank" : undefined} rel={isExternal ? 'noreferrer' : undefined}>
+                <div class="proj-name">{data.title}</div>
+                <div class="proj-desc">{data.description}</div>
+                <div class="proj-star">
+                  {data.status === 'active' || data.status === 'maintained' ? (
+                    <span class="project-status"><Icon name="star" size={13} /> {UI.projects.maintaining}</span>
+                  ) : ''}
+                </div>
+                {isExternal && <Icon name="external" size={16} class="muted-icon" />}
+              </a>
+            );
+          })}
+        </div>
+      </section>
+    )}
+  </div>
+</StarlightPage>
+
+<style>
+  .repo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr));
+    gap: 16px;
+    margin-top: 18px;
+  }
+  .repo-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 22px 24px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    transition:
+      border-color var(--duration-fast) var(--ease-out-quart),
+      background var(--duration-fast) var(--ease-out-quart),
+      box-shadow var(--duration-mid) var(--ease-out-quart),
+      transform var(--duration-mid) var(--ease-out-quart);
+  }
+  .repo-card:hover,
+  .repo-card:focus-visible {
+    border-color: var(--ink);
+    background: color-mix(in srgb, var(--ink) 3%, transparent);
+    box-shadow: var(--shadow);
+    transform: translateY(-3px);
+  }
+  .repo-card:active {
+    box-shadow: none;
+    transform: translateY(-1px) scale(0.994);
+    transition-duration: var(--duration-fast);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .repo-card,
+    .repo-card:hover,
+    .repo-card:focus-visible,
+    .repo-card:active {
+      transform: none;
+      transition: none;
+    }
+  }
+  .repo-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+  }
+  .repo-card-name {
+    font-family: var(--serif);
+    font-size: 19px;
+    line-height: 1.3;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+  }
+  .repo-card-open {
+    display: inline-flex;
+    flex: none;
+    color: var(--faint);
+    transition:
+      transform var(--duration-mid) var(--ease-out-quart),
+      color var(--duration-fast) var(--ease-out-quart);
+  }
+  .repo-card:hover .repo-card-open,
+  .repo-card:focus-visible .repo-card-open {
+    color: var(--ink);
+    transform: translate(2px, -2px);
+  }
+  .repo-card-desc {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--muted);
+    text-wrap: pretty;
+  }
+  .repo-card-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-top: auto;
+    padding-top: 4px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--faint);
+  }
+  .repo-card-tags {
+    min-width: 0;
+  }
+  .repo-card-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: none;
+  }
+  .repo-card-stars {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--muted);
+  }
+  .repo-card-sep {
+    color: var(--line);
+  }
+  .repo-card-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex: none;
+  }
+</style>

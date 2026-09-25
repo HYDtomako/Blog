@@ -1,0 +1,65 @@
+{
+  "name": "refined-x",
+  "private": true,
+  "type": "module",
+  "version": "2.0.0",
+  "description": "Agent-ready personal publish starter for Astro + Starlight",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tower1229/Refined-X.git"
+  },
+  "homepage": "https://github.com/tower1229/Refined-X#readme",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
+  "keywords": [
+    "astro",
+    "starlight",
+    "withastro",
+    "llms.txt",
+    "mcp",
+    "nlweb",
+    "personal-site"
+  ],
+  "scripts": {
+    "collect-assets": "node scripts/collect-assets.mjs",
+    "sync:github": "node scripts/sync-github.mjs",
+    "verify": "node scripts/verify.mjs",
+    "test:public-ask": "node --test shared/public-ask-contract.test.ts shared/import-boundary.test.ts src/lib/ask-persistence.test.ts src/lib/public-capabilities.test.ts src/lib/openapi-document.test.ts src/lib/mcp-discovery.test.ts src/lib/awp-manifest.test.ts src/lib/verify-capabilities.test.ts src/lib/paths.test.ts src/lib/locale.test.ts src/lib/site-config-overlay.test.mjs src/scripts/ask-agent.test.ts src/scripts/ask-pending.test.ts src/scripts/source-link.test.ts src/scripts/turnstile-client.test.ts src/scripts/theme-control.test.ts src/scripts/theme-preference.test.ts src/scripts/hero-theme-bg.test.ts src/scripts/typewriter.test.ts",
+    "test:related": "node --test src/lib/related-articles.test.ts",
+    "test:comments": "node --test src/lib/comments.test.mjs src/scripts/giscus-comments.test.ts",
+    "test:stats": "node --test worker/*.test.ts src/scripts/page-stats.test.ts src/scripts/site-stats.test.ts",
+    "sync-content": "astro sync --force",
+    "predev": "npm run collect-assets",
+    "prebuild": "npm run sync:github && npm run collect-assets && npm run sync-content",
+    "precheck": "npm run collect-assets",
+    "check": "astro check",
+    "dev": "astro dev --host 127.0.0.1",
+    "dev:worker": "npx wrangler dev",
+    "start": "astro dev --host 127.0.0.1",
+    "build": "astro build",
+    "preview": "astro preview",
+    "db:migrate:local": "npx wrangler d1 migrations apply your-blog-stats --local",
+    "db:migrate": "npx wrangler d1 migrations apply your-blog-stats --remote",
+    "deploy": "npm run build && npm run verify && npm run db:migrate && npx wrangler deploy",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/markdown-remark": "^7.3.0",
+    "@astrojs/rss": "^4.0.19",
+    "@astrojs/sitemap": "^3.7.3",
+    "@astrojs/starlight": "^0.42.0",
+    "astro": "^7.3.2",
+    "github-slugger": "^2.0.0",
+    "sharp": "^0.35.3",
+    "unist-util-visit": "^5.1.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "typescript": "^6.0.3",
+    "yaml": "^2.9.0",
+    "svgo": ">=4.1.0",
+    "sharp": ">=0.35.0"
+  }
+}

@@ -1,0 +1,157 @@
+---
+import { getSiteCopy } from '../lib/site-copy';
+import { absoluteUrl, breadcrumbJsonLd, getPublicProfile, personJsonLd } from '../lib/public-data';
+import { sitePath, withBase } from '../lib/paths';
+import { localeFromPath, localePath, stripLocalePrefix } from '../lib/locale';
+import { seriesName } from '../lib/articles';
+import { DEFAULT_SEO_IMAGE, normalizeSeoHead, type SeoHeadTag } from '../lib/seo';
+
+const { entry, head } = Astro.locals.starlightRoute;
+const locale = localeFromPath(Astro.url.pathname);
+const copy = getSiteCopy(locale);
+const UI = copy.ui;
+const logicalPath = stripLocalePrefix(Astro.url.pathname);
+const isHome = logicalPath === '/' || logicalPath === '';
+const homePath = localePath(locale, '/');
+const contentType = entry.data.contentType;
+const structuredData: Record<string, unknown>[] = [];
+const normalizedHead = normalizeSeoHead({ head, entry, pathname: Astro.url.pathname, locale });
+
+if (contentType === 'article') {
+	const profile = await getPublicProfile(locale);
+	const articleUrl = absoluteUrl(sitePath(`/${entry.id}`));
+	const breadcrumbItems = [
+		{ name: UI.common.home, item: absoluteUrl(homePath) },
+		{ name: UI.nav.writing, item: absoluteUrl(localePath(locale, '/writing/')) },
+	];
+	if (entry.data.series) {
+		breadcrumbItems.push({
+			name: seriesName(entry.data.series, locale),
+			item: absoluteUrl(localePath(locale, `/writing/${entry.data.series}/`)),
+		});
+	}
+	breadcrumbItems.push({ name: entry.data.title, item: articleUrl });
+
+	structuredData.push({
+		'@context': 'https://schema.org',
+		'@type': 'BlogPosting',
+		'@id': `${articleUrl}#article`,
+		mainEntityOfPage: articleUrl,
+		headline: entry.data.title,
+		description: entry.data.description,
+		image: absoluteUrl(entry.data.seoImage ?? DEFAULT_SEO_IMAGE),
+		datePublished: entry.data.pubDate?.toISOString(),
+		dateModified: entry.data.updatedDate?.toISOString() ?? entry.data.pubDate?.toISOString(),
+		author: personJsonLd(profile),
+		publisher: { '@id': profile.id },
+		keywords: entry.data.tags,
+		articleSection: entry.data.series,
+		inLanguage: locale,
+		isPartOf: { '@id': absoluteUrl(`${homePath}#website`) },
+	});
+	structuredData.push({
+		'@context': 'https://schema.org',
+		'@type': 'BreadcrumbList',
+		itemListElement: breadcrumbItems.map((item, index) => ({
+			'@type': 'ListItem',
+			position: index + 1,
+			...item,
+		})),
+	});
+} else if (contentType === 'answer') {
+	const answerUrl = sitePath(`/${entry.id}`);
+	structuredData.push({
+		'@context': 'https://schema.org',
+		'@type': 'FAQPage',
+		'@id': absoluteUrl(`${answerUrl}#faq`),
+		mainEntity: [
+			{
+				'@type': 'Question',
+				name: entry.data.question,
+				acceptedAnswer: { '@type': 'Answer', text: entry.data.shortAnswer },
+			},
+		],
+	});
+	structuredData.push(
+		breadcrumbJsonLd([
+			{ name: UI.common.home, path: homePath },
+			{ name: UI.answers.label, path: localePath(locale, '/answers/') },
+			{ name: entry.data.question ?? entry.data.title, path: answerUrl },
+		]),
+	);
+} else if (contentType === 'note') {
+	const profile = await getPublicProfile(locale);
+	const notePaths = sitePath(`/${entry.id}`);
+	const noteUrl = absoluteUrl(notePaths);
+	structuredData.push({
+		'@context': 'https://schema.org',
+		'@type': 'BlogPosting',
+		'@id': `${noteUrl}#note`,
+		mainEntityOfPage: noteUrl,
+		headline: entry.data.title,
+		description: entry.data.description,
+		datePublished: entry.data.pubDate?.toISOString(),
+		dateModified: entry.data.updatedDate?.toISOString() ?? entry.data.pubDate?.toISOString(),
+		author: personJsonLd(profile),
+		publisher: { '@id': profile.id },
+		keywords: entry.data.tags,
+		inLanguage: locale,
+		isPartOf: { '@id': absoluteUrl(`${homePath}#website`) },
+	});
+	structuredData.push(
+		breadcrumbJsonLd([
+			{ name: UI.common.home, path: homePath },
+			{ name: UI.notes.label, path: localePath(locale, '/notes/') },
+			{ name: entry.data.title, path: notePaths },
+		]),
+	);
+}
+---
+
+<script is:inline>
+	(() => {
+		const preferenceKey = 'refined-x-theme-preference';
+		const starlightKey = 'starlight-theme';
+		const root = document.documentElement;
+		const getStored = (key) => {
+			try {
+				return localStorage.getItem(key);
+			} catch {
+				return null;
+			}
+		};
+		const setStored = (key, value) => {
+			try {
+				localStorage.setItem(key, value);
+			} catch {
+				// Storage can be unavailable; still apply the page theme.
+			}
+		};
+		const storedTheme = getStored(preferenceKey);
+		const legacyTheme = getStored(starlightKey);
+		const resolvedTheme =
+			storedTheme === 'dark' || storedTheme === 'light'
+				? storedTheme
+				: legacyTheme === 'dark'
+					? 'dark'
+					: 'light';
+		root.dataset.theme = resolvedTheme;
+		root.style.colorScheme = resolvedTheme;
+		setStored(preferenceKey, resolvedTheme);
+		setStored(starlightKey, resolvedTheme);
+	})();
+</script>
+{normalizedHead.map(({ tag: Tag, attrs, content }: SeoHeadTag) => <Tag {...attrs} set:html={content} />)}
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+<link rel="icon" type="image/png" href={withBase('/favicon.png')} />
+<link rel="apple-touch-icon" href={withBase('/apple-touch-icon.png')} />
+{isHome && (
+	<>
+		<link rel="preload" as="image" href={withBase('/asset/hero-home.jpg')} fetchpriority="high" />
+	</>
+)}
+{structuredData.map((value) => (
+	<script is:inline type="application/ld+json" set:html={JSON.stringify(value)} />
+))}

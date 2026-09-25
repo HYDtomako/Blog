@@ -1,0 +1,55 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import ArticleCards from '../ArticleCards.astro';
+import Icon from '../Icon.astro';
+import WritingPagination from '../WritingPagination.astro';
+import type { PublicDocEntry } from '../../lib/public-data';
+import { localeFromPath, localizedHref } from '../../lib/locale';
+import { getSiteCopy } from '../../lib/site-copy';
+
+interface Props {
+	articles: PublicDocEntry[];
+	pageNumber: number;
+	pageCount: number;
+	totalArticles: number;
+}
+
+const locale = localeFromPath(Astro.url.pathname);
+const copy = getSiteCopy(locale);
+const UI = copy.ui;
+
+const { articles, pageNumber, pageCount, totalArticles } = Astro.props;
+const archiveSummary = [copy.brand.writingLede, `${UI.writing.articleCountSuffix(totalArticles)} · ${UI.writing.pageProgress(pageNumber, pageCount)}`].filter(Boolean).join(' ');
+---
+
+<StarlightPage
+	frontmatter={{
+		title: `${UI.writing.label}｜${UI.writing.pageCrumb(pageNumber)}`,
+		description: archiveSummary,
+		template: 'splash',
+		contentType: 'page',
+		slug: `writing/page/${pageNumber}`,
+		tags: ['writing', 'pagination'],
+		llmSummary: `${UI.writing.label} ${UI.writing.pageProgress(pageNumber, pageCount)} · ${UI.writing.articleCountSuffix(totalArticles)}`,
+	}}
+>
+	<div class="wrap page page-writing">
+		<div class="crumbs">
+			<a href={localizedHref(locale, '/')}>{UI.writing.homeCrumb}</a><span class="sep">/</span>
+			<a href={localizedHref(locale, '/writing/')}>{UI.writing.label}</a><span class="sep">/</span><span>{UI.writing.pageCrumb(pageNumber)}</span>
+		</div>
+		<h1 id="_top" class="display page-heading">{UI.writing.label}</h1>
+		<p class="lede page-lede">
+			{archiveSummary}
+		</p>
+
+		<div class="section-head section-head-spaced" aria-labelledby="writing-archive-heading">
+			<h2 id="writing-archive-heading" class="section-title">{UI.writing.archiveHeading}</h2>
+			<a class="more-link" href={localizedHref(locale, '/topics/')}>{UI.writing.browseByTopic} <Icon name="arrow-right" size={14} /></a>
+		</div>
+
+		<ArticleCards articles={articles} />
+
+		<WritingPagination pageNumber={pageNumber} pageCount={pageCount} />
+	</div>
+</StarlightPage>

@@ -1,0 +1,195 @@
+---
+import { getSiteCopy } from '../lib/site-copy';
+import Icon from './Icon.astro';
+import ArticleToc from './ArticleToc.astro';
+import ArticleComments from './ArticleComments.astro';
+import PageStats from './PageStats.astro';
+import { siteConfig } from '../../site.config.mjs';
+import {
+	estimateReadingMinutes,
+	formatArticleDate,
+	getSeriesEntries,
+	isSameCalendarDay,
+	seriesName,
+} from '../lib/articles';
+import { selectRelatedArticles } from '../lib/related-articles';
+import { extractTocFromMarkdown, shouldShowToc } from '../lib/article-toc';
+import { withBase } from '../lib/paths';
+import { getArticles, getPublicProfile, topicSlug } from '../lib/public-data';
+import { localeFromPath, localizedHref } from '../lib/locale';
+
+const locale = localeFromPath(Astro.url.pathname);
+const copy = getSiteCopy(locale);
+const UI = copy.ui;
+
+const entry = Astro.locals.starlightRoute.entry;
+const data = entry.data || {};
+const {
+	contentType = 'page',
+	title = 'Not Found',
+	tags = [],
+	series = undefined,
+	pubDate = undefined,
+	updatedDate = undefined,
+} = data;
+
+const allSeries = await getSeriesEntries();
+const seriesMeta = allSeries.find((x) => x.id === `${locale}/${series}`)?.data;
+
+const allArticles = await getArticles(locale);
+const rel = selectRelatedArticles(entry, allArticles, 3);
+
+const publicProfile = await getPublicProfile(locale);
+const readingMinutes = estimateReadingMinutes(entry.body?.length ?? 0);
+const effectiveUpdated = updatedDate ?? pubDate;
+const showUpdated =
+	pubDate && effectiveUpdated && !isSameCalendarDay(pubDate, effectiveUpdated);
+const pubDateIso = pubDate?.toISOString().slice(0, 10);
+const updatedIso = effectiveUpdated?.toISOString().slice(0, 10);
+
+const tocItems = contentType === 'article' ? extractTocFromMarkdown(entry.body ?? '') : [];
+const showToc = shouldShowToc(tocItems);
+---
+{contentType === 'note' ? (
+  <article class="wrap page page-article">
+    <nav class="crumbs" aria-label={UI.common.breadcrumbAria}>
+      <a href={localizedHref(locale, '/')}>{UI.common.home}</a><span class="sep">/</span>
+      <a href={localizedHref(locale, '/notes/')}>{UI.notes.label}</a>
+    </nav>
+
+    <header class="article-heading">
+      <h1 id="_top" class="display article-title">{title}</h1>
+      <div class="meta-bar article-meta">
+        <span class="who">{publicProfile.name}</span>
+        {pubDate && (
+          <>
+            <span class="dot" aria-hidden="true"></span>
+            <time datetime={pubDateIso}>{UI.common.published} {formatArticleDate(pubDate)}</time>
+          </>
+        )}
+        <span class="dot" aria-hidden="true"></span>
+        <span>{UI.common.readingMinutes(readingMinutes)}</span>
+      </div>
+    </header>
+
+    <hr class="rule-soft article-divider" />
+
+    <div class="article-layout">
+      <div class="article-layout-main">
+        <div class="prose article-body">
+          <slot />
+        </div>
+      </div>
+    </div>
+
+    {siteConfig.stats?.enabled && (
+      <footer class="article-foot">
+        <PageStats path={withBase(`/${entry.id}/`)} />
+      </footer>
+    )}
+  </article>
+) : contentType !== 'article' ? (
+  <slot />
+) : (
+  <article class="wrap page page-article">
+    <nav class="crumbs" aria-label={UI.common.breadcrumbAria}>
+      <a href={localizedHref(locale, '/')}>{UI.common.home}</a><span class="sep">/</span>
+      <a href={localizedHref(locale, '/writing/')}>{UI.nav.writing}</a>
+      {seriesMeta && series && (
+        <>
+          <span class="sep">/</span>
+          <a href={localizedHref(locale, `/writing/${series}/`)}>{seriesMeta.title}</a>
+        </>
+      )}
+    </nav>
+
+    <header class="article-heading">
+      {series && <p class="eyebrow">{seriesName(series, locale)}</p>}
+      <h1 id="_top" class="display article-title">{title}</h1>
+      <div class="meta-bar article-meta">
+        <span class="who">{publicProfile.name}</span>
+        {pubDate && (
+          <>
+            <span class="dot" aria-hidden="true"></span>
+            <time datetime={pubDateIso}>{UI.common.published} {formatArticleDate(pubDate)}</time>
+          </>
+        )}
+        {showUpdated && effectiveUpdated && (
+          <>
+            <span class="dot" aria-hidden="true"></span>
+            <time datetime={updatedIso}>{UI.common.updated} {formatArticleDate(effectiveUpdated)}</time>
+          </>
+        )}
+        <span class="dot" aria-hidden="true"></span>
+        <span>{UI.common.readingMinutes(readingMinutes)}</span>
+      </div>
+      {tags.length > 0 && (
+        <div class="tagrow article-tags">
+          {tags.map((t: string) => (
+            <a href={localizedHref(locale, `/topics/${topicSlug(t, locale)}/`)} class="tag">{t}</a>
+          ))}
+        </div>
+      )}
+    </header>
+
+    <hr class="rule-soft article-divider" />
+
+    <div class="article-layout" data-toc={showToc ? '' : undefined}>
+      <div class="article-layout-main">
+        {showToc && <ArticleToc part="mobile" items={tocItems} />}
+        <div class="prose article-body">
+          {data.llmSummary && (
+            <div class="article-llm-summary">
+              <strong class="summary-title">{UI.writing.summaryTitle}</strong>
+              <div class="summary-content" set:html={data.llmSummary.replace(/\n/g, '<br/>')} />
+            </div>
+          )}
+          <slot />
+        </div>
+      </div>
+      {showToc && <ArticleToc part="rail" items={tocItems} />}
+    </div>
+
+    <footer class="article-foot">
+      {siteConfig.stats?.enabled && <PageStats path={withBase(`/${entry.id}/`)} />}
+      {seriesMeta && series && (
+        <div class="article-return">
+          <a class="btn btn-ghost" href={localizedHref(locale, `/writing/${series}/`)}>
+            <Icon name="return" size={15} />
+            {UI.writing.backToSeries} · {seriesMeta.title}
+          </a>
+        </div>
+      )}
+
+      {siteConfig.comments.enabled && <ArticleComments entryId={entry.id} />}
+
+      {rel.length > 0 && (
+        <>
+          <div class="section-head related-heading" aria-labelledby="related-reading-heading">
+            <h2 id="related-reading-heading" class="section-title">{UI.common.relatedReading}</h2>
+            <span class="mono section-meta">{UI.writing.relatedMeta}</span>
+          </div>
+          <div class="related">
+            {rel.map((r) => (
+              <a class="related-card" href={withBase(`/${r.id}/`)}>
+                <div class="feat-meta">
+                  <span>{seriesName(r.data.series, locale)}</span>
+                  <span>{formatArticleDate(r.data.pubDate!)}</span>
+                </div>
+                <div class="feat-title related-title">{r.data.title || r.id}</div>
+                <div class="pillar-foot related-link">{UI.common.read} <Icon name="arrow-right" size={14} /></div>
+              </a>
+            ))}
+          </div>
+        </>
+      )}
+    </footer>
+  </article>
+)}
+
+{showToc && (
+  <script>
+    import { initArticleToc } from '../scripts/article-toc';
+    initArticleToc();
+  </script>
+)}

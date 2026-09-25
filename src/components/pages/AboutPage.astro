@@ -1,0 +1,141 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { getCollection, render } from 'astro:content';
+import Icon from '../Icon.astro';
+import { absoluteUrl, breadcrumbJsonLd, entryLocale, getPublicProfile, personJsonLd } from '../../lib/public-data';
+import { withBase } from '../../lib/paths';
+import { DEFAULT_LOCALE, localeFromPath, localizedHref, localizedSitePath } from '../../lib/locale';
+import { getSiteCopy } from '../../lib/site-copy';
+
+const locale = localeFromPath(Astro.url.pathname);
+const copy = getSiteCopy(locale);
+const UI = copy.ui;
+
+const profile = await getCollection('profile');
+const resumeEntries = await getCollection('resume');
+const personEntry =
+  profile.find((entry) => entryLocale(entry.id) === locale && entry.data.kind === 'person') ??
+  profile.find((entry) => entry.data.kind === 'person');
+const resume =
+  resumeEntries.find((entry) => entryLocale(entry.id) === locale) ??
+  resumeEntries.find((entry) => entryLocale(entry.id) === DEFAULT_LOCALE);
+
+if (!personEntry || personEntry.data.kind !== 'person' || !resume) {
+  throw new Error('About page requires person profile and resume content');
+}
+const contentLocale = entryLocale(personEntry.id);
+const person = personEntry.data;
+const publicProfile = await getPublicProfile(contentLocale);
+const aboutCopy = copy.brand.about;
+const { Content } = await render(resume);
+const aboutPath = localizedSitePath(locale, '/about/');
+const aboutStructuredData = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    personJsonLd(publicProfile),
+    {
+      '@type': 'ProfilePage',
+      '@id': absoluteUrl(`${aboutPath}#profile`),
+      url: absoluteUrl(aboutPath),
+      name: aboutCopy.pageName,
+      description: resume.data.description,
+      inLanguage: locale,
+      mainEntity: { '@id': publicProfile.id },
+      isPartOf: { '@id': absoluteUrl(`${localizedSitePath(locale, '/')}#website`) },
+    },
+    breadcrumbJsonLd([
+      { name: UI.common.home, path: localizedSitePath(locale, '/') },
+      { name: aboutCopy.crumb, path: aboutPath },
+    ]),
+  ],
+};
+
+---
+
+<StarlightPage
+  frontmatter={{
+    ...resume.data,
+    template: 'splash'
+  }}
+>
+  <script is:inline type="application/ld+json" set:html={JSON.stringify(aboutStructuredData)} />
+
+  <div class="wrap page about-page">
+    <div class="crumbs"><a href={localizedHref(locale, '/')}>{UI.common.home}</a><span class="sep">/</span><span>{aboutCopy.crumb}</span></div>
+    <div class="about-grid">
+      <aside class="about-aside" aria-label={UI.about.profileAria}>
+        <img
+          class="portrait about-avatar"
+          src={withBase('/asset/avatar.jpg')}
+          alt={person.name}
+          width="112"
+          height="112"
+          decoding="async"
+        />
+        <div class="about-identity">
+          <h1 id="_top" class="display about-name">{person.name}</h1>
+        </div>
+        <nav class="about-links" aria-label={UI.about.linksAria}>
+          {person.links?.github && (
+            <a class="about-link" href={person.links.github} target="_blank" rel="noreferrer">
+              <Icon name="external" size={16} />
+              GitHub
+            </a>
+          )}
+          {person.links?.email && (
+            <a class="about-link" href={person.links.email}>
+              <Icon name="mail" size={16} />
+              {person.links.email.replace('mailto:', '')}
+            </a>
+          )}
+          {person.qq && (
+            <span class="about-link about-link-static">
+              <Icon name="message" size={16} />
+              {UI.about.qq(person.qq)}
+            </span>
+          )}
+          <a class="about-link" href={localizedHref(locale, '/projects/')}>
+            <Icon name="grid" size={16} />
+            {UI.about.allProjects}
+          </a>
+        </nav>
+      </aside>
+
+      <div class="about-main">
+        <div class="about-markdown">
+          <Content />
+        </div>
+
+        <section class="cooperation-panel" aria-labelledby="about-cooperation">
+          <h2 id="about-cooperation" class="section-title cooperation-title">
+            {publicProfile.cooperation?.title ?? UI.about.cooperationFallback}
+          </h2>
+          <p class="cooperation-description">{publicProfile.cooperation?.description}</p>
+          <div class="cooperation-actions">
+            {person.links?.email && (
+              <a class="btn btn-solid" href={person.links.email}>
+                <Icon name="mail" size={15} />
+                {UI.about.sendEmail}
+              </a>
+            )}
+            <button class="btn btn-ghost" type="button" data-open-ask data-query={UI.about.askCollaborate(copy.brand.persona)}>{UI.about.askCollaborateButton}</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</StarlightPage>
+
+<style>
+  .about-link-static {
+    cursor: default;
+  }
+  .about-link-static:hover,
+  .about-link-static:focus-visible {
+    color: var(--muted);
+  }
+  .about-link-static:hover svg,
+  .about-link-static:focus-visible svg {
+    color: var(--faint);
+  }
+</style>

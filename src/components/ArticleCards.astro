@@ -1,0 +1,137 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import Icon from './Icon.astro';
+import { estimateReadingMinutes, formatArticleDate, seriesName } from '../lib/articles';
+import { localeFromPath } from '../lib/locale';
+import { withBase } from '../lib/paths';
+import { getSiteCopy } from '../lib/site-copy';
+
+interface Props {
+	articles: CollectionEntry<'docs'>[];
+}
+
+const { articles } = Astro.props;
+const locale = localeFromPath(Astro.url.pathname);
+const UI = getSiteCopy(locale).ui;
+---
+
+<div class="post-list">
+	{
+		articles.map((a) => (
+			<a class="post-card" href={withBase(`/${a.id}/`)}>
+				<div class="post-card-head">
+					<time class="post-card-date" datetime={a.data.pubDate?.toISOString().slice(0, 10)}>
+						{formatArticleDate(a.data.pubDate!)}
+					</time>
+					{a.data.series && <span class="post-card-series">{seriesName(a.data.series, locale)}</span>}
+				</div>
+				<div class="post-card-title">
+					<span>{a.data.title || a.id}</span>
+					<span class="post-card-arrow"><Icon name="arrow-right" size={16} /></span>
+				</div>
+				<p class="post-card-excerpt">{a.data.llmSummary || a.data.description || ''}</p>
+				<div class="post-card-foot">
+					<span class="post-card-read">
+						<Icon name="clock" size={14} />
+						{UI.common.readingMinutes(estimateReadingMinutes(a.body?.length ?? 0))}
+					</span>
+					{a.data.tags.length > 0 && (
+						<span class="post-card-tags">
+							{a.data.tags.map((tag) => <span class="post-card-tag">{tag}</span>)}
+						</span>
+					)}
+				</div>
+			</a>
+		))
+	}
+</div>
+
+<style>
+	.post-list {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr));
+		gap: 16px;
+	}
+	.post-card {
+		display: block;
+		padding: 22px 26px 20px;
+		border: 1px solid var(--line);
+		border-radius: var(--r-lg);
+		transition:
+			border-color var(--duration-fast) var(--ease-out-quart),
+			background var(--duration-fast) var(--ease-out-quart);
+	}
+	.post-card:hover,
+	.post-card:focus-visible {
+		border-color: var(--ink);
+		background: color-mix(in srgb, var(--ink) 3%, transparent);
+	}
+	.post-card-head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 16px;
+		font-family: var(--mono);
+		font-size: 12px;
+		color: var(--faint);
+		letter-spacing: 0.02em;
+	}
+	.post-card-title {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
+		margin-top: 10px;
+		font-family: var(--serif);
+		font-size: 20px;
+		line-height: 1.35;
+		color: var(--ink);
+	}
+	.post-card-arrow {
+		display: inline-flex;
+		flex: none;
+		color: var(--faint);
+		transition:
+			transform var(--duration-mid) var(--ease-out-quart),
+			color var(--duration-fast) var(--ease-out-quart);
+	}
+	.post-card:hover .post-card-arrow,
+	.post-card:focus-visible .post-card-arrow {
+		color: var(--ink);
+		transform: translateX(4px);
+	}
+	.post-card-excerpt {
+		margin: 8px 0 0;
+		font-size: 14px;
+		line-height: 1.65;
+		color: var(--muted);
+		text-wrap: pretty;
+	}
+	.post-card-foot {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 12px;
+		margin-top: 16px;
+	}
+	.post-card-read {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		font-family: var(--mono);
+		font-size: 12px;
+		color: var(--faint);
+	}
+	.post-card-tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+	.post-card-tag {
+		padding: 2px 10px;
+		border: 1px solid var(--line-soft);
+		border-radius: 999px;
+		font-size: 12px;
+		color: var(--muted);
+	}
+</style>

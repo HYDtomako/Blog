@@ -1,0 +1,129 @@
+---
+import { getGitHubActivity } from '../lib/github-activity';
+import { localeFromPath } from '../lib/locale';
+import { getSiteCopy } from '../lib/site-copy';
+
+const locale = localeFromPath(Astro.url.pathname);
+const UI = getSiteCopy(locale).ui;
+
+const activity = await getGitHubActivity();
+
+/** GitHub's calendar starts every week on Sunday, so pad the first partial week. */
+const firstDate = activity ? new Date(`${activity.days[0].date}T00:00:00Z`) : null;
+const lead = firstDate ? firstDate.getUTCDay() : 0;
+const cells = activity ? [...Array.from({ length: lead }, () => null), ...activity.days] : [];
+const weekCount = Math.ceil(cells.length / 7);
+
+const monthFormatter = new Intl.DateTimeFormat(locale, { month: 'short', timeZone: 'UTC' });
+const monthLabels: string[] = [];
+let previousMonth = '';
+for (let week = 0; week < weekCount; week += 1) {
+	const day = cells[week * 7];
+	if (!day) {
+		monthLabels.push('');
+		continue;
+	}
+	const label = monthFormatter.format(new Date(`${day.date}T00:00:00Z`));
+	monthLabels.push(label === previousMonth ? '' : label);
+	previousMonth = label;
+}
+---
+
+{
+	activity && (
+		<section class="gh-activity" aria-labelledby="github-activity-heading">
+			<div class="section-head section-head-large projects-section-head">
+				<div>
+					<p class="eyebrow">GitHub</p>
+					<h2 id="github-activity-heading" class="section-title">
+						{UI.projects.activityHeading}
+					</h2>
+				</div>
+				<span class="mono section-meta">{UI.projects.activityTotal(activity.total)}</span>
+			</div>
+			<div class="gh-activity-panel">
+				<div class="gh-activity-scroll">
+					<div class="gh-activity-inner" style={`--gh-weeks:${weekCount}`}>
+						<div class="gh-activity-months" aria-hidden="true">
+							{monthLabels.map((label) => (
+								<span class="gh-activity-month">{label}</span>
+							))}
+						</div>
+						<div class="gh-activity-grid" role="img" aria-label={UI.projects.activityAria}>
+							{cells.map((day) =>
+								day ? (
+									<span
+										class="gh-activity-day"
+										data-level={day.level}
+										title={`${day.date} · ${day.count}`}
+									/>
+								) : (
+									<span class="gh-activity-day gh-activity-day-pad" />
+								),
+							)}
+						</div>
+					</div>
+				</div>
+				<p class="mono gh-activity-synced">{UI.projects.activitySynced(activity.syncedAt)}</p>
+			</div>
+		</section>
+	)
+}
+
+<style>
+	.gh-activity-panel {
+		display: inline-block;
+		max-width: 100%;
+		margin-top: 18px;
+		padding: 18px 22px;
+		border: 1px solid var(--line);
+		border-radius: var(--r-lg);
+	}
+	.gh-activity-scroll {
+		overflow-x: auto;
+		padding-bottom: 4px;
+	}
+	.gh-activity-inner {
+		display: inline-block;
+	}
+	.gh-activity-months,
+	.gh-activity-grid {
+		display: grid;
+		grid-template-columns: repeat(var(--gh-weeks), 11px);
+		gap: 3px;
+	}
+	.gh-activity-month {
+		font-family: var(--mono);
+		font-size: 11px;
+		line-height: 1;
+		color: var(--faint);
+		white-space: nowrap;
+	}
+	.gh-activity-grid {
+		grid-template-rows: repeat(7, 11px);
+		margin-top: 8px;
+	}
+	.gh-activity-day {
+		width: 11px;
+		height: 11px;
+		border-radius: 2px;
+		background: color-mix(in srgb, var(--ink) 6%, transparent);
+	}
+	.gh-activity-day[data-level='1'] {
+		background: color-mix(in srgb, var(--ink) 24%, transparent);
+	}
+	.gh-activity-day[data-level='2'] {
+		background: color-mix(in srgb, var(--ink) 44%, transparent);
+	}
+	.gh-activity-day[data-level='3'] {
+		background: color-mix(in srgb, var(--ink) 64%, transparent);
+	}
+	.gh-activity-day[data-level='4'] {
+		background: color-mix(in srgb, var(--ink) 88%, transparent);
+	}
+	.gh-activity-synced {
+		margin: 12px 0 0;
+		font-size: 11px;
+		color: var(--faint);
+	}
+</style>

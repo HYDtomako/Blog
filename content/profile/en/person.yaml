@@ -1,0 +1,30 @@
+kind: person
+name: Your Name
+aliases: [Your Name]
+title: One line about what you do, e.g. full-stack development / AI products
+bio: |-
+  Two or three sentences about yourself: what you work on, what you care about, and why you keep this site.
+  This text appears on the home page, the about page, and in machine-readable surfaces such as /api/profile.json and llms.txt.
+stats:
+  - value: "1"
+    label: year writing
+  - value: "3"
+    label: focus areas
+knowsAbout:
+  - Topic one
+  - Topic two
+  - Topic three
+capabilities:
+  - title: Focus one
+    description: One line about what you build or study in this area.
+  - title: Focus two
+    description: One line about what you build or study in this area.
+timeline:
+  - period: "2026"
+    role: Something you did
+    description: One line about what you were doing at the time.
+location: Your city
+links:
+  website: https://example.com
+  github: https://github.com/yourname
+  email: mailto:you@example.com

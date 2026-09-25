@@ -1,0 +1,48 @@
+---
+import { localeFromPath } from '../lib/locale';
+import { withBase } from '../lib/paths';
+import { getSiteCopy } from '../lib/site-copy';
+
+interface Props {
+	articles: number;
+	notes: number;
+}
+
+const { articles, notes } = Astro.props;
+const locale = localeFromPath(Astro.url.pathname);
+const UI = getSiteCopy(locale).ui;
+const statsBase = import.meta.env.PUBLIC_STATS_URL ?? '';
+const endpoint = withBase(`${statsBase}/api/stats/total`);
+const format = (value: number) => value.toLocaleString(locale);
+---
+
+<section
+	class="wrap section section-compact-top section-home-end"
+	aria-labelledby="home-stats-heading"
+	data-site-stats
+	data-stats-endpoint={endpoint}
+	data-stats-locale={locale}
+>
+	<div class="section-head site-stats-head">
+		<h2 id="home-stats-heading" class="section-title">{UI.stats.heading}</h2>
+	</div>
+	<dl class="stats-grid">
+		<div class="stats-cell">
+			<dt>{format(articles)}</dt>
+			<dd>{UI.stats.articles}</dd>
+		</div>
+		<div class="stats-cell">
+			<dt>{format(notes)}</dt>
+			<dd>{UI.stats.notes}</dd>
+		</div>
+		<div class="stats-cell">
+			<dt data-stats-total>—</dt>
+			<dd>{UI.stats.totalViews}</dd>
+		</div>
+	</dl>
+	<p class="stats-note" hidden data-stats-note>{UI.stats.failed}</p>
+	<script>
+		import { initSiteStats } from '../scripts/site-stats';
+		initSiteStats();
+	</script>
+</section>

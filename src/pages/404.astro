@@ -1,0 +1,47 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import Icon from '../components/Icon.astro';
+import { askPageUrl } from '../lib/paths';
+import { localeFromPath, localePrefix, localizedHref } from '../lib/locale';
+import { getSiteCopy } from '../lib/site-copy';
+
+const locale = localeFromPath(Astro.url.pathname);
+const copy = getSiteCopy(locale);
+const UI = copy.ui;
+---
+
+<StarlightPage
+	frontmatter={{
+		title: '404',
+		description: UI.common.notFoundDescription,
+		template: 'splash',
+		contentType: 'page',
+		slug: '404',
+		llmSummary: UI.common.notFoundDescription,
+	}}
+>
+	<div class="wrap not-found">
+		<p class="eyebrow">404</p>
+		<h1 id="_top" class="display not-found-title">{UI.common.notFoundTitle}</h1>
+		<p class="lede not-found-lede">{UI.common.notFoundLede}</p>
+		<form class="ask not-found-ask" action={askPageUrl('', undefined, localePrefix(locale))} method="get" role="search">
+			<div class="ask-row">
+				<Icon name="spark" size={19} />
+				<label class="visually-hidden" for="not-found-query">{UI.ask.overlayHeading}</label>
+				<input
+					id="not-found-query"
+					name="q"
+					class="ask-input"
+					placeholder={copy.ask.overlayPlaceholder}
+					autocomplete="off"
+				/>
+				<button class="ask-send" type="submit">{UI.ask.button}</button>
+			</div>
+		</form>
+		<div class="not-found-links">
+			<a class="btn btn-ghost" href={localizedHref(locale, '/')}>{UI.common.backHome}</a>
+			<a class="btn btn-ghost" href={localizedHref(locale, '/writing/')}>{UI.common.browseWriting}</a>
+			<a class="btn btn-ghost" href={localizedHref(locale, '/answers/')}>{UI.answers.label}</a>
+		</div>
+	</div>
+</StarlightPage>

@@ -1,0 +1,239 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { getCollection } from 'astro:content';
+import ArticleFeed from '../ArticleFeed.astro';
+import AskForm from '../AskForm.astro';
+import EntryList from '../EntryList.astro';
+import Icon from '../Icon.astro';
+import SiteStats from '../SiteStats.astro';
+import { absoluteUrl, entryLocale, getArticles, getNotes, getPublicProfile, personJsonLd } from '../../lib/public-data';
+import { localeFromPath, localePath, localePrefix, localizedHref } from '../../lib/locale';
+import { askPageUrl, withBase } from '../../lib/paths';
+import { getSiteCopy, SITE_BRAND } from '../../lib/site-copy';
+import { siteConfig } from '../../../site.config.mjs';
+
+const locale = localeFromPath(Astro.url.pathname);
+const copy = getSiteCopy(locale);
+const UI = copy.ui;
+const homePath = localePath(locale, '/');
+const askPath = localePath(locale, '/ask/');
+
+const articles = await getArticles(locale);
+
+const featuredArticles = articles.slice(0, 5);
+const notes = await getNotes(locale);
+const featuredNotes = notes.slice(0, 4);
+
+const openSourceEntries = (await getCollection('projects'))
+	.filter((entry) => entryLocale(entry.id) === locale && entry.data.category === 'oss')
+	.sort((a, b) => a.data.sortRank - b.data.sortRank || a.data.title.localeCompare(b.data.title, locale))
+	.slice(0, 3)
+	.map(({ data }) => ({
+		meta: data.tags[0] ?? '',
+		title: data.title,
+		excerpt: data.description,
+		href: data.url ?? data.repository,
+		external: true,
+	}));
+
+const publicProfile = await getPublicProfile(locale);
+const articleCount = articles.length;
+const noteCount = notes.length;
+const githubUrl = siteConfig.social?.github ?? '';
+const homeStructuredData = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    personJsonLd(publicProfile),
+    {
+      '@type': 'WebSite',
+      '@id': absoluteUrl(`${homePath}#website`),
+      url: absoluteUrl(homePath),
+      name: SITE_BRAND,
+      alternateName: [...copy.brand.alternateNames],
+      description: copy.brand.description,
+      inLanguage: locale,
+      author: { '@id': publicProfile.id },
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: {
+          '@type': 'EntryPoint',
+          urlTemplate: `${absoluteUrl(askPath)}?q={search_term_string}`,
+        },
+        'query-input': 'required name=search_term_string',
+      },
+    },
+    {
+      '@type': 'WebPage',
+      '@id': absoluteUrl(`${homePath}#webpage`),
+      url: absoluteUrl(homePath),
+      name: copy.brand.homeTitle,
+      description: copy.brand.description,
+      inLanguage: locale,
+      isPartOf: { '@id': absoluteUrl(`${homePath}#website`) },
+      about: { '@id': publicProfile.id },
+    },
+  ],
+};
+---
+
+<StarlightPage
+  frontmatter={{
+    title: copy.brand.homeTitle,
+    description: copy.brand.description,
+    template: 'splash',
+    contentType: 'page',
+    slug: 'index',
+    llmSummary: `${SITE_BRAND} is ${copy.brand.persona}'s public content site for articles, projects, profile, and machine-readable surfaces.`,
+  }}
+>
+  <script is:inline type="application/ld+json" set:html={JSON.stringify(homeStructuredData)} />
+
+  <section class="heroB" aria-label={UI.home.sectionAria}>
+    <div class="heroB-theme-stack" aria-hidden="true">
+      <div class="heroB-theme-layer heroB-theme-layer--light"></div>
+      <div class="heroB-theme-layer heroB-theme-layer--dark"></div>
+    </div>
+    <div class="wrap heroB-inner">
+      <div class="hero-glass-mount">
+        <div class="hero-glass-body">
+          <div class="hero-glass-identity">
+            <img
+              class="portrait hero-avatar"
+              src={withBase('/asset/avatar.jpg')}
+              alt={publicProfile.name}
+              width={130}
+              height={130}
+              decoding="sync"
+              fetchpriority="high"
+            />
+            <h1 id="_top" class="display heroB-title">
+              <span class="typewriter">{copy.brand.homeHeading}</span>
+            </h1>
+            <div class="hero-meta">
+              {publicProfile.location && (
+                <span class="hero-location">
+                  <Icon name="map-pin" size={18} />
+                  {publicProfile.location}
+                </span>
+              )}
+              {
+                githubUrl && (
+                  <a
+                    class="hero-github"
+                    href={githubUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`GitHub · ${githubUrl.replace(/^https?:\/\/(www\.)?/, '')}`}
+                    title="GitHub"
+                  >
+                    <Icon name="github" size={22} />
+                  </a>
+                )
+              }
+            </div>
+          </div>
+          <AskForm
+            variant="hero"
+            placeholder={copy.ask.placeholder}
+            inputId="hero-query"
+            action={askPageUrl('', undefined, localePrefix(locale))}
+          />
+        </div>
+        {copy.brand.homeLede && (
+          <p class="lede hero-description hero-glass-lede">{copy.brand.homeLede}</p>
+        )}
+      </div>
+    </div>
+  </section>
+
+  <div class="home-body">
+    <section class="wrap section" aria-labelledby="home-about-heading">
+      <div class="section-head">
+        <h2 id="home-about-heading" class="section-title">{UI.home.aboutHeading}</h2>
+        <a class="more-link" href={localizedHref(locale, '/about/')}>{UI.home.aboutLink} <Icon name="arrow-right" size={14} /></a>
+      </div>
+      <div class="home-about">
+        <div class="home-about-bio-body">
+          {(publicProfile.description ?? '').split('\n').filter(Boolean).map((paragraph) => (
+            <p class="home-about-bio">{paragraph}</p>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    {featuredArticles.length > 0 && (
+      <section class="wrap section section-compact-top" aria-labelledby="home-writing-heading">
+        <div class="section-head">
+          <h2 id="home-writing-heading" class="section-title">{UI.home.latestHeading}</h2>
+          <a class="more-link" href={localizedHref(locale, '/writing/')}>{UI.home.blogLink} <Icon name="arrow-right" size={14} /></a>
+        </div>
+        <ArticleFeed articles={featuredArticles} />
+      </section>
+    )}
+
+    {featuredNotes.length > 0 && (
+      <section class="wrap section section-compact-top" aria-labelledby="home-notes-heading">
+        <div class="section-head">
+          <h2 id="home-notes-heading" class="section-title">{UI.home.notesHeading}</h2>
+          <a class="more-link" href={localizedHref(locale, '/notes/')}>{UI.home.notesLink} <Icon name="arrow-right" size={14} /></a>
+        </div>
+        <ArticleFeed articles={featuredNotes} />
+      </section>
+    )}
+
+    {openSourceEntries.length > 0 && (
+      <section class="wrap section section-compact-top" aria-labelledby="home-oss-heading">
+        <div class="section-head">
+          <h2 id="home-oss-heading" class="section-title">{UI.home.ossHeading}</h2>
+          <a class="more-link" href={localizedHref(locale, '/projects/')}>{UI.home.ossLink} <Icon name="arrow-right" size={14} /></a>
+        </div>
+        <EntryList entries={openSourceEntries} />
+      </section>
+    )}
+
+    {siteConfig.stats?.enabled && <SiteStats articles={articleCount} notes={noteCount} />}
+  </div>
+
+</StarlightPage>
+
+<style>
+  .home-body {
+    background-image: var(--bg-canvas);
+    background-repeat: no-repeat;
+    background-size: 100% 100vh;
+  }
+  .home-about {
+    padding-top: 24px;
+    border-top: 1px solid var(--line-soft);
+  }
+  .home-about-bio-body {
+    max-width: var(--read);
+  }
+  .home-about-bio {
+    margin: 0;
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.85;
+    text-wrap: pretty;
+  }
+  .home-about-bio + .home-about-bio {
+    margin-top: 14px;
+  }
+  .hero-meta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    margin-top: 14px;
+  }
+  .hero-location {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .hero-meta .hero-github {
+    margin-top: 0;
+  }
+</style>

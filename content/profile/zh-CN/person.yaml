@@ -1,0 +1,30 @@
+kind: person
+name: 你的名字
+aliases: [Your Name]
+title: 一句话说明你的方向，例如「全栈开发 / AI 应用」
+bio: |-
+  用两三句话介绍你自己：在做什么、关心什么问题、为什么写这个站点。
+  这段文字会出现在首页、关于页，以及 /api/profile.json、llms.txt 这类机器可读接口里。
+stats:
+  - value: "1"
+    label: 年写作
+  - value: "3"
+    label: 个方向
+knowsAbout:
+  - 主题一
+  - 主题二
+  - 主题三
+capabilities:
+  - title: 方向一
+    description: 用一句话说明你在这个方向做过什么、关注什么。
+  - title: 方向二
+    description: 用一句话说明你在这个方向做过什么、关注什么。
+timeline:
+  - period: "2026"
+    role: 一段经历
+    description: 用一句话说明这段时间你在做什么。
+location: 你所在的城市
+links:
+  website: https://example.com
+  github: https://github.com/yourname
+  email: mailto:you@example.com

@@ -1,0 +1,43 @@
+---
+import { getSiteCopy } from '../lib/site-copy';
+import { pageHref } from '../lib/articles';
+import { localeFromPath } from '../lib/locale';
+
+interface Props {
+	pageNumber: number;
+	pageCount: number;
+}
+
+const { pageNumber, pageCount } = Astro.props;
+const locale = localeFromPath(Astro.url.pathname);
+const copy = getSiteCopy(locale);
+const UI = copy.ui;
+---
+
+{
+	pageCount > 1 && (
+		<nav aria-label={UI.common.paginationAria} class="writing-pagination">
+			{pageNumber > 1 && (
+				<a class="writing-pagination-nav" href={pageHref(pageNumber - 1, locale)} rel="prev">
+					{UI.common.prevPage}
+				</a>
+			)}
+			{Array.from({ length: pageCount }, (_, i) => i + 1).map((n) =>
+				n === pageNumber ? (
+					<span class="writing-pagination-current" aria-current="page">
+						{n}
+					</span>
+				) : (
+					<a class="writing-pagination-link" href={pageHref(n, locale)}>
+						{n}
+					</a>
+				),
+			)}
+			{pageNumber < pageCount && (
+				<a class="writing-pagination-nav" href={pageHref(pageNumber + 1, locale)} rel="next">
+					{UI.common.nextPage}
+				</a>
+			)}
+		</nav>
+	)
+}

@@ -1,0 +1,91 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import ArticleCards from '../ArticleCards.astro';
+import Icon from '../Icon.astro';
+import SeriesGrid from '../SeriesGrid.astro';
+import WritingPagination from '../WritingPagination.astro';
+import { ARTICLE_PAGE_SIZE, getArticlePageCount, seriesOrder } from '../../lib/articles';
+import { breadcrumbJsonLd, collectionPageJsonLd, docPath, getArticles } from '../../lib/public-data';
+import { localeFromPath, localizedHref, localizedSitePath } from '../../lib/locale';
+import { getSiteCopy } from '../../lib/site-copy';
+
+const locale = localeFromPath(Astro.url.pathname);
+const copy = getSiteCopy(locale);
+const UI = copy.ui;
+
+const articles = await getArticles(locale);
+const hasSeries = seriesOrder(locale).length > 0;
+
+const pageCount = getArticlePageCount(articles.length);
+const pageOneArticles = articles.slice(0, ARTICLE_PAGE_SIZE);
+const archiveSummary = [copy.brand.writingLede, UI.writing.articleCountSuffix(articles.length)].filter(Boolean).join(' ');
+
+const byYear: Record<string, typeof pageOneArticles> = {};
+pageOneArticles.forEach((a) => {
+  const y = String(a.data.pubDate!.getUTCFullYear());
+  if (!byYear[y]) byYear[y] = [];
+  byYear[y].push(a);
+});
+const years = Object.keys(byYear).sort((a, b) => Number(b) - Number(a));
+const writingPath = localizedSitePath(locale, '/writing/');
+const structuredData = [
+  collectionPageJsonLd({
+    path: writingPath,
+    name: UI.writing.label,
+    description: archiveSummary,
+    items: pageOneArticles.map((article) => ({ name: article.data.title, url: docPath(article) })),
+    locale,
+  }),
+  breadcrumbJsonLd([
+    { name: UI.writing.homeCrumb, path: localizedSitePath(locale, '/') },
+    { name: UI.writing.label, path: writingPath },
+  ]),
+];
+---
+
+<StarlightPage
+  frontmatter={{
+    title: UI.writing.label,
+    description: archiveSummary,
+    template: 'splash',
+    contentType: 'page',
+    slug: 'writing',
+    llmSummary: archiveSummary,
+  }}
+>
+  {structuredData.map((value) => (
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(value)} />
+  ))}
+  <div class="wrap page page-writing">
+    <div class="crumbs"><a href={localizedHref(locale, '/')}>{UI.writing.homeCrumb}</a><span class="sep">/</span><span>{UI.writing.label}</span></div>
+    <h1 id="_top" class="display page-heading">{UI.writing.label}</h1>
+    <p class="lede page-lede">{archiveSummary}</p>
+
+    {articles.length > 0 && (
+      <>
+        {hasSeries && (
+          <>
+            <div class="section-head section-head-spaced" aria-labelledby="writing-series-heading">
+              <h2 id="writing-series-heading" class="section-title">{UI.writing.seriesHeading}</h2>
+            </div>
+            <SeriesGrid />
+          </>
+        )}
+
+        <div class="section-head section-head-large" aria-labelledby="writing-archive-heading">
+          <h2 id="writing-archive-heading" class="section-title">{UI.writing.archiveHeading}</h2>
+          <a class="more-link" href={localizedHref(locale, '/topics/')}>{UI.writing.browseByTopic} <Icon name="arrow-right" size={14} /></a>
+        </div>
+
+        {years.map((y) => (
+          <section class="archive-year" aria-labelledby={`archive-year-${y}`}>
+            <h3 id={`archive-year-${y}`} class="mono archive-year-heading">{y}</h3>
+            <ArticleCards articles={byYear[y]} />
+          </section>
+        ))}
+      </>
+    )}
+
+    <WritingPagination pageNumber={1} pageCount={pageCount} />
+  </div>
+</StarlightPage>

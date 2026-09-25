@@ -1,0 +1,77 @@
+name: Deploy to GitHub Pages (Refined-X sample demo)
+
+# Instance note: this workflow publishes the template's sample demo (demo.refined-x.com,
+# built through deploy/github-pages.config.mjs), not this site. This site deploys from
+# Cloudflare Pages, so the job stays manual-only and never runs on push.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build sample demo
+        env:
+          REFINED_X_INSTANCE_CONFIG: ${{ github.workspace }}/deploy/github-pages.config.mjs
+          PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.PUBLIC_TURNSTILE_SITE_KEY }}
+        run: npm run build
+
+      - name: Verify sample demo
+        env:
+          REFINED_X_INSTANCE_CONFIG: ${{ github.workspace }}/deploy/github-pages.config.mjs
+        run: npm run verify
+
+      - name: Inject custom domain CNAME
+        # Keep out of public/ so template clones do not inherit this domain.
+        run: echo 'demo.refined-x.com' > dist/CNAME
+
+      - name: Archive Pages artifact
+        run: |
+          tar \
+            --dereference --hard-dereference \
+            --directory dist \
+            --exclude=.git \
+            --exclude=.github \
+            -cvf "$RUNNER_TEMP/artifact.tar" \
+            .
+
+      - name: Upload Pages artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: github-pages
+          path: ${{ runner.temp }}/artifact.tar
+          retention-days: 1
+          if-no-files-found: error
+          compression-level: 6
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
