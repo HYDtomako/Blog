@@ -1,9 +1,9 @@
 kind: person
 name: HYD
 aliases: [HYD]
-title: 数据科学与大数据技术 · 2024 级
+title: AI Agent 与 AI Native 产品实践
 bio: |-
-  青岛工学院 2024 级数据科学与大数据技术专业在读。比起把知识停在笔记里，我更习惯把它推到能跑起来的那一步——从脚本、小工具，到真正能用的产品。
+  本科在读。比起把知识停在笔记里，我更习惯把它推到能跑起来的那一步——从脚本、小工具，到真正能用的产品。
   平时在写代码、读论文和做小工具之间来回切换，关注 AI Agent 与 AI Native 的产品形态；喜欢开源、音乐和动漫，想到什么就写进随笔。
 stats: []
 knowsAbout:
@@ -21,20 +21,14 @@ capabilities:
     description: EnCoder、QQbot 等项目在 GitHub 上公开，边用边改。
 timeline:
   - period: "2024.9"
-    role: 入读青岛工学院
-    description: 数据科学与大数据技术专业，预计 2028.6 毕业。
+    role: 开始本科阶段学习
+    description: 方向偏数据与 AI，预计 2028.6 毕业。
   - period: "2025 夏"
     role: 开始公开写作
     description: 在 CSDN 写下第一批学习记录，从 Python 与数据分析起步。
   - period: "2026"
     role: 迁移到自建站点
     description: 用 Astro 与 Starlight 搭起个人站点，文章、随笔与项目统一发布在这里。
-education: 青岛工学院
-educationHistory:
-  - school: 青岛工学院
-    degree: 工学学士
-    major: 数据科学与大数据技术
-    period: 2024.9-2028.6
 location: 山东 青岛
 qq: "2804956879"
 links:

@@ -52,21 +52,6 @@ function buildSchemas(includeAsk: boolean) {
 				email: { type: 'string', format: 'email' },
 				qq: { type: 'string', description: 'QQ 号' },
 				location: { type: 'string', description: '城市级位置' },
-				education: { type: 'string', description: '在读院校' },
-				educationHistory: {
-					type: 'array',
-					description: '教育经历',
-					items: {
-						type: 'object',
-						required: ['school', 'degree', 'major', 'period'],
-						properties: {
-							school: { type: 'string' },
-							degree: { type: 'string' },
-							major: { type: 'string' },
-							period: { type: 'string' },
-						},
-					},
-				},
 			},
 		},
 		...(includeAsk

@@ -3,6 +3,7 @@ import { getSiteCopy } from '../lib/site-copy';
 import Icon from './Icon.astro';
 import ArticleToc from './ArticleToc.astro';
 import ArticleComments from './ArticleComments.astro';
+import PageStats from './PageStats.astro';
 import { siteConfig } from '../../site.config.mjs';
 import {
 	estimateReadingMinutes,
@@ -80,6 +81,12 @@ const showToc = shouldShowToc(tocItems);
         </div>
       </div>
     </div>
+
+    {siteConfig.stats?.enabled && (
+      <footer class="article-foot">
+        <PageStats path={withBase(`/${entry.id}/`)} />
+      </footer>
+    )}
   </article>
 ) : contentType !== 'article' ? (
   <slot />
@@ -144,6 +151,7 @@ const showToc = shouldShowToc(tocItems);
     </div>
 
     <footer class="article-foot">
+      {siteConfig.stats?.enabled && <PageStats path={withBase(`/${entry.id}/`)} />}
       {seriesMeta && series && (
         <div class="article-return">
           <a class="btn btn-ghost" href={localizedHref(locale, `/writing/${series}/`)}>

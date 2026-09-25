@@ -15,9 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Root `wrangler.jsonc`: the site deploys as a Cloudflare Worker with static assets (`npm run build`, then `npx wrangler deploy` uploading `./dist`)
 - Header spark button: the ⌘K ask/search overlay now has a trigger on every page (reuses `ask.openAria` / `ask.openTitle`, previously unused copy)
 - `ask.staticNote`, `askSearch.noResults`, and `askSearch.aiFallbackSearch` copy for builds without a remote Ask endpoint
+- Site stats and per-article counters: the site Worker serves same-origin `/api/stats/page` and `/api/stats/total` from a new D1 database (`worker/`, binding `STATS_DB`); the home page shows post/note counts plus total views (`src/components/SiteStats.astro`) and every article/note shows views with a like button (`src/components/PageStats.astro`). Counts are IP-free (likes dedupe through a weekly HMAC pseudonym) and the widget hides itself when the API is unavailable
+- `npm run deploy`, `npm run db:migrate`, `npm run db:migrate:local`, `npm run dev:worker`, and `npm run test:stats` scripts
 
 ### Changed
 
+- School details removed from the site: `person.yaml` drops `education`/`educationHistory` (the home page's education section is gone), the bio, About page, and author answer no longer name a school, and `/openapi.json` stops advertising the education fields
 - `/ask` and its overlay stop promising a live answer when the build has no `ask.askUrl`: the page says it searches the published content, submit runs the static index only, and the overlay's fallback link points at that search instead of "live AI"
 - `/api/search-index.json` also indexes notes (new `notes` array, `items[].type: 'note'`), so ⌘K and `/ask` search notes alongside articles and curated answers
 - Disabled Pagefind (`pagefind: false`) — site search is the `/ask` index, so the unused ~850 KB index is no longer built

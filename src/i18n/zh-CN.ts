@@ -66,7 +66,6 @@ export const zhCN: UiCopy = {
 		notesLink: '全部随笔',
 		ossHeading: '开源',
 		ossLink: '全部项目',
-		educationHeading: '教育背景',
 	},
 	notes: {
 		label: '随笔',
@@ -181,6 +180,16 @@ export const zhCN: UiCopy = {
 		published: '发布',
 		updated: '更新',
 		readingMinutes: (n) => `${n} 分钟阅读`,
+	},
+	stats: {
+		heading: '站点统计',
+		articles: '博客',
+		notes: '随笔',
+		totalViews: '总浏览量',
+		viewsLabel: '浏览',
+		likeAction: '点赞',
+		unlikeAction: '取消点赞',
+		failed: '统计数据暂时不可用。',
 	},
 	footer: {
 		content: '内容',

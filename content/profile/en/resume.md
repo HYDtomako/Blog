@@ -1,15 +1,15 @@
 ---
 title: About HYD
-description: About HYD — field of study, focus, hobbies, and how to get in touch.
+description: About HYD — focus, hobbies, and how to get in touch.
 contentType: profile
 slug: about
 tags: [profile, resume]
-llmSummary: HYD is a Data Science and Big Data Technology student at Qingdao Institute of Technology (class of 2024) focused on AI agents and AI-native products; this page collects his introduction, hobbies, links, and the story behind the blog.
+llmSummary: HYD is a student focused on AI agents and AI-native products; this page collects his introduction, hobbies, links, and the story behind the blog.
 ---
 
 ## About Me
 
-I am a student at Qingdao Institute of Technology. Outside coursework I am into anime, music, games, and photographing landscapes. Right now I focus on AI agents, and I want to grow into a full-stack developer and an open-source contributor — late to open source, but still moving forward. I have always been a learner; since getting involved, I want to make contributions of my own, and learn from each other along the way.
+I am a student. Outside coursework I am into anime, music, games, and photographing landscapes. Right now I focus on AI agents, and I want to grow into a full-stack developer and an open-source contributor — late to open source, but still moving forward. I have always been a learner; since getting involved, I want to make contributions of my own, and learn from each other along the way.
 
 "Try doing it, instead of thinking about it; the mountain is right there, so head for it."
 

@@ -12,10 +12,28 @@ npm run build
 npm run verify
 ```
 
+`npm run verify` fails when `/ask` ships without its Turnstile widget, so the build needs the public
+site key (`PUBLIC_TURNSTILE_SITE_KEY` in the environment, or a gitignored `.env.production`).
+
 `npm run build` starts with `npm run sync:github`, which refreshes the GitHub contribution
 snapshot (`content/github-activity.json`, rendered by `src/components/GitHubActivity.astro`) and
 the `stars` field of matching `content/projects/<locale>/*.yaml` entries from
 `siteConfig.social.github`. It keeps the previous snapshot and warns when GitHub is unreachable.
+
+## Stats counters
+
+Page-view and like counts are served by the site Worker itself (`worker/`, D1 `hydblog-stats`) on
+the same-origin `/api/stats/*` paths; articles and notes render `src/components/PageStats.astro`,
+the home page renders `src/components/SiteStats.astro`, both gated by `stats.enabled` in
+`site.config.mjs`. The API is optional at runtime: when it is unreachable the counters stay hidden
+and the rest of the page is unaffected.
+
+```sh
+npm run db:migrate:local   # apply worker/migrations to the local D1
+npm run dev:worker         # wrangler dev: ./dist assets plus the stats API
+npm run db:migrate         # apply migrations to the remote D1
+npm run deploy             # build + verify + migrate + wrangler deploy
+```
 
 ## Documentation
 

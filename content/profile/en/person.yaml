@@ -1,9 +1,9 @@
 kind: person
 name: HYD
 aliases: [HYD]
-title: Data Science and Big Data Technology · 2024
+title: AI agents & AI-native product practice
 bio: |-
-  Class of 2024, Data Science and Big Data Technology at Qingdao Institute of Technology. Rather than leaving what I learn in notes, I like pushing it to the point where it runs — from scripts and small tools to products people can actually use.
+  An undergraduate student. Rather than leaving what I learn in notes, I like pushing it to the point where it runs — from scripts and small tools to products people can actually use.
   Most days I move between code, papers, and small tools, with an eye on AI agents and AI-native products. Open source, music, and anime fill the rest; anything worth keeping goes into the notes.
 stats: []
 knowsAbout:
@@ -21,20 +21,14 @@ capabilities:
     description: EnCoder, QQbot, and others published on GitHub and improved while in use.
 timeline:
   - period: "2024.9"
-    role: Started at Qingdao Institute of Technology
-    description: Data Science and Big Data Technology, graduating 2028.6.
+    role: Started undergraduate study
+    description: Leaning toward data and AI, graduating 2028.6.
   - period: "2025 summer"
     role: Started writing in public
     description: First study notes went up on CSDN, beginning with Python and data analysis.
   - period: "2026"
     role: Moved to a site of my own
     description: Built a personal site with Astro and Starlight; articles, notes, and projects now publish here.
-education: Qingdao Institute of Technology
-educationHistory:
-  - school: Qingdao Institute of Technology
-    degree: Bachelor of Engineering
-    major: Data Science and Big Data Technology
-    period: 2024.9-2028.6
 location: Qingdao, Shandong
 qq: "2804956879"
 links:

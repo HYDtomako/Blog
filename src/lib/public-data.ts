@@ -82,7 +82,6 @@ export async function getPublicProfile(locale: string = DEFAULT_LOCALE) {
 		sameAs: Object.values(links).filter((url) => !url.startsWith('mailto:') && url !== links.website),
 		email: cooperation?.contact ?? links.email?.replace(/^mailto:/, ''),
 		location: personEntry.data.location,
-		educationHistory: personEntry.data.educationHistory,
 		qq: personEntry.data.qq,
 		github: links.github,
 		stats: personEntry.data.stats,

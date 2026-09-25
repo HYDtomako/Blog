@@ -1,7 +1,7 @@
 {
 	"owner": "HYDtomako",
 	"syncedAt": "2026-09-25",
-	"total": 46,
+	"total": 45,
 	"days": [
 		{
 			"date": "2025-09-21",
@@ -1410,8 +1410,8 @@
 		},
 		{
 			"date": "2026-06-29",
-			"level": 2,
-			"count": 2
+			"level": 0,
+			"count": 0
 		},
 		{
 			"date": "2026-06-30",
@@ -1850,8 +1850,8 @@
 		},
 		{
 			"date": "2026-09-25",
-			"level": 0,
-			"count": 0
+			"level": 1,
+			"count": 1
 		}
 	]
 }

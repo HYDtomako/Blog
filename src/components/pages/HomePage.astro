@@ -5,6 +5,7 @@ import ArticleFeed from '../ArticleFeed.astro';
 import AskForm from '../AskForm.astro';
 import EntryList from '../EntryList.astro';
 import Icon from '../Icon.astro';
+import SiteStats from '../SiteStats.astro';
 import { absoluteUrl, entryLocale, getArticles, getNotes, getPublicProfile, personJsonLd } from '../../lib/public-data';
 import { localeFromPath, localePath, localePrefix, localizedHref } from '../../lib/locale';
 import { askPageUrl, withBase } from '../../lib/paths';
@@ -36,11 +37,8 @@ const openSourceEntries = (await getCollection('projects'))
 	}));
 
 const publicProfile = await getPublicProfile(locale);
-const educationEntries = publicProfile.educationHistory.map((item) => ({
-	meta: item.period,
-	title: item.school,
-	excerpt: `${item.degree} · ${item.major}`,
-}));
+const articleCount = articles.length;
+const noteCount = notes.length;
 const githubUrl = siteConfig.social?.github ?? '';
 const homeStructuredData = {
   '@context': 'https://schema.org',
@@ -193,14 +191,7 @@ const homeStructuredData = {
       </section>
     )}
 
-    {educationEntries.length > 0 && (
-      <section class="wrap section section-compact-top section-home-end" aria-labelledby="home-education-heading">
-        <div class="section-head">
-          <h2 id="home-education-heading" class="section-title">{UI.home.educationHeading}</h2>
-        </div>
-        <EntryList entries={educationEntries} />
-      </section>
-    )}
+    {siteConfig.stats?.enabled && <SiteStats articles={articleCount} notes={noteCount} />}
   </div>
 
 </StarlightPage>
