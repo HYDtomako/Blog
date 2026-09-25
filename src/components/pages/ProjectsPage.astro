@@ -40,10 +40,10 @@ const eyebrows: Record<string, string> = locale === DEFAULT_LOCALE
   ? { featured: '精选', oss: '开源', courses: '公开课', archive: '归档' }
   : { featured: 'Featured', oss: 'Open source', courses: 'Open Courses', archive: 'Archive' };
 
-const projectsDescription = pageCopy.description;
 const projectsLlmSummary = locale === DEFAULT_LOCALE
   ? `${copy.brand.persona} 公开发布的项目、课程与实验。`
   : `Public projects and experiments by ${copy.brand.persona}.`;
+const projectsDescription = pageCopy.description ?? projectsLlmSummary;
 
 const structuredData = [
   collectionPageJsonLd({

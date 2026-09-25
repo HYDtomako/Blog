@@ -20,7 +20,7 @@ const distRoot = siteConfig.outDir;
 const defaultLocale = siteConfig.locales.default;
 const prefixedLocales = siteConfig.locales.list.filter((locale) => locale !== defaultLocale);
 const localePrefixOf = (locale) => (locale === defaultLocale ? '' : `/${locale}`);
-const hubPages = ['/', '/about/', '/projects/', '/writing/', '/notes/', '/ask/', '/answers/', '/friends/'];
+const hubPages = ['/', '/about/', '/projects/', '/writing/', '/notes/', '/ask/', '/answers/'];
 const localeFiles = [
 	'/api/profile.json',
 	'/api/articles.json',

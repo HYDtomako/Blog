@@ -19,7 +19,7 @@ const copy = getSiteCopy(locale);
 const UI = copy.ui;
 
 const { articles, pageNumber, pageCount, totalArticles } = Astro.props;
-const archiveSummary = `${copy.brand.writingLede} ${UI.writing.articleCountSuffix(totalArticles)} · ${UI.writing.pageProgress(pageNumber, pageCount)}`;
+const archiveSummary = [copy.brand.writingLede, `${UI.writing.articleCountSuffix(totalArticles)} · ${UI.writing.pageProgress(pageNumber, pageCount)}`].filter(Boolean).join(' ');
 ---
 
 <StarlightPage
@@ -40,7 +40,7 @@ const archiveSummary = `${copy.brand.writingLede} ${UI.writing.articleCountSuffi
 		</div>
 		<h1 id="_top" class="display page-heading">{UI.writing.label}</h1>
 		<p class="lede page-lede">
-			{copy.brand.writingLede} {UI.writing.articleCountSuffix(totalArticles)} · {UI.writing.pageProgress(pageNumber, pageCount)}
+			{archiveSummary}
 		</p>
 
 		<div class="section-head section-head-spaced" aria-labelledby="writing-archive-heading">

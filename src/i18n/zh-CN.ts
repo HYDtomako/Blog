@@ -156,7 +156,7 @@ export const zhCN: UiCopy = {
 		linksAria: '联系方式与作品',
 		cooperationFallback: '合作交流',
 		allProjects: '全部作品',
-		askCollaborate: (persona) => `如何与${persona}合作？`,
+		askCollaborate: (persona) => `如何与 ${persona} 合作？`,
 		askCollaborateButton: '问 AI 如何合作',
 		qq: (id) => `QQ ${id}`,
 		sendEmail: '发邮件',
@@ -164,7 +164,6 @@ export const zhCN: UiCopy = {
 	common: {
 		home: '首页',
 		close: '关闭',
-		friends: '友情链接',
 		relatedReading: '相关阅读',
 		breadcrumbAria: '面包屑',
 		articleTocAria: '文章目录',

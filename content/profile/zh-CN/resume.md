@@ -1,10 +1,10 @@
 ---
 title: 关于 HYD
-description: Refined-X 个人发布模板的示例「关于」页面。
+description: HYD 的个人介绍：在读专业、关注方向、日常与联系方式。
 contentType: profile
 slug: about
 tags: [个人资料, 简历]
-llmSummary: HYD 在 Refined-X 中的示例简历。请替换成你自己的简介、能力与联系策略。
+llmSummary: HYD 是青岛工学院 2024 级数据科学与大数据技术专业在读学生，方向是 AI Agent 与 AI Native 产品；这一页是他的自我介绍、兴趣、联系方式，以及做这个博客的缘由。
 ---
 
 ## About Me

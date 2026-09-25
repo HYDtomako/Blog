@@ -1,12 +1,16 @@
 ---
 title: Who is the author?
-description: Demo identity for the Refined-X sample site.
+description: A short introduction to HYD — field of study, focus, and what he builds.
 contentType: answer
 slug: who-is-author
-tags: [profile, identity]
-llmSummary: HYD is a sample persona shipped with the Refined-X starter so the about page and Ask chips work out of the box.
+tags: [author, profile]
+llmSummary: HYD studies Data Science and Big Data Technology at Qingdao Institute of Technology (class of 2024) and works on AI agents and AI-native products, publishing his study notes and the small tools that come out of them.
 question: Who is the author?
-shortAnswer: HYD is the sample persona for this starter — replace the profile YAML with your own identity.
+shortAnswer: HYD is a Data Science and Big Data Technology student at Qingdao Institute of Technology (class of 2024), focused on AI agents and AI-native products — he likes pushing what he learns into small tools that actually run, then open-sourcing them.
 ---
 
-**HYD** is placeholder identity data. Edit `content/profile/person.yaml` and `content/profile/resume.md` to publish your own about page.
+**HYD** studies Data Science and Big Data Technology at Qingdao Institute of Technology (class of 2024) and works on AI agents and AI-native products, moving between code, papers, and small tools.
+
+Rather than leaving what he learns in notes, he pushes it to the point where it runs: read the source until it can be restated, turn the idea into a tool, then come back here to write it up. Public projects live on GitHub (https://github.com/HYDtomako), from agent tooling to reproductions of deep-learning basics.
+
+The rest is on the [about page](/en/about/): anime, music, and landscapes picked up on walks.

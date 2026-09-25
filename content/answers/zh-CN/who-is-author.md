@@ -1,12 +1,16 @@
 ---
 title: 作者是谁？
-description: Refined-X 示例站点的演示身份信息。
+description: HYD 的自我介绍：在读专业、方向与日常在做的事。
 contentType: answer
 slug: who-is-author
-tags: [个人资料, 身份]
-llmSummary: HYD 是 Refined-X 起步模板自带的示例人物，让「关于」页面和 Ask 快捷入口开箱即用。
+tags: [作者, 自我介绍]
+llmSummary: HYD 是青岛工学院 2024 级数据科学与大数据技术专业的学生，方向是 AI Agent 与 AI Native 产品，把学习笔记和做出来的小工具都公开在自己的站点上。
 question: 作者是谁？
-shortAnswer: HYD 是本模板的示例人物——把个人资料 YAML 换成你自己的身份即可。
+shortAnswer: HYD 是青岛工学院 2024 级数据科学与大数据技术专业的学生，方向是 AI Agent 与 AI Native 产品，习惯把学到的东西推到能跑起来的那一步，再开源出来。
 ---
 
-**HYD** 是占位的身份数据。编辑 `content/profile/person.yaml` 和 `content/profile/resume.md`，就能发布属于你自己的「关于」页面。
+**HYD** 是青岛工学院 2024 级数据科学与大数据技术专业的学生，方向是 AI Agent 与 AI Native 产品，平时在写代码、读论文和做小工具之间来回切换。
+
+比起把知识停在笔记里，他更习惯把它推到能跑起来的那一步：源码读到能复述，想法做成能用的工具，再回到站点上复盘。公开的项目在 GitHub（https://github.com/HYDtomako），从 Agent 应用到深度学习的基础复现都有。
+
+代码之外的那一面写在[关于页面](/about/)里：动漫、音乐，还有出门随手拍的风景。
