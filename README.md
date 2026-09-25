@@ -1,381 +1,350 @@
 English | [简体中文](README.zh-CN.md)
 
-# Refined-X
+# Blog — an Astro + Starlight personal site you can make your own
 
-## Your public interface for the agentic web
+A personal publishing site that serves people and agents from one source: Markdown and YAML go in,
+an editorial website plus machine-readable surfaces (`llms.txt`, Markdown mirrors, JSON APIs,
+OpenAPI, RSS) come out.
 
-Publish once for people, search engines, and AI agents.
+This repository is meant to be used as a **template**. Clone it, then work through
+[Make it yours](#make-it-yours) and replace every piece of the sample identity with your own.
 
-Refined-X is an opinionated personal publishing starter built with
-[Astro](https://astro.build/) and [Starlight](https://starlight.astro.build/).
-Write in Markdown and YAML; Refined-X turns the same public corpus into:
+- Live example: <https://hydblog.xyz/>
+- Upstream project: [Refined-X](https://github.com/tower1229/Refined-X) — [demo](https://demo.refined-x.com/)
+- Design references: [joyehuang.me](https://www.joyehuang.me/), [demo.refined-x.com](https://demo.refined-x.com/), Astra (the WordPress theme)
 
-- a calm, editorial website for human readers;
-- Markdown mirrors, `llms.txt`, and structured JSON for language models;
-- OpenAPI and MCP discovery metadata for programmatic clients;
-- an optional NLWeb-compatible Ask service for live, grounded Q&A.
+## What you get
 
-Your content stays in your own repository or knowledge vault. The site is
-static by default, and the AI service is optional.
+| Area            | Ships with                                                                                                              |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Reading         | Blog (`/writing/`), notes (`/notes/`), projects (`/projects/`), curated answers (`/answers/`), about (`/about/`), topics, light/dark theme, two locales — `zh-CN` at `/` and `en` at `/en/` |
+| Asking          | `⌘K` overlay and the `/ask` page, searching curated answers, articles and notes; optional live AI answers               |
+| Machine-readable| `/llms.txt`, `/llms-full.txt`, a Markdown mirror for every page, `/api/*.json`, `/openapi.json`, `/.well-known/about.json`, `/rss.xml`, `/robots.txt`, sitemap |
+| Counters        | Optional site totals on the home page and per-page views + likes, served same-origin by a Cloudflare Worker with D1     |
+| Comments        | Optional giscus discussion on articles                                                                                  |
 
-[Live demo](https://demo.refined-x.com) ·
-[Ask the demo](https://demo.refined-x.com/ask/) ·
-[Use this template](https://github.com/new?template_name=Refined-X&template_owner=tower1229) ·
-[Production example](https://refined-x.com)
+## Stack
 
-![Refined-X home page](docs/screenshots/home.jpg)
-
-## Why Refined-X?
-
-Most personal sites publish HTML and stop there. That works for browsers, but
-agents must still extract meaning from navigation, layout, and scripts.
-
-Refined-X publishes one source corpus through three surfaces:
-
-| Surface          | What it provides                                                        |
-| ---------------- | ----------------------------------------------------------------------- |
-| Human-readable   | Articles, series, projects, profile, answers, topics, light/dark themes |
-| Machine-readable | Per-page Markdown, `llms.txt`, `llms-full.txt`, JSON APIs, OpenAPI      |
-| Agent-queryable  | Static curated search, optional NLWeb `/ask`, optional MCP `ask` tool   |
-
-```mermaid
-flowchart LR
-  A["Markdown + YAML"] --> B["Refined-X build"]
-  B --> C["Editorial website"]
-  B --> D["Agent-readable surfaces"]
-  D --> E["Optional Public Ask"]
-```
-
-## What makes it different
-
-### One corpus, multiple outputs
-
-Articles, answers, projects, series, and public profile data share an explicit
-content schema. Refined-X generates the website and every machine-readable
-surface from that same source of truth.
-
-### Content independent from the theme
-
-`contentRoot`, `publicDir`, and `outDir` are configurable. Keep a personal
-vault or monorepo outside the template, and use Refined-X only as the publishing
-layer.
-
-### Useful without an AI backend
-
-The default site is fully static. `/ask` searches curated answers and public
-articles without a model, database, or runtime bill.
-
-### Live Q&A when you want it
-
-The optional Public Ask Worker adds grounded retrieval and summarization through
-a restricted NLWeb v0.55-compatible `/ask` endpoint and a dual-era Streamable HTTP MCP
-server (one `ask` tool on `/mcp` for modern `2026-07-28` and legacy 2025 clients).
-Offline dual-era integration runs in CI; product-client verification is recorded in
-[`docs/mcp-client-support-matrix.md`](docs/mcp-client-support-matrix.md) (core: Claude Code modern + Codex CLI legacy on a synthetic mock backend; other clients stay `not_run`).
-It includes quotas, rate limits, browser verification, source links,
-and explicit capability boundaries.
-
-### Designed for reading
-
-Agent support is not allowed to turn the site into a dashboard. Refined-X keeps
-an editorial, monochrome visual system with restrained motion and accessible
-light/dark themes.
+Astro 7 + Starlight with overridden theme components, Markdown/YAML content collections, TypeScript
+tooling, optional Cloudflare Workers (site with static assets, counters, Live Ask) and D1, GitHub
+Actions for CI. Node.js 24+ is required.
 
 ## Quick start
 
-This repository is a GitHub template. Select
-[Use this template](https://github.com/new?template_name=Refined-X&template_owner=tower1229),
-or run:
-
 ```sh
-npm create astro@latest -- --template tower1229/Refined-X
-cd <project>
+git clone https://github.com/HYDtomako/Blog.git my-blog
+# or: npx degit HYDtomako/Blog my-blog
+cd my-blog
 npm install
 npm run dev
 ```
 
-Then open the local URL printed by Astro.
-
-Before deploying:
+Checks before you ship:
 
 ```sh
-npm run check
+npm run check           # astro check (types and content schema)
 npm run test:public-ask
 npm run test:related
+npm run test:stats
 npm run build
-npm run verify
+npm run verify          # fails when a public surface is missing or off-contract
 ```
 
-## Choose a deployment mode
+`npm run verify` expects `/ask` to ship its Turnstile widget as soon as `ask.askUrl` is configured,
+so a release build needs `PUBLIC_TURNSTILE_SITE_KEY` in the environment — see
+[Live Ask](#optional-live-ask).
 
-| Mode                    | Infrastructure                                              | Result                                                                             |
-| ----------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| Static                  | GitHub Pages, Cloudflare Pages, Netlify, or any static host | Website, local Ask search, Markdown, `llms.txt`, JSON, OpenAPI, discovery metadata |
-| Static + external vault | Static host plus an external `contentRoot`                  | Same outputs while content remains outside the template                            |
-| Live Ask                | Static site plus the reference Cloudflare Worker            | Grounded browser answers, NLWeb `/ask`, MCP `ask`, health endpoint                 |
+## Make it yours
 
-Start static. Add Live Ask only when conversational access is useful.
+No sample identity is hard-coded in the components: identity, copy and content all live in the files
+below. Work through the table, then delete what you do not need.
 
-## Deploy static site
+| #  | Change                                                                     | File(s)                                                                                   |
+| -- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 1  | Site URL, title, locales, per-locale copy, social link, feature switches    | `site.config.mjs`                                                                          |
+| 2  | Name, bio, skills, timeline, links, cooperation, résumé/about page          | `content/profile/<locale>/person.yaml`, `cooperation.yaml`, `resume.md`                    |
+| 3  | Articles, notes, curated answers, standalone pages                          | `content/{articles,notes,answers,pages}/<locale>/*.md`                                     |
+| 4  | Projects                                                                    | `content/projects/<locale>/*.yaml`                                                         |
+| 5  | Series — optional grouping for articles                                     | `content/series/<locale>/series.json` + `<slug>.yaml`                                      |
+| 6  | Avatar, hero image, share image, favicons, project covers                   | `public/asset/avatar.jpg`, `public/asset/hero-home.jpg`, `public/asset/og-default.png`, `public/favicon.png`, `public/apple-touch-icon.png`, `public/projects/**` |
+| 7  | Navigation and UI wording                                                   | `src/i18n/zh-CN.ts`, `src/i18n/en.ts`                                                      |
+| 8  | Counters — optional                                                         | `wrangler.jsonc`, `package.json` (`db:migrate*` scripts)                                    |
+| 9  | Live Ask — optional                                                         | `site.config.mjs` (`ask`), `.env`, `examples/public-ask-worker/`                            |
+| 10 | Repository metadata                                                         | `package.json`, `README.md`, `LICENSE`                                                      |
+| 11 | Sample content and upstream-only files                                      | [Delete what you do not need](#delete-what-you-do-not-need)                                 |
 
-| Path | Guide |
-| ---- | ----- |
-| GitHub Pages | Copy [`deploy/user-github-pages.yml`](deploy/user-github-pages.yml) → enable Pages (GitHub Actions) |
-| Cloudflare Pages | Build `npm run build`, output `dist`, Node `24` |
+### 1. Site identity — `site.config.mjs`
 
-Step-by-step: [`docs/deploy-static.md`](docs/deploy-static.md).
+The single configuration entrypoint. Edit the defaults here, or keep your identity out of the
+template with an overlay file `instance.config.mjs` (git-ignored) or the
+`REFINED_X_INSTANCE_CONFIG` environment variable — overlay keys are merged over the defaults.
 
-Cloudflare Pages: connect the repo in the [dashboard](https://dash.cloudflare.com/) ([git integration docs](https://developers.cloudflare.com/pages/get-started/git-integration/)). GitHub Pages: copy the workflow linked above.
+| Field                              | What it controls                                                                        |
+| ---------------------------------- | --------------------------------------------------------------------------------------- |
+| `title`                            | Site name used by the header, feeds and machine-readable identity                        |
+| `site`                             | Canonical URL; also decides `base` for project-style deploys such as `user.github.io/repo` |
+| `locales.default`                  | The locale served at `/`                                                                 |
+| `locales.list`                     | Every locale with a content tree; each needs a `brand.<locale>` entry                    |
+| `locales.labels`                   | Compact labels for the header language switch                                            |
+| `brand.<locale>.*`                 | Public identity and page copy: `description`, `persona`, `wordmark`, `alternateNames`, `homeHeading`, `homeTitle`, `homeLede`, `writingLede`, `askChips`, `projects.*`, `about.*` |
+| `social.github`                    | GitHub link; its owner drives `npm run sync:github` (contribution snapshot + project stars) |
+| `ask.askUrl` / `mcpUrl` / `healthUrl` | Optional Live Ask endpoints; leave empty for the static-only site                      |
+| `comments.repo` / `repoId` / `category` / `categoryId` | Optional giscus identifiers; all four empty = comments off         |
+| `stats.enabled` / `stats.url`      | Counters on/off; `url` empty means same-origin                                            |
+| `redirects`                        | Old path → new path map; delete the sample entries                                        |
+| `contentRoot`, `publicDir`, `outDir`, `assetSource` | Where content, assets and build output live; keep a vault outside the template if you like |
+| `discovery.awp`                    | Optional AWP experiment, off by default                                                    |
 
-## Content model
+### 2. Profile — `content/profile/<locale>/`
 
-Content is grouped by locale — `content/<collection>/<locale>/` — with one corpus per
-locale listed in `locales.list`:
+| File              | Contents                                                                                                  |
+| ----------------- | --------------------------------------------------------------------------------------------------------- |
+| `person.yaml`     | `name`, `aliases`, `title`, `bio`, `stats`, `knowsAbout`, `capabilities`, `timeline`, `location`, `qq`, `links` — the structured identity behind the home hero, the about page and `/api/profile.json` |
+| `cooperation.yaml`| `title`, `description`, `contact` for the "how to work with me" block                                      |
+| `resume.md`       | Frontmatter (`title`, `description`, `tags`, `llmSummary`) plus the body of the about page. Social link lists render as icon chips, links to image files open in a new tab |
 
-```text
-content/
-  articles/<locale>/**/*.md
-  notes/<locale>/**/*.md
-  answers/<locale>/**/*.md
-  pages/<locale>/**/*.md
-  profile/<locale>/
-    person.yaml
-    cooperation.yaml
-    resume.md
-  projects/<locale>/*.{yaml,yml,json}
-  series/<locale>/
-    series.json
-    *.yaml
-```
+Keep one folder per locale (`content/profile/zh-CN/…`, `content/profile/en/…`). Properties you do not
+use — for example `education` / `educationHistory` — can simply be omitted.
 
-`locales.default` is served at `/`; every other locale is served under `/<locale>/`
-(so English lives at `/en/`, `/en/writing/`, `/en/<yyyy>/<mm>/<dd>/<slug>/`). A new
-page appears only in the locale you author it in. The default locale never falls
-back; other locales render the default-locale page as a Starlight fallback route
-until the translation exists, so the header language switch never lands on a 404.
+### 3. Content — `content/<collection>/<locale>/`
 
-Article frontmatter is intentionally explicit:
+Every locale folder is a separate corpus, and the URL follows the content type:
+
+| Collection | Frontmatter `contentType` | URL                                          |
+| ---------- | ------------------------- | -------------------------------------------- |
+| `articles` | `article`                 | `/YYYY/MM/DD/<slug>/` (date comes from `pubDate`) |
+| `notes`    | `note`                    | `/notes/<slug>/`                              |
+| `answers`  | `answer`                  | `/answers/<slug>/`                            |
+| `pages`    | `page`                    | `/<slug>/`                                    |
 
 ```yaml
 ---
 title: Building for humans and agents
-description: A short description for readers and search engines.
+description: One sentence for readers and search engines.
 contentType: article
 pubDate: 2026-07-01
 slug: humans-and-agents
-series: notes
-tags:
-  - publishing
-  - agents
-llmSummary: A concise, evidence-grounded summary for machine-readable outputs.
+series: notes            # optional, must be a slug listed in series.json
+tags: [publishing, agents]
+llmSummary: A concise summary used by the machine-readable surfaces.
 ---
 ```
 
-The schema validates required dates, slugs, summaries, answer fields, and
-content types during the build.
+`slug`, `llmSummary` and a `pubDate` (articles and notes only) are required; curated answers
+additionally need `question` and `shortAnswer`, and pages may set `seoImage`. The schema is enforced
+at build time by `src/content.config.ts`, so a broken entry fails the build instead of shipping.
 
-Series are optional per locale. `content/series/<locale>/series.json` lists the published
-series in order; an empty `order` (or no `series/<locale>/` directory at all) means that
-locale publishes no `/writing/<series>/` pages, no series grid on `/writing/`, and no
-series links in the footer or `llms.txt`. The `series` frontmatter field stays valid either
-way — related-article selection still prefers same-series peers.
+Images referenced from Markdown resolve to `/asset/<file name>` — write either a normal Markdown
+image or an Obsidian-style embed (`![[figure.png]]`) and put the file in `public/asset/`.
 
-## Configure your site
+### 4. Projects — `content/projects/<locale>/*.yaml`
 
-For most installations, create an `instance.config.mjs` overlay. You can also
-edit the defaults in [`site.config.mjs`](site.config.mjs):
-
-```js
-export default {
-  site: "https://example.com",
-  title: "Your Name",
-  locales: {
-    default: "zh-CN",
-    list: ["zh-CN", "en"],
-    labels: { "zh-CN": "中文", en: "EN" },
-  },
-  timeZone: "UTC",
-  contentRoot: "./content",
-  publicDir: "./public",
-  outDir: "./dist",
-  brand: {
-    "zh-CN": {
-      description: "机器可读的站点简介。",
-      persona: "你的名字",
-      homeHeading: "你的名字",
-      homeLede: "你发布什么，以及为什么值得读。",
-    },
-    en: {
-      description: "Machine-readable site summary.",
-      persona: "Your Name",
-      homeHeading: "Your Name",
-      homeLede: "What you publish and why it matters.",
-    },
-  },
-};
+```yaml
+title: My project
+description: What it does and for whom.
+slug: my-project
+status: active           # active | maintained | archived | planned | unknown
+url: https://example.com # or a path such as /projects/my-project/
+repository: https://github.com/you/my-project
+tags: [TypeScript, Agent]
+category: oss            # project | course | snippet | oss
+featured: true
+sortRank: 10             # lower sorts first
+image: /projects/my-project/cover.png
+imageAlt: Cover
+role: Author
+impact: One line on the outcome
+proofPoints: [Shipped to 2k users]
 ```
 
-Common options:
+`stars` is refreshed automatically on every build by `npm run sync:github` for entries whose
+`repository` belongs to the GitHub owner in `social.github`. Project images live under
+`public/projects/`.
 
-| Field             | Default     | Purpose                                   |
-| ----------------- | ----------- | ----------------------------------------- |
-| `locales.default` | `zh-CN`     | Locale served at `/` (also its BCP-47 tag) |
-| `locales.list`    | `["zh-CN","en"]` | Locales with a content tree; each needs a `brand` entry |
-| `locales.labels`  | `中文`/`EN`  | Compact labels for the header language switch |
-| `contentRoot`     | `./content` | Public Markdown/YAML corpus               |
-| `publicDir`       | `./public`  | Static assets                             |
-| `outDir`          | `./dist`    | Build output                              |
-| `assetSource`     | unset       | Optional external image library           |
-| `brand.<locale>.*` | demo values | Per-locale identity, home copy, and section labels |
-| `ask.*`           | empty       | Optional Public Ask / MCP / health URLs; `protocolProfile` defaults to `undeclared` (set `dual-era` only after deployment acceptance) |
-| `discovery.awp`   | `false`     | Optional AWP 0.2 manifests; when `true`, emits byte-identical `/agent.json` and `/.well-known/agent.json` (phase-1 static reads only); llms does not auto-recommend them; subpath deploy limits — see plan §8.3 |
-| `comments.*`      | empty       | Optional giscus repository and category   |
+### 5. Series — optional
 
-Relative paths resolve from the Refined-X package root.
+`content/series/<locale>/series.json` lists published series in order:
 
-## Enable article comments
-
-Refined-X can load [giscus](https://giscus.app/) on article pages and keep the
-discussion data in a public GitHub Discussions repository. Enable Discussions,
-install the giscus GitHub App, create a discussion category, then copy the four
-public identifiers from the giscus configuration page:
-
-```js
-export default {
-  comments: {
-    repo: "owner/repository",
-    repoId: "R_...",
-    category: "Comments",
-    categoryId: "DIC_...",
-  },
-};
+```json
+{ "order": ["notes"] }
 ```
 
-Leave all four fields empty to disable comments. A partial configuration fails
-the build instead of silently publishing a broken surface. Refined-X uses a
-stable `article:<entry.id>` discussion key, follows the site locale and theme,
-and loads the third-party iframe lazily. Visitors need a GitHub account to
-participate.
+Each slug in `order` may have a `<slug>.yaml` with `title`, `description`, `intro`, `faq` and
+`featured`. With an empty `order` — or no `series/<locale>/` directory at all — that locale
+publishes no series pages, no series grid and no series links, and the `series` frontmatter field
+stays free-form.
 
-## Agent-readable surfaces
+### 6. Images and icons
 
-Every build exposes a predictable public interface:
+| File                            | Use                                                        | Suggested                  |
+| ------------------------------- | ---------------------------------------------------------- | -------------------------- |
+| `public/asset/avatar.jpg`       | Home hero portrait, about page portrait, and the image in `/api/profile.json` | Square, 512×512 |
+| `public/asset/hero-home.jpg`    | Home page background, preloaded by the document head        | Wide, ~2247×1268 or larger |
+| `public/asset/og-default.png`   | Default social share image when a page sets no `seoImage`   | 1200×1200                  |
+| `public/favicon.png`            | Browser tab icon                                            | 32×32                      |
+| `public/apple-touch-icon.png`   | iOS home screen icon                                        | 180×180                    |
+| `public/projects/**`            | Project covers referenced from project YAML                 | As needed                  |
 
-| Endpoint                            | Purpose                                         |
-| ----------------------------------- | ----------------------------------------------- |
-| `/llms.txt`                         | Compact site map and important links for agents |
-| `/llms-full.txt`                    | Full public text corpus                         |
-| `/<page>.md`                        | Clean Markdown mirror of a public page          |
-| `/api/profile.json`                 | Structured public identity                      |
-| `/api/articles.json`                | Article catalog                                 |
-| `/api/topics.json`                  | Topic catalog                                   |
-| `/api/search-index.json`            | Static Ask/search corpus                        |
-| `/openapi.json`                     | API and optional Ask/MCP contract (only declares configured remotes) |
-| `/.well-known/about.json`           | Site capability summary                         |
+Keep the file names: they are referenced directly by the components.
 
-Locale-scoped endpoints (`/llms.txt`, `/llms-full.txt`, `/<page>.md`, `/api/*.json`,
-`/rss.xml`) are generated per locale: the default locale keeps the path above, other
-locales mirror it under their prefix (for example `/en/llms.txt`, `/en/api/articles.json`,
-`/en/rss.xml`). Site-wide discovery files (`/openapi.json`, `/.well-known/about.json`,
-`/robots.txt`, `sitemap-index.xml`) stay single and describe every locale tree.
+### 7. UI wording — `src/i18n/`
 
-The site footer lists these surfaces for the current locale (site-wide files stay
-unprefixed). `src/lib/public-surfaces.ts` is the single source of truth for that list, and
-`npm run verify` fails when a listed path is missing from the build output.
+`zh-CN.ts` and `en.ts` hold navigation labels, ask/overlay copy, home section titles, footer labels
+and runtime strings. Both must stay structurally identical — `src/i18n/types.ts` is the shared
+contract. This is optional tuning; the identity copy in `site.config.mjs` is the part you usually
+want to change.
 
-These endpoints make the site easier to ingest and connect. They do not assume
-that every agent automatically discovers or invokes them.
+### 8. Delete what you do not need
 
-Legacy draft MCP discovery paths (`/.well-known/mcp.json`,
-`/.well-known/mcp/catalog.json`, `/.well-known/mcp/server-card.json`) were
-**removed** in a breaking change. Prefer the configured MCP endpoint URL,
-OpenAPI, and `about.json`. Do not expect `/.well-known/ai-catalog.json`.
+| Item                                                             | Why                                                                                             |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `content/articles|notes|answers|projects/*` sample entries        | Replace with your own writing and projects                                                       |
+| `myself/`                                                         | Personal scratch notes and photos of the sample author; not read by the build                     |
+| `content/github-activity.json`                                    | Regenerated by `npm run sync:github` as soon as `social.github` points at you                     |
+| `redirects` in `site.config.mjs`                                  | Redirects for renamed sample answers                                                              |
+| `.github/workflows/deploy-pages.yml`                              | Upstream maintainer workflow that publishes the Refined-X demo; manual-only. Replace it with `deploy/user-github-pages.yml` if you deploy to GitHub Pages |
+| `deploy/`                                                         | Sample-demo deployment configs. Keep `user-github-pages.yml` if you deploy to GitHub Pages; drop `github-pages.config.mjs`, which publishes the upstream demo |
+| `docs/community-cover/`, `docs/screenshots/`                      | Upstream promo assets                                                                             |
+| `PRODUCT.md`, `DESIGN.md`, `ROADMAP.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`, `.github/ISSUE_TEMPLATE/`, `docs/` | Upstream project docs. Keep the deploy guides you still need, drop the rest             |
+| `examples/public-ask-worker/`                                     | Only needed for live AI answers                                                                   |
 
-## Enable Live Ask
+## Deploy
 
-Optional Cloudflare Worker for grounded browser answers, NLWeb `POST /ask`, and
-MCP `ask`. Package: [`examples/public-ask-worker`](examples/public-ask-worker).
+| Mode                            | Use when                                                       | How                                                                                 |
+| ------------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Static host                     | You only want the site, the Markdown mirrors and the JSON APIs | `npm run build`, publish `dist/`                                                     |
+| Cloudflare Worker + static assets | You also want counters (or one deploy for everything)          | `npm run deploy` — builds, verifies, migrates D1 and uploads `dist/` as Worker assets |
+| Static site + Live Ask Worker   | You want live AI answers and the MCP endpoint                  | Static host plus [`examples/public-ask-worker`](examples/public-ask-worker/README.md) |
 
-**Deploy checklist and troubleshooting:** [`docs/deploy-live-ask.md`](docs/deploy-live-ask.md).
+**Cloudflare Pages**: build command `npm run build`, output directory `dist`, Node.js `24`.
 
-After the Worker is up, point the static site at it:
+**GitHub Pages**: copy [`deploy/user-github-pages.yml`](deploy/user-github-pages.yml) to
+`.github/workflows/`, set **Settings → Pages → Source** to *GitHub Actions*, and make sure `site` in
+`site.config.mjs` is your real URL (a custom domain or `https://<user>.github.io/<repo>`).
+
+Step-by-step notes: [`docs/deploy-static.md`](docs/deploy-static.md).
+
+### Cloudflare Worker with counters
+
+`wrangler.jsonc` ships the sample values; change them before you deploy:
+
+| Field                                | Change to                                                    |
+| ------------------------------------ | ------------------------------------------------------------ |
+| `name`                               | Your Worker name                                             |
+| `d1_databases[0].database_name` / `database_id` | The D1 database you create (`npx wrangler d1 create <name>`, then paste the id) |
+| `routes[0].pattern`                  | Your custom domain, or drop the `routes` block to stay on `*.workers.dev` |
+| `ratelimits[0].namespace_id`         | A namespace id of your own for the stats rate limiter         |
+
+```sh
+npx wrangler login
+npx wrangler d1 create my-blog-stats     # paste database_id into wrangler.jsonc
+npm run db:migrate                       # apply worker/migrations to the remote D1
+npm run deploy                           # build + verify + migrate + wrangler deploy
+```
+
+The D1 name also appears in the `db:migrate` / `db:migrate:local` scripts in `package.json` — keep
+the two in sync. `npm run dev:worker` runs `wrangler dev` against the built `dist/` for local API
+work, and `npm run db:migrate:local` applies the migrations to the local database.
+
+Counters are optional at runtime: when the API is unreachable the widgets hide themselves and the
+rest of the page is unaffected. Likes are stored against a weekly HMAC pseudonym; no IP addresses
+are kept. Set `stats.enabled` to `false` to remove the widgets and their verification.
+
+### Optional: Live Ask
+
+Live answers, the NLWeb-compatible `POST /ask` and the MCP endpoint come from a separate Cloudflare
+Worker. Deploy [`examples/public-ask-worker`](examples/public-ask-worker/README.md), then point the
+site at it and provide the Turnstile **site** key (public) at build time:
 
 ```js
 export default {
   ask: {
-    askUrl: "https://ask.example.com/ask",
-    mcpUrl: "https://ask.example.com/mcp",
-    healthUrl: "https://ask.example.com/health",
-    // Optional. Default undeclared — do not claim modern dual-era until accepted.
-    // protocolProfile: "dual-era",
+    askUrl: 'https://ask.example.com/ask',
+    mcpUrl: 'https://ask.example.com/mcp',
+    healthUrl: 'https://ask.example.com/health',
+    persistInteractions: false,
   },
 };
 ```
 
-Set `PUBLIC_TURNSTILE_SITE_KEY` at Astro build time when using browser generation.
-The hosted demo uses `https://ask-demo.refined-x.com/mcp`.
-
-Live Ask intentionally does not support long-term memory, arbitrary actions,
-elicitation, or impersonating the site owner.
-
-## Use an external vault
-
-Refined-X can live as a submodule inside a personal data repository:
-
 ```sh
-git submodule add git@github.com:tower1229/Refined-X.git 90_Website/Template
+PUBLIC_TURNSTILE_SITE_KEY=your_site_key npm run build
 ```
 
-Place `instance.config.mjs` next to the submodule, or set
-`REFINED_X_INSTANCE_CONFIG`:
+Full checklist and troubleshooting: [`docs/deploy-live-ask.md`](docs/deploy-live-ask.md).
 
-```js
-export default {
-  contentRoot: "../../20_Publish",
-  publicDir: "../../30_Assets/Public",
-  outDir: "../../dist",
-};
+## Commands
+
+| Command                     | Does                                                                                   |
+| --------------------------- | -------------------------------------------------------------------------------------- |
+| `npm run dev`               | Astro dev server (also refreshes `public/asset` when `assetSource` is set)               |
+| `npm run build`             | Refreshes the GitHub snapshot, then builds to `dist/`                                    |
+| `npm run preview`           | Serves the built site locally                                                           |
+| `npm run check`             | `astro check` — types, content schema, template diagnostics                              |
+| `npm run verify`            | Verifies the built output: required pages, machine-readable surfaces, capabilities       |
+| `npm run test:public-ask`   | Unit tests for the ask/discovery/contract layer                                          |
+| `npm run test:related`      | Related-articles selection tests                                                         |
+| `npm run test:comments`     | giscus configuration tests                                                               |
+| `npm run test:stats`        | Counter Worker and client tests                                                          |
+| `npm run sync:github`       | Refreshes `content/github-activity.json` and project `stars` from GitHub                 |
+| `npm run collect-assets`    | Copies an external image library into `public/asset` (no-op unless `assetSource` is set)  |
+| `npm run dev:worker`        | `wrangler dev` — built assets plus the counters API                                      |
+| `npm run db:migrate:local` / `db:migrate` | Applies `worker/migrations` to the local / remote D1                    |
+| `npm run deploy`            | `build` → `verify` → `db:migrate` → `wrangler deploy`                                    |
+
+## Project structure
+
+```text
+site.config.mjs         # identity, locales, feature switches
+astro.config.mjs        # Astro/Starlight wiring (reads site.config.mjs)
+content/                # your corpus, grouped by collection and locale
+  articles|notes|answers|pages/<locale>/*.md
+  profile/<locale>/{person.yaml,cooperation.yaml,resume.md}
+  projects/<locale>/*.yaml
+  series/<locale>/{series.json,<slug>.yaml}
+public/
+  asset/                # avatar, hero, share image, article figures
+  projects/             # project covers
+  favicon.png, apple-touch-icon.png
+src/
+  components/           # Starlight overrides and page sections
+  i18n/                 # UI copy per locale
+  lib/                  # config, locale, capability and SEO helpers
+  pages/                # routes plus machine-readable endpoints (/llms.txt, /api/*, ...)
+  content.config.ts     # content collections and frontmatter schemas
+worker/                 # counters Worker (D1) and its migrations
+wrangler.jsonc          # Worker name, D1 binding, routes
+examples/public-ask-worker/  # optional Live Ask Worker
+scripts/                # build-time helpers (verify, sync, sitemaps, asset collection)
+docs/                   # deploy guides and upstream design notes
 ```
 
-Instance-specific settings stay outside the template, so upstream updates do
-not overwrite your identity or content.
+## Machine-readable surfaces
 
-## Design
+| Endpoint                     | Purpose                                             |
+| ---------------------------- | --------------------------------------------------- |
+| `/llms.txt`, `/llms-full.txt` | Compact site map / full public text corpus for agents |
+| `/<page>.md`                 | Markdown mirror of every public page                 |
+| `/api/profile.json`          | Structured public identity                           |
+| `/api/articles.json`         | Article catalog                                      |
+| `/api/topics.json`           | Topic catalog                                        |
+| `/api/search-index.json`     | Corpus behind `⌘K` and `/ask`                        |
+| `/openapi.json`              | API contract plus any configured Ask/MCP remotes     |
+| `/.well-known/about.json`    | Capability summary                                   |
+| `/rss.xml`, `/robots.txt`, sitemap | Syndication and discovery                      |
 
-See [`DESIGN.md`](DESIGN.md) for the visual system, typography, component
-rules, motion boundaries, and accessibility guidance.
+Locale-scoped files are generated per locale: the default locale keeps the paths above, other
+locales mirror them under their prefix (`/en/llms.txt`, `/en/api/articles.json`, `/en/rss.xml`).
+Site-wide discovery files (`/openapi.json`, `/.well-known/about.json`, `/robots.txt`,
+`sitemap-index.xml`) stay single and describe every locale.
 
-![Refined-X cover — cascade](docs/community-cover/refined-x-cover-ink.png)
+## Credits and license
 
-![Refined-X cover — collage](docs/community-cover/refined-x-cover-paper.png)
-
-## Scope
-
-Refined-X is:
-
-- a static-first personal publishing starter;
-- an opinionated public content schema;
-- a reference implementation for agent-readable and agent-queryable surfaces.
-
-Refined-X is not:
-
-- a hosted CMS;
-- a private personal agent;
-- a long-term memory service;
-- a promise of automatic MCP discovery in every client;
-- a claim that every MCP client in the extended matrix has been product-verified (see [`docs/mcp-client-support-matrix.md`](docs/mcp-client-support-matrix.md)).
-
-## Contributing
-
-Issues, implementation reports, documentation improvements, and pull requests
-are welcome. If you launch a site with Refined-X, open a showcase issue so it
-can be included in the community gallery.
-
-- [Contributing guide](CONTRIBUTING.md)
-- [Changelog](CHANGELOG.md)
-- [Security policy](SECURITY.md)
-- [Roadmap](ROADMAP.md)
-
-## License
+Built on [Refined-X](https://github.com/tower1229/Refined-X) (MIT) with
+[Astro](https://astro.build/) and [Starlight](https://starlight.astro.build/). The reading
+experience takes cues from [joyehuang.me](https://www.joyehuang.me/), the
+[Refined-X demo](https://demo.refined-x.com/) and the Astra WordPress theme. See
+[`DESIGN.md`](DESIGN.md) for the design system and [`CHANGELOG.md`](CHANGELOG.md) for notable
+changes.
 
 [MIT](LICENSE)
