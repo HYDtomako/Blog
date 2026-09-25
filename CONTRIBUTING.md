@@ -58,7 +58,7 @@ Do not run staging or remote Cloudflare scripts in CI; those need account creden
 
 - Describe *why* the change is needed, not only what changed.
 - Keep sample `content/` edits minimal unless the PR is about demo content.
-- Match existing naming, file layout, and bilingual README discipline (update `README.md` and `README.zh-CN.md` together when user-facing docs change).
+- Match existing naming, file layout, and bilingual README discipline (update `README.md` and `README.en.md` together when user-facing docs change).
 - Do not commit secrets, real Cloudflare account IDs, or production `wrangler.demo.jsonc` files.
 
 ## Design and product boundaries
