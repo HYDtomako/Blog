@@ -41,11 +41,12 @@ jobs:
         run: npm run test:stats
 
       - name: Build
-        # The build needs the public Turnstile site key once site.config.mjs sets ask.askUrl,
-        # otherwise verify fails on an /ask page without its widget. Set the repository
-        # variable PUBLIC_TURNSTILE_SITE_KEY, or drop this env block for a static-only site.
+        # The build embeds the public Turnstile site key into /ask; without one, verify fails on a
+        # page that ships no widget. Set the repository variable to your own widget's site key when
+        # you have one — the fallback is Cloudflare's always-passing test key, so CI stays green
+        # without secrets.
         env:
-          PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.PUBLIC_TURNSTILE_SITE_KEY }}
+          PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA' }}
         run: npm run build
 
       - name: Verify
