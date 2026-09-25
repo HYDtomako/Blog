@@ -1,0 +1,43 @@
+---
+import Icon from './Icon.astro';
+import { localeFromPath } from '../lib/locale';
+import { withBase } from '../lib/paths';
+import { getSiteCopy } from '../lib/site-copy';
+
+interface Props {
+	path: string;
+}
+
+const { path } = Astro.props;
+const UI = getSiteCopy(localeFromPath(Astro.url.pathname)).ui;
+const statsBase = import.meta.env.PUBLIC_STATS_URL ?? '';
+const endpoint = withBase(`${statsBase}/api/stats/page`);
+const labels = JSON.stringify({ like: UI.stats.likeAction, unlike: UI.stats.unlikeAction });
+---
+
+<span
+	class="page-stats"
+	hidden
+	data-page-stats
+	data-stats-path={path}
+	data-stats-endpoint={endpoint}
+	data-stats-labels={labels}
+>
+	<span class="page-stats-views">{UI.stats.viewsLabel} <b data-stats-views>0</b></span>
+	<button
+		class="like-btn"
+		type="button"
+		data-stats-like
+		aria-pressed="false"
+		aria-label={UI.stats.likeAction}
+		title={UI.stats.likeAction}
+	>
+		<Icon name="heart" size={14} />
+		<b data-stats-likes>0</b>
+	</button>
+</span>
+
+<script>
+	import { initPageStats } from '../scripts/page-stats';
+	initPageStats();
+</script>

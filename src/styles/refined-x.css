@@ -1938,6 +1938,106 @@ h4 {
   font-size: 13.5px;
   line-height: 1.55;
 }
+.section-head.site-stats-head {
+  justify-content: center;
+  align-items: center;
+}
+.stats-grid {
+  display: flex;
+  width: fit-content;
+  margin: 0 auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.stats-cell {
+  min-width: 116px;
+  padding: 16px 26px;
+  background: var(--surface);
+  text-align: center;
+}
+.stats-cell + .stats-cell {
+  border-left: 1px solid var(--line);
+}
+.stats-cell dt {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 28px;
+  line-height: 1;
+  color: var(--ink);
+}
+.stats-cell dd {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.stats-note {
+  margin: 10px 0 0;
+  color: var(--faint);
+  font-size: 12.5px;
+  text-align: center;
+}
+.page-stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.article-foot .page-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 0 0 32px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line-soft);
+}
+.page-stats-views b,
+.like-btn b {
+  font-weight: 600;
+  color: var(--ink);
+}
+.like-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 26px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  background: transparent;
+  color: var(--faint);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition:
+    color var(--duration-fast) var(--ease-out-quart),
+    border-color var(--duration-fast) var(--ease-out-quart);
+}
+.like-btn:hover,
+.like-btn:focus-visible {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+.like-btn[aria-pressed='true'] {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+.like-btn[aria-pressed='true'] svg {
+  fill: currentColor;
+}
+.like-btn[aria-disabled='true'] {
+  opacity: 0.6;
+  cursor: default;
+}
+@media (max-width: 680px) {
+  .stats-cell {
+    min-width: 0;
+    padding: 12px 16px;
+  }
+  .stats-cell dt {
+    font-size: 24px;
+  }
+}
 .projects-section-head {
   align-items: flex-start;
 }

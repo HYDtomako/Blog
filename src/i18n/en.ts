@@ -67,7 +67,6 @@ export const en: UiCopy = {
 		notesLink: 'All notes',
 		ossHeading: 'Open source',
 		ossLink: 'All projects',
-		educationHeading: 'Education',
 	},
 	notes: {
 		label: 'Notes',
@@ -182,6 +181,16 @@ export const en: UiCopy = {
 		published: 'Published',
 		updated: 'Updated',
 		readingMinutes: (n) => `${n} min read`,
+	},
+	stats: {
+		heading: 'Site stats',
+		articles: 'Posts',
+		notes: 'Notes',
+		totalViews: 'Total views',
+		viewsLabel: 'Views',
+		likeAction: 'Like',
+		unlikeAction: 'Remove like',
+		failed: 'Statistics are unavailable right now.',
 	},
 	footer: {
 		content: 'Content',

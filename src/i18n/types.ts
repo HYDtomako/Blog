@@ -62,7 +62,6 @@ export type UiCopy = {
 		notesLink: string;
 		ossHeading: string;
 		ossLink: string;
-		educationHeading: string;
 	};
 	notes: {
 		label: string;
@@ -177,6 +176,16 @@ export type UiCopy = {
 		published: string;
 		updated: string;
 		readingMinutes: (n: number) => string;
+	};
+	stats: {
+		heading: string;
+		articles: string;
+		notes: string;
+		totalViews: string;
+		viewsLabel: string;
+		likeAction: string;
+		unlikeAction: string;
+		failed: string;
 	};
 	footer: {
 		content: string;

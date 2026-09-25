@@ -64,6 +64,11 @@ const defaults = {
 		category: '',
 		categoryId: '',
 	},
+	/** Page-view/like counters. Keep `url` empty for same-origin; point it at `wrangler dev` while developing the API. */
+	stats: {
+		enabled: true,
+		url: '',
+	},
 	/** Renamed answers keep their old URLs working. */
 	redirects: {
 		'/answers/what-is-refined-x': '/answers/what-is-this-site/',
@@ -198,6 +203,7 @@ const merged = {
 	locales,
 	social: { ...defaults.social, ...(overlayRest.social ?? {}) },
 	ask: { ...defaults.ask, ...(overlayRest.ask ?? {}) },
+	stats: { ...defaults.stats, ...(overlayRest.stats ?? {}) },
 	comments: resolveCommentsConfig({ ...defaults.comments, ...(overlayRest.comments ?? {}) }),
 	brand: mergedBrand,
 	discovery: { ...defaults.discovery, ...(overlayRest.discovery ?? {}) },

@@ -37,6 +37,7 @@ export default defineConfig({
 			'import.meta.env.PUBLIC_ASK_URL': JSON.stringify(siteConfig.ask.askUrl || ''),
 			'import.meta.env.PUBLIC_MCP_URL': JSON.stringify(siteConfig.ask.mcpUrl || ''),
 			'import.meta.env.PUBLIC_ASK_HEALTH_URL': JSON.stringify(siteConfig.ask.healthUrl || ''),
+			'import.meta.env.PUBLIC_STATS_URL': JSON.stringify(siteConfig.stats?.url || ''),
 		},
 	},
 	integrations: [

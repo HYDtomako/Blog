@@ -131,15 +131,21 @@ if (caps.ask) {
 }
 
 try {
+	const statsEnabled = siteConfig.stats?.enabled === true;
 	const htmlFiles = await listHtmlFiles(distRoot);
 	let commentPages = 0;
+	let statsPages = 0;
+	let statsHome = false;
 	for (const htmlPath of htmlFiles) {
 		const html = await readFile(htmlPath, 'utf8');
 		const relativePath = path.relative(distRoot, htmlPath).replaceAll('\\', '/');
 		const isArticle = articlePattern.test(relativePath);
 		const hasComments = html.includes('data-giscus-comments');
+		const hasStats = html.includes('data-page-stats');
 
 		if (hasComments) commentPages += 1;
+		if (hasStats) statsPages += 1;
+		if (relativePath === 'index.html' && html.includes('data-site-stats')) statsHome = true;
 		if (siteConfig.comments.enabled && isArticle && !hasComments) {
 			failures.push(`${relativePath} is an article but is missing the comments surface`);
 		}
@@ -148,6 +154,12 @@ try {
 		}
 		if (hasComments && !/data-term="article:[^"]+"/.test(html)) {
 			failures.push(`${relativePath} is missing its stable article comment term`);
+		}
+		if (statsEnabled && isArticle && !hasStats) {
+			failures.push(`${relativePath} is an article but is missing the stats surface`);
+		}
+		if (!statsEnabled && hasStats) {
+			failures.push(`${relativePath} includes the stats surface while stats are disabled`);
 		}
 
 		const expectedLocale = prefixedLocales.includes(relativePath.split('/')[0])
@@ -167,6 +179,12 @@ try {
 	}
 	if (!siteConfig.comments.enabled && commentPages > 0) {
 		failures.push('Comments are disabled but comment surfaces were generated');
+	}
+	if (statsEnabled && statsPages === 0) {
+		failures.push('Stats are enabled but no article stats surfaces were generated');
+	}
+	if (statsEnabled && !statsHome) {
+		failures.push('Stats are enabled but the home page has no site stats block');
 	}
 } catch (error) {
 	failures.push(`HTML integration verification failed: ${error.message}`);
