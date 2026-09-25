@@ -1,0 +1,12 @@
+title: Blog
+description: 本站在用的个人站点模板：Astro + Starlight，一份 Markdown 与 YAML 内容同时生成给人读的页面，以及给搜索引擎和 AI Agent 读的接口（llms.txt、Markdown 镜像、JSON API），可选接入浏览量统计与实时问答。
+slug: blog
+status: active
+stars: 0
+url: https://github.com/HYDtomako/Blog
+repository: https://github.com/HYDtomako/Blog
+tags: [Astro, 模板, 开源]
+category: oss
+featured: false
+sortRank: 25
+role: 作者
