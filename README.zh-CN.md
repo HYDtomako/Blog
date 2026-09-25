@@ -67,7 +67,7 @@ npm run verify          # 缺页面或接口不符合约定时会失败
 | 8  | 统计（可选）                                                | `wrangler.jsonc`、`package.json`（`db:migrate*` 脚本）                                        |
 | 9  | Live Ask（可选）                                            | `site.config.mjs`（`ask`）、`.env`、`examples/public-ask-worker/`                              |
 | 10 | 仓库信息                                                    | `package.json`、`README.md`、`LICENSE`                                                        |
-| 11 | 示例内容与上游专用文件                                      | [删掉不需要的东西](#删掉不需要的东西)                                                          |
+| 11 | 示例内容与上游专用文件                                      | [删掉不需要的东西](#8-删掉不需要的东西)                                                          |
 
 ### 1. 站点身份 —— `site.config.mjs`
 
@@ -191,7 +191,7 @@ proofPoints: [已有 2000 位用户在用]
 
 | 项目                                                              | 原因                                                                                              |
 | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `content/articles|notes|answers|projects/*` 里的示例条目            | 换成你自己的文章与项目                                                                             |
+| `content/articles`、`content/notes`、`content/answers`、`content/projects` 里的示例条目 | 换成你自己的文章与项目                                                                             |
 | `myself/`                                                          | 示例作者的个人草稿与照片，不参与构建                                                                |
 | `content/github-activity.json`                                     | `social.github` 指向你之后，`npm run sync:github` 会重新生成它                                      |
 | `site.config.mjs` 里的 `redirects`                                 | 示例站改名遗留的跳转                                                                                |
