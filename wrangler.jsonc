@@ -5,5 +5,11 @@
 	"assets": {
 		"directory": "./dist",
 		"not_found_handling": "404-page"
-	}
+	},
+	"routes": [
+		{
+			"pattern": "hydblog.xyz",
+			"custom_domain": true
+		}
+	]
 }

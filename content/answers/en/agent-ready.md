@@ -1,14 +1,16 @@
 ---
-title: How is Refined-X agent-ready?
-description: How Refined-X exposes one public corpus to AI agents.
+title: How can AI agents read this site?
+description: The machine-readable surfaces this site generates from one corpus.
 contentType: answer
 slug: agent-ready
-tags: [agents, llms, mcp, openapi]
-llmSummary: Refined-X generates Markdown mirrors, llms.txt files, structured JSON, OpenAPI, MCP discovery metadata, and optional Ask access from the same public corpus.
-question: How is Refined-X agent-ready?
-shortAnswer: Refined-X gives agents predictable Markdown, llms.txt, JSON, OpenAPI, MCP discovery, and optional Ask surfaces generated from the same public content.
+tags: [agents, machine-readable]
+llmSummary: The build turns one corpus into machine-readable surfaces — llms.txt and llms-full.txt indexes, a Markdown mirror per page, JSON endpoints for articles, profile, and search, an OpenAPI description, and a sitemap — so an agent can cite material without parsing page layouts.
+question: How can AI agents read this site?
+shortAnswer: The build generates llms.txt and llms-full.txt indexes, a Markdown mirror per page, JSON endpoints for articles, profile, and search, plus an OpenAPI description — so agents can cite material without parsing page layouts.
 ---
 
-Refined-X publishes the same public content through predictable interfaces: per-page Markdown mirrors, `llms.txt`, `llms-full.txt`, structured JSON APIs, OpenAPI, and MCP discovery metadata. This reduces the amount of navigation and page layout an agent must interpret before it can find citable material.
+**One corpus, two read paths: pages for people and interfaces for machines.** The index is [llms.txt](/en/llms.txt), and the full corpus sits at [llms-full.txt](/en/llms-full.txt).
 
-The optional Ask service adds grounded retrieval and summarization without changing the source corpus. “Agent-ready” means the site is easier to ingest and connect; it does not promise that every agent will automatically discover or invoke these interfaces.
+Articles, notes, and answers each have a Markdown mirror and a JSON endpoint — /api/articles.json, /api/profile.json, /api/search-index.json — with field descriptions in [openapi.json](/openapi.json) and a sitemap at /sitemap-index.xml. The Markdown mirror is the source text that was published, so citations do not drift from the rendered page.
+
+Asking on this site runs in three layers: curated answers, full-text retrieval, and live AI answers (see "How do search and asking work here?"). The live answers come from a same-origin worker that retrieves this site's public content before generating a source-cited, single-turn answer, without long-term memory.

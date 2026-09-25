@@ -19,6 +19,7 @@ examples/public-ask-worker/spike/**/.dry-run/
 examples/public-ask-worker/test/product-clients/.acceptance-base-url
 examples/public-ask-worker/test/product-clients/fixtures/
 examples/public-ask-worker/wrangler.demo.jsonc
+examples/public-ask-worker/wrangler.local.jsonc
 instance.config.mjs
 node_modules/
 npm-debug.log*
