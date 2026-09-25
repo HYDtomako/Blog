@@ -1,0 +1,12 @@
+title: Blog
+description: The personal-site template this site runs on — Astro + Starlight, turning one Markdown and YAML corpus into both the pages people read and the surfaces search engines and AI agents consume (llms.txt, Markdown mirrors, JSON APIs), with optional view counters and live Q&A.
+slug: blog
+status: active
+stars: 0
+url: https://github.com/HYDtomako/Blog
+repository: https://github.com/HYDtomako/Blog
+tags: [Astro, template, open source]
+category: oss
+featured: false
+sortRank: 25
+role: Author
