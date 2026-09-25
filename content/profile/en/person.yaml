@@ -13,14 +13,22 @@ knowsAbout:
   - Open source
   - Frontend engineering
 capabilities:
-  - title: Publishing
-    description: Opinionated public content schema for articles, answers, projects, and series.
-  - title: Agents
-    description: llms.txt, OpenAPI, JSON APIs, and MCP discovery generated from the same corpus.
+  - title: Study notes
+    description: Course, paper, and source-reading notes written to be reproducible.
+  - title: Agent practice
+    description: Small tools and experiments around tool calling, long-term memory, and multi-agent collaboration.
+  - title: Open source
+    description: EnCoder, QQbot, and others published on GitHub and improved while in use.
 timeline:
+  - period: "2024.9"
+    role: Started at Qingdao Institute of Technology
+    description: Data Science and Big Data Technology, graduating 2028.6.
+  - period: "2025 summer"
+    role: Started writing in public
+    description: First study notes went up on CSDN, beginning with Python and data analysis.
   - period: "2026"
-    role: Starter release
-    description: Refined-X extracted as a reusable Astro template.
+    role: Moved to a site of my own
+    description: Built a personal site with Astro and Starlight; articles, notes, and projects now publish here.
 education: Qingdao Institute of Technology
 educationHistory:
   - school: Qingdao Institute of Technology

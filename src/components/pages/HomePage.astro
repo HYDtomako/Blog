@@ -141,7 +141,9 @@ const homeStructuredData = {
             action={askPageUrl('', undefined, localePrefix(locale))}
           />
         </div>
-        <p class="lede hero-description hero-glass-lede">{copy.brand.homeLede}</p>
+        {copy.brand.homeLede && (
+          <p class="lede hero-description hero-glass-lede">{copy.brand.homeLede}</p>
+        )}
       </div>
     </div>
   </section>

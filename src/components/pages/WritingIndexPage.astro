@@ -18,7 +18,7 @@ const hasSeries = seriesOrder(locale).length > 0;
 
 const pageCount = getArticlePageCount(articles.length);
 const pageOneArticles = articles.slice(0, ARTICLE_PAGE_SIZE);
-const archiveSummary = `${copy.brand.writingLede} ${UI.writing.articleCountSuffix(articles.length)}`;
+const archiveSummary = [copy.brand.writingLede, UI.writing.articleCountSuffix(articles.length)].filter(Boolean).join(' ');
 
 const byYear: Record<string, typeof pageOneArticles> = {};
 pageOneArticles.forEach((a) => {
@@ -32,7 +32,7 @@ const structuredData = [
   collectionPageJsonLd({
     path: writingPath,
     name: UI.writing.label,
-    description: copy.brand.writingLede,
+    description: archiveSummary,
     items: pageOneArticles.map((article) => ({ name: article.data.title, url: docPath(article) })),
     locale,
   }),
@@ -59,7 +59,7 @@ const structuredData = [
   <div class="wrap page page-writing">
     <div class="crumbs"><a href={localizedHref(locale, '/')}>{UI.writing.homeCrumb}</a><span class="sep">/</span><span>{UI.writing.label}</span></div>
     <h1 id="_top" class="display page-heading">{UI.writing.label}</h1>
-    <p class="lede page-lede">{copy.brand.writingLede} {UI.writing.articleCountSuffix(articles.length)}</p>
+    <p class="lede page-lede">{archiveSummary}</p>
 
     {articles.length > 0 && (
       <>

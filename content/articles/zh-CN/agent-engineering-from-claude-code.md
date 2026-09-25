@@ -3,7 +3,7 @@ title: 三个 Claude Code 实现：一份 Agent 工程笔记
 description: 把 CoreCoder、Claude Code 与 learn-claude-code 放在一起读，Agent Loop、工具、上下文、并发、多 Agent 与安全边界这几块机制就串成了一条线。
 contentType: article
 slug: agent-engineering-from-claude-code
-pubDate: 2026-09-24T21:00:00+08:00
+pubDate: 2026-08-23T21:00:00+08:00
 tags: [Agent, Claude Code, 源码阅读, 工程实践]
 llmSummary: 一份来自三个实现的 Agent 工程笔记。CoreCoder 是 Python 手写的最小实现，Claude Code 是生产实现，learn-claude-code 是教学实现。内容覆盖 Agent Loop 的流转条件与中断修复、工具定义与文件编辑策略、上下文注入与三档压缩、QueryEngine 的长期状态、并行工具与子 Agent、Hook 与 Task 扩展点、多 Agent 协作、记忆 / MCP / 后台任务 / 定时任务，以及路径与命令的安全防线。
 ---

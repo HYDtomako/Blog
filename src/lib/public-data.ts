@@ -56,7 +56,6 @@ export async function getAnswers(locale: string = DEFAULT_LOCALE) {
 		await getCollection('docs', ({ data }) => data.contentType === 'answer'),
 		locale,
 	)
-		.filter((entry) => entry.data.slug !== 'who-is-zangtao')
 		.sort((a, b) => a.data.title.localeCompare(b.data.title, locale));
 }
 

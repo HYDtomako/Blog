@@ -160,7 +160,6 @@ export type UiCopy = {
 	common: {
 		home: string;
 		close: string;
-		friends: string;
 		relatedReading: string;
 		breadcrumbAria: string;
 		articleTocAria: string;

@@ -165,7 +165,6 @@ export const en: UiCopy = {
 	common: {
 		home: 'Home',
 		close: 'Close',
-		friends: 'Friends',
 		relatedReading: 'Related reading',
 		breadcrumbAria: 'Breadcrumb',
 		articleTocAria: 'Table of contents',

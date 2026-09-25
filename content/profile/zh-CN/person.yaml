@@ -13,14 +13,22 @@ knowsAbout:
   - 开源
   - 前端工程
 capabilities:
-  - title: 发布
-    description: 面向文章、问答、项目和系列的约定式公开内容规范。
-  - title: Agent
-    description: 由同一份内容生成的 llms.txt、OpenAPI、JSON API 与 MCP 发现信息。
+  - title: 学习记录
+    description: 把课程、论文与源码阅读整理成可复现的公开笔记。
+  - title: AI Agent 实践
+    description: 围绕工具调用、长期记忆与多 Agent 协作的小工具与实验。
+  - title: 开源
+    description: EnCoder、QQbot 等项目在 GitHub 上公开，边用边改。
 timeline:
+  - period: "2024.9"
+    role: 入读青岛工学院
+    description: 数据科学与大数据技术专业，预计 2028.6 毕业。
+  - period: "2025 夏"
+    role: 开始公开写作
+    description: 在 CSDN 写下第一批学习记录，从 Python 与数据分析起步。
   - period: "2026"
-    role: 模板发布
-    description: Refined-X 被抽取为可复用的 Astro 模板。
+    role: 迁移到自建站点
+    description: 用 Astro 与 Starlight 搭起个人站点，文章、随笔与项目统一发布在这里。
 education: 青岛工学院
 educationHistory:
   - school: 青岛工学院
