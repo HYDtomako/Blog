@@ -251,7 +251,16 @@ h4 {
 .brand {
   display: flex;
   align-items: center;
+  gap: 10px;
   margin-right: auto;
+}
+.brand-avatar {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid color-mix(in srgb, var(--ink) 16%, transparent);
 }
 .brand-wordmark {
   font-family: var(--serif);
