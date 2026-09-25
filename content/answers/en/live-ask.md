@@ -1,14 +1,16 @@
 ---
-title: How does Live Ask work?
-description: The optional grounded Ask service and its capability boundaries.
+title: How do search and asking work here?
+description: Curated answers, full-text retrieval, and live AI answers from a same-origin service.
 contentType: answer
 slug: live-ask
-tags: [ask, retrieval, mcp, cloudflare]
-llmSummary: Live Ask is an optional sibling Worker that retrieves public site content and can generate source-grounded summaries through restricted browser and MCP interfaces.
-question: How does Live Ask work?
-shortAnswer: Live Ask is an optional Worker that retrieves this site's public content and can generate source-grounded summaries through restricted browser and MCP interfaces.
+tags: [ask, retrieval]
+llmSummary: Asking a question here first matches pre-generated curated answers; when nothing matches, it runs a full-text search over published articles, notes, and answers. Anything still unmatched goes to a live same-origin service that retrieves public content and returns a source-cited, single-turn, quota-limited answer.
+question: How do search and asking work here?
+shortAnswer: A question matches pre-generated curated answers first; then it searches the published articles, notes, and answers; anything still unmatched goes to a live service that answers from retrieved public content, single-turn and source-cited.
 ---
 
-The site starts with static Ask: exact curated questions and related articles work without a model, database, or runtime service. **Live Ask** is an optional sibling Worker that retrieves the site’s public content and can generate a summary grounded in returned sources.
+**Asking works without a model.** The common questions have pre-generated curated answers that appear as soon as they match; anything else runs a full-text search across the published articles, notes, and answers.
 
-Its browser interface uses verification, quotas, and rate limits; its MCP interface exposes a restricted `ask` tool. Live Ask does not provide long-term memory, arbitrary external actions, elicitation, or impersonation of the site owner.
+If nothing matches, the question goes to a live same-origin service: it retrieves this site's public content, hands the retrieved passages to a model for a source-grounded answer, and gates the browser entry point with a challenge and quotas. Answers stay single-turn and cite the pages they came from.
+
+Either way there is no long-term memory and no speaking on the author's behalf; when in doubt, trust the linked public page.

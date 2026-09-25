@@ -1,14 +1,16 @@
 ---
-title: Refined-X 如何做到 Agent 友好？
-description: Refined-X 如何把同一份公开内容开放给 AI Agent。
+title: Agent 或 AI 怎么读取本站内容？
+description: 站点为 AI Agent 与阅读器准备的可读接口。
 contentType: answer
 slug: agent-ready
-tags: [Agent, 大模型, MCP, OpenAPI]
-llmSummary: Refined-X 从同一份公开内容生成 Markdown 镜像、llms.txt 文件、结构化 JSON、OpenAPI、MCP 发现元数据，以及可选的 Ask 入口。
-question: Refined-X 如何做到 Agent 友好？
-shortAnswer: Refined-X 从同一份公开内容生成可预期的 Markdown、llms.txt、JSON、OpenAPI、MCP 发现信息与可选的 Ask 入口，供 Agent 使用。
+tags: [Agent, 可读性, 接口]
+llmSummary: 站点用同一份内容生成多种机器可读接口：llms.txt 与 llms-full.txt 目录、每页的 Markdown 镜像、articles/profile/search-index 等 JSON 接口、OpenAPI 描述和站点地图，Agent 不必解析页面布局就能取到可引用的材料。
+question: Agent 或 AI 怎么读取本站内容？
+shortAnswer: 从同一份内容生成 llms.txt、llms-full.txt、Markdown 镜像、JSON 接口和 OpenAPI 描述，Agent 不用解析页面布局就能拿到可引用的材料。
 ---
 
-Refined-X 通过一组可预期的接口发布同一份公开内容：每页的 Markdown 镜像、`llms.txt`、`llms-full.txt`、结构化 JSON API、OpenAPI 以及 MCP 发现元数据。这样一来，Agent 在找到可引用的材料之前，需要理解的导航和页面布局就少了很多。
+**同一份内容，既有给人看的页面，也有给机器读的接口。** 入口目录是 [llms.txt](/llms.txt)，完整语料在 [llms-full.txt](/llms-full.txt)。
 
-可选的 Ask 服务在不改动源内容的前提下，提供有来源依据的检索与摘要。“Agent 友好”意味着站点更容易被读取和接入；它并不承诺每个 Agent 都会自动发现或调用这些接口。
+文章、随笔和问答都有对应的 Markdown 镜像与 JSON 接口，例如 /api/articles.json、/api/profile.json、/api/search-index.json；接口字段说明在 [openapi.json](/openapi.json)，站点地图在 /sitemap-index.xml。Markdown 镜像就是发布时用的原文，引用时不会和页面渲染产生出入。
+
+站内提问走三层：策展答案、全文检索，以及实时 AI 问答（见「本站的搜索和提问是怎么工作的？」）。实时回答由同源的 Worker 提供——它先检索本站公开内容，再生成带来源引用的答案，保持单轮、不做长期记忆。

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Live Ask for this instance: `https://ask.hydblog.xyz` (Cloudflare Worker + AI Search + D1 + Turnstile + DeepSeek) serves `POST /ask`, `POST /mcp`, and `GET /health` for `https://hydblog.xyz`
 - `src/lib/public-surfaces.ts`: the single source of truth for the machine-readable endpoints the footer links (locale-scoped vs site-wide)
 - Root `wrangler.jsonc`: the site deploys as a Cloudflare Worker with static assets (`npm run build`, then `npx wrangler deploy` uploading `./dist`)
 - Header spark button: the ⌘K ask/search overlay now has a trigger on every page (reuses `ask.openAria` / `ask.openTitle`, previously unused copy)

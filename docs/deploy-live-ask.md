@@ -131,6 +131,7 @@ Product-client acceptance (Claude Code modern + Codex CLI legacy on the same syn
 | Browser Ask blocked by CORS | `ALLOWED_ORIGIN` / `SITE_URL` ≠ static site origin | Align scheme + host + port; redeploy Worker |
 | `/health` unhealthy or 5xx | Missing bindings, bad AI Search name, D1 not migrated | Check Wrangler logs; re-apply migrations; confirm instance names |
 | Empty or irrelevant answers | AI Search index empty or out of date | Re-sync / re-index; run `check:search` with an API token |
+| `502` / `MODEL_FAILED` from `/ask` while retrieval works | The AI Gateway rejects the request: with **Authenticated Gateway** on, calls without `cf-aig-authorization` return `Unauthorized` (code 2009) | Turn Authenticated Gateway off for that gateway, or set the optional `CF_AIG_TOKEN` secret; this instance calls `api.deepseek.com` directly instead |
 | Turnstile failures in the UI | Site key ≠ secret, or hostname not allowed on the widget | Recreate/match keys; add your Pages domain to Turnstile hostnames |
 | Static `/ask` never calls the Worker | `ask.askUrl` unset or build used old config | Set `ask.*` and rebuild the site |
 | Quota / rate-limit errors | `DAILY_*_LIMIT` or rate-limit bindings exhausted | Raise limits carefully or wait for reset; confirm limiter namespace IDs |

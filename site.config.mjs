@@ -34,7 +34,7 @@ const defaults = {
 		/** Compact labels for the header language switch and Starlight locale UI. */
 		labels: { 'zh-CN': '中文', en: 'EN' },
 	},
-	site: 'https://blog.hydyd0505.workers.dev',
+	site: 'https://hydblog.xyz',
 	timeZone: 'UTC',
 	contentRoot: './content',
 	publicDir: './public',
@@ -45,9 +45,9 @@ const defaults = {
 		github: 'https://github.com/HYDtomako',
 	},
 	ask: {
-		askUrl: '',
-		mcpUrl: '',
-		healthUrl: '',
+		askUrl: 'https://ask.hydblog.xyz/ask',
+		mcpUrl: 'https://ask.hydblog.xyz/mcp',
+		healthUrl: 'https://ask.hydblog.xyz/health',
 		/**
 		 * Public protocol declaration for discovery/OpenAPI.
 		 * Default `undeclared` does not claim modern dual-era until a deployment has passed acceptance.
@@ -55,7 +55,7 @@ const defaults = {
 		 */
 		protocolProfile: 'undeclared',
 		/** Must match the Worker PERSIST_INTERACTIONS setting when Live Ask is enabled. */
-		persistInteractions: true,
+		persistInteractions: false,
 	},
 	/** Optional giscus repository/category identifiers. Leave all fields empty to disable comments. */
 	comments: {
@@ -64,7 +64,13 @@ const defaults = {
 		category: '',
 		categoryId: '',
 	},
-	redirects: {},
+	/** Renamed answers keep their old URLs working. */
+	redirects: {
+		'/answers/what-is-refined-x': '/answers/what-is-this-site/',
+		'/answers/external-content-vault': '/answers/where-articles-were/',
+		'/en/answers/what-is-refined-x': '/en/answers/what-is-this-site/',
+		'/en/answers/external-content-vault': '/en/answers/where-articles-were/',
+	},
 	/** Per-locale public identity and page copy, keyed by locale id. */
 	brand: {
 		'zh-CN': {
@@ -76,17 +82,15 @@ const defaults = {
 			homeHeading: 'HYD',
 			homeTitle: 'HYD — 个人站点',
 			homeLede: '把文章、项目与自我介绍发布一次，让人和 Agent 都能读到。',
-			writingLede: '关于前端架构、AI 工程实践与工程判断的长文。',
+			writingLede: '平时沉淀的长文，参考多角度的观点，欢迎分享你的见解。',
 			askChips: [
 				{ label: '这是谁？', query: '作者是谁？' },
 				{ label: 'AI 实践', query: '站点记录了哪些 AI 实践？' },
 				{ label: '开源项目', query: '有哪些开源项目？' },
-				{ label: '合作方式', query: '如何与我合作？' },
+				{ label: '合作方式', query: '如何与 HYD 合作？' },
 			],
-			footerTagline: '为人类与 Agent 同时构建。',
 			projects: {
 				heading: '项目',
-				description: '通过这个站点公开发布的项目、课程与实验。',
 				lede: '如果你也热爱开源，欢迎交流！',
 				titleSuffix: '项目',
 			},
@@ -97,26 +101,21 @@ const defaults = {
 		},
 		en: {
 			description:
-				'HYD is an agent-ready personal site for Astro + Starlight: opinionated public content schema, editorial design, and machine-readable surfaces (llms.txt, OpenAPI, MCP discovery).',
+				'HYD is an agent-ready personal site for Astro + Starlight.',
 			persona: 'HYD',
 			wordmark: 'HYD Personal Blog',
 			alternateNames: ['HYD'],
 			homeHeading: 'HYD',
 			homeTitle: 'HYD — Personal site',
-			homeLede: 'Editorial personal publishing with agent-friendly surfaces.',
-			writingLede:
-				'Long-form writing on frontend architecture, AI engineering practice, and professional judgment.',
+			writingLede: 'Long-form pieces written over time, drawing on more than one angle — your thoughts are welcome.',
 			askChips: [
 				{ label: 'Who is this?', query: 'Who is the author?' },
-				{ label: 'AI practice', query: 'What AI practices are documented?' },
-				{ label: 'Open source', query: 'What open source projects are featured?' },
-				{ label: 'Collaborate', query: 'How can I collaborate?' },
+				{ label: 'AI practice', query: 'What AI practices does this site document?' },
+				{ label: 'Open source', query: 'Which open source projects are here?' },
+				{ label: 'Collaborate', query: 'How can I collaborate with HYD?' },
 			],
-			footerTagline: 'Built for humans and agents.',
 			projects: {
 				heading: 'Projects',
-				description:
-					'Selected public projects, courses, and experiments published with this site.',
 				lede: 'Into open source too? Let’s talk.',
 				titleSuffix: 'Projects',
 			},
