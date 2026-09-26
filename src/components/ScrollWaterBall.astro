@@ -44,7 +44,8 @@ const label = getSiteCopy(locale).ui.common.backToTop;
 		bottom: 24px;
 		z-index: 20;
 		--ball-progress: 0;
-		--ball-water: color-mix(in srgb, var(--ink) 62%, transparent);
+		/* One blue in both themes: the page canvas blue deepened with the focus blue. */
+		--ball-water: color-mix(in srgb, #d5e6fb 55%, #005fcc);
 	}
 	.water-ball-button {
 		display: block;

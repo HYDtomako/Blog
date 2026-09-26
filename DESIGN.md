@@ -132,6 +132,7 @@ Flat elsewhere. No nested cards. Ask stage uses full-width sunken band + lifted 
 | `.answer-index-item` | Full-width FAQ rows, no side stripes |
 | `.prose` | Article body, editorial measure |
 | `.gb-*` | Guestbook composer, message rows, emoji popover; chrome stays monochrome so the picked emoji read as the only colour |
+| `.water-ball` | Reading progress ball on articles, `/projects/`, `/about/`; its water is the one sanctioned blue besides the page canvas wash |
 
 Header wordmark: Spectral, from `site.config.mjs` `brand[locale].wordmark`. User-facing persona comes from `brand[locale].persona` (per-locale brand copy, default locale `zh-CN`).
 
