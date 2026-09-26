@@ -673,24 +673,6 @@ h4 {
 .entry:focus-visible {
   padding-left: 8px;
 }
-.section-cards .feed {
-  gap: 14px;
-}
-.section-cards .entry {
-  padding: 20px 24px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  background: var(--surface);
-  transition:
-    padding-left var(--duration-mid) var(--ease-out-quart),
-    border-color var(--duration-fast) var(--ease-out-quart),
-    background var(--duration-fast) var(--ease-out-quart);
-}
-.section-cards .entry:hover,
-.section-cards .entry:focus-visible {
-  padding-left: 24px;
-  border-color: var(--ink);
-}
 .entry-date {
   font-family: var(--mono);
   font-size: 12px;
@@ -919,9 +901,13 @@ h4 {
 .archive-year {
   margin-bottom: 20px;
 }
+/* The year label stands alone: no rule underneath it. */
+.archive-year .archive-year-heading {
+  border-bottom: 0;
+}
 .archive-year-heading {
   margin: 0;
-  padding: 18px 0 6px;
+  padding: 18px 0 12px;
   border-bottom: 1px solid var(--line);
   font-size: 13px;
   color: var(--ghost);

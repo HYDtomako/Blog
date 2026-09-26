@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Home page lists stop reading as one welded block: the 博客/随笔/开源 sections render every entry as its own bordered card with real spacing (`section-cards` in `src/styles/refined-x.css`), and the closing 站点统计 block is three separate cards instead of a single divided strip
+- The blog archive's year label no longer draws a rule under itself: it read as a stray full-width line lying across the tops of the article cards, and the label now sits further above them. The closing 站点统计 block on the home page is three separate cards instead of one divided strip
 - School details removed from the site: `person.yaml` drops `education`/`educationHistory` (the home page's education section is gone), the bio, About page, and author answer no longer name a school, and `/openapi.json` stops advertising the education fields
 - `/ask` and its overlay stop promising a live answer when the build has no `ask.askUrl`: the page says it searches the published content, submit runs the static index only, and the overlay's fallback link points at that search instead of "live AI"
 - `/api/search-index.json` also indexes notes (new `notes` array, `items[].type: 'note'`), so ⌘K and `/ask` search notes alongside articles and curated answers
