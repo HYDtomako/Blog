@@ -89,6 +89,7 @@ overlay 的字段会覆盖默认值。
 | `stats.enabled` / `stats.url`        | 统计开关；`url` 留空表示同源接口 |
 | `guestbook.enabled` / `guestbook.url` | 匿名留言板开关；`url` 留空表示同源接口 |
 | `readingProgress.enabled` | 右下角水球阅读进度开关（文章页 / 项目页 / 关于页）                                                                |
+| `intro.enabled` | 首页开屏动画开关（深海下潜仪表；首访播放，可跳过）                                                                |
 | `redirects`                          | 旧路径到新路径的跳转表，示例条目可以删掉                                                        |
 | `contentRoot`、`publicDir`、`outDir`、`assetSource` | 内容、静态资源、构建产物的位置；也可以把内容仓库放在模板之外                     |
 | `discovery.awp`                      | 可选的 AWP 实验开关，默认关闭                                                                   |

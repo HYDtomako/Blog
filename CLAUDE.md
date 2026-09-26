@@ -75,6 +75,35 @@ height changes. It is decorative apart from the button, which scrolls back to th
 
 Config entrypoint: `site.config.mjs` (optional overlay `../instance.config.mjs`).
 
+## Deep-sea intro
+
+`src/components/DeepSeaIntro.astro` renders a full-screen deep-sea diving instrument on the home
+page only (`/` and `/en/`, gated by `intro.enabled` in `site.config.mjs`). It is fully
+self-contained: no other page ships its markup, its stylesheet, or its script.
+
+- `src/scripts/deep-sea-intro.ts` holds the whole timeline as pure functions —
+  `introFrameAt(elapsed)` returns the phase, label, depth, pressure, temperature, the start-up
+  ratio and the needle angle for any millisecond — plus `initDeepSeaIntro(doc, win)`, which writes
+  `--ds-boot` / `--ds-depth` / `--ds-needle`, the `data-ds-phase` / `data-ds-label` beats and the
+  three readouts on one rAF loop, then removes the node. Total run is 7500 ms in six beats:
+  a 1.2 s instrument start-up, a 3.5 s descent through the brief's sixteen checkpoints
+  (000 → 2000 m in stages of 260/340/100 ms), the 0.5 s breath at DEPTH REACHED, 0.8 s of HYD and
+  a 1.5 s hand-off. Pressure is exactly `1 + depth / 10` and temperature falls through a
+  300 m thermocline from 18.0 °C to 4.2 °C, both by construction.
+- `src/styles/deep-sea-intro.css` is linked from `Head.astro` only when the intro renders, so
+  article and hub pages pay nothing for it. Every layer carries its own start-up ramp
+  (`--ds-in-*`, derived from `--ds-boot`), which is what makes the case ring, the scale, the
+  pointer and the halo appear one after another; the descent itself is driven by `--ds-depth`.
+- The overlay is `display: none` unless the document root carries `data-intro="play"`, which is set
+  by `introBootScript()` — an inline head script emitted by `Head.astro`. Without JavaScript the
+  intro never appears; when the intro bundle fails to load, the same script's `INTRO_FAILSAFE_MS`
+  timer removes the overlay and frees the scroll lock.
+- Seen state lives in `localStorage` under `refined-x-intro-seen`; `?intro=1` replays the intro,
+  `prefers-reduced-motion: reduce` skips it without marking it seen, and `SKIP INTRO` (or `Esc`)
+  exits through a compressed reveal.
+- `npm run test:intro` covers the curve, the beats, the hold at 2000 m, the skip path, storage
+  failures, and the no-JavaScript and bundle-failure paths.
+
 ## Locales
 
 Two locales ship by default: `zh-CN` (default, served at `/`) and `en` (served at `/en/`).
