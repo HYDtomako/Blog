@@ -131,6 +131,7 @@ Product-client acceptance (Claude Code modern + Codex CLI legacy on the same syn
 | Browser Ask blocked by CORS | `ALLOWED_ORIGIN` / `SITE_URL` ≠ static site origin | Align scheme + host + port; redeploy Worker |
 | `/health` unhealthy or 5xx | Missing bindings, bad AI Search name, D1 not migrated | Check Wrangler logs; re-apply migrations; confirm instance names |
 | Empty or irrelevant answers | AI Search index empty or out of date | Re-sync / re-index; run `check:search` with an API token |
+| Empty answers for Chinese questions while English works | Grounding miss: no chunk clears the grounding floor (strict `MIN_GROUNDING_SCORE`, then the `0.30` fallback), so `summarize` streams the no-reference text | Not a failure — confirm with `/health?check=search`, then read “Grounding misses vs. real failures” below |
 | `502` / `MODEL_FAILED` from `/ask` while retrieval works | The AI Gateway rejects the request: with **Authenticated Gateway** on, calls without `cf-aig-authorization` return `Unauthorized` (code 2009) | Turn Authenticated Gateway off for that gateway, or set the optional `CF_AIG_TOKEN` secret; this instance calls `api.deepseek.com` directly instead |
 | Turnstile failures in the UI | Site key ≠ secret, or hostname not allowed on the widget | Recreate/match keys; add your Pages domain to Turnstile hostnames |
 | Static `/ask` never calls the Worker | `ask.askUrl` unset or build used old config | Set `ask.*` and rebuild the site |
@@ -138,6 +139,27 @@ Product-client acceptance (Claude Code modern + Codex CLI legacy on the same syn
 | Demo vs full confusion | Demo omits learning queue / `LEARNING_EXPORT_TOKEN` and sets `PERSIST_INTERACTIONS=false` | Use the matching wrangler file and secret list |
 | `typecheck` / deploy persona stale | Persona not synced | `npm run sync:persona` (also runs on `predeploy`) |
 | Machine MCP clients unauthorized | Expecting browser Turnstile path | Anonymous MCP gets retrieval; generated browser answers need Turnstile + budget |
+
+### Grounding misses vs. real failures
+
+An empty Ask answer is usually a **grounding miss**: the query did reach AI Search, but no chunk cleared the grounding floor. Chinese questions hit this far more often than English ones against the same index.
+
+| Signal | Grounding miss | Real failure |
+| ------ | -------------- | ------------ |
+| `GET /health?check=search` | `ok: true`, index and jobs healthy | `503` or `ok: false` with an `ai_search` error |
+| `/ask` response | `200` with the localized no-reference text as the `SearchSummary` | `4xx`/`5xx` with `error.code` (`UPSTREAM_ERROR`, `UPSTREAM_TIMEOUT`, `INTERNAL_ERROR`, …) |
+| Worker log event | `public_ask_no_grounding` with `"grounding":"none"` | `public_ask_failed` with `failureCode`, `stage`, and `reason` |
+
+`public_ask_ok` stays the successful path; its `grounding` field reads `strict` (cleared the floor), `low` (only cleared the fallback floor), or `none` alongside `public_ask_no_grounding`.
+
+Thresholds and how to tune them:
+
+- `MIN_GROUNDING_SCORE` — Worker var, defaulting to the `0.48` constant in [`src/retrieval.ts`](../examples/public-ask-worker/src/retrieval.ts). The same value caps the AI Search `match_threshold`, so the index never filters harder than the Worker does. Lower it (for example `0.40`) to admit weaker matches deployment-wide.
+- Fallback floor — retrieval asks the index for everything at or above the lower of the two floors (`0.30`, `FALLBACK_GROUNDING_SCORE`) and keeps only chunks at `MIN_GROUNDING_SCORE` first; when nothing clears it, the Worker keeps the weaker set instead of answering with nothing. Rescued sources are logged as `"grounding":"low"`; frames, ranking, and answer shape are unchanged, and when even the fallback floor finds nothing the no-reference answer is served exactly as before.
+
+The durable fix is on the **AI Search index side**, which this repo cannot tune: use a multilingual embedding model (or an instance with Chinese tokenization) and re-index the corpus. Lowering `MIN_GROUNDING_SCORE` or relying on the fallback only buys back part of the coverage an index ranks poorly.
+
+Secrets: `ACTOR_HMAC_KEY` must exist (`npx wrangler secret put ACTOR_HMAC_KEY`). The Worker now fails closed without it — `/ask` answers `500 INTERNAL_ERROR` and logs `"event":"actor_key_missing"`, `/mcp` fails in pre-auth with `MissingActorKeyError` — instead of silently hashing every visitor into a single actor id.
 
 ## Boundaries
 

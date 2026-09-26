@@ -13,6 +13,19 @@ export const RETRIEVAL_CONFIG = {
 /** Drop weak matches after reranking so list mode does not surface unrelated pages. */
 export const MIN_GROUNDING_SCORE = 0.48;
 
+/** Weakest floor: chunks at or above it are kept only when nothing clears the configured floor. */
+export const FALLBACK_GROUNDING_SCORE = 0.3;
+
+function parseScore(value: string | undefined, floor: number): number {
+  const parsed = Number.parseFloat(value ?? "");
+  return Number.isFinite(parsed) && parsed > 0 && parsed < 1 ? parsed : floor;
+}
+
+/** Deployment-tunable grounding floor (`MIN_GROUNDING_SCORE`), defaulting to the constant. */
+export function resolveMinGroundingScore(env: { MIN_GROUNDING_SCORE?: string }): number {
+  return parseScore(env.MIN_GROUNDING_SCORE, MIN_GROUNDING_SCORE);
+}
+
 function sourceUrl(key: string, siteUrl: string): string {
   try {
     const url = new URL(key, `${siteUrl.replace(/\/$/, "")}/`);
@@ -48,13 +61,14 @@ export function sourceResults(
   return results;
 }
 
-export function aiSearchOptions() {
+/** The index filter must never be stricter than the loosest floor the caller keeps chunks at. */
+export function aiSearchOptions(minScore = MIN_GROUNDING_SCORE) {
   return {
     retrieval: {
       retrieval_type: RETRIEVAL_CONFIG.retrieval_type,
       keyword_match_mode: RETRIEVAL_CONFIG.keyword_match_mode,
       max_num_results: RETRIEVAL_CONFIG.max_num_results,
-      match_threshold: RETRIEVAL_CONFIG.match_threshold,
+      match_threshold: Math.min(RETRIEVAL_CONFIG.match_threshold, minScore),
       context_expansion: RETRIEVAL_CONFIG.context_expansion,
       return_on_failure: RETRIEVAL_CONFIG.return_on_failure,
     },

@@ -86,7 +86,8 @@ overlay 的字段会覆盖默认值。
 | `social.github`                      | GitHub 链接；`npm run sync:github` 按这个账号拉取贡献图与项目 star 数                            |
 | `ask.askUrl` / `mcpUrl` / `healthUrl` | 可选的 Live Ask 接口；留空就是纯静态站点                                                        |
 | `comments.repo` / `repoId` / `category` / `categoryId` | 可选的 giscus 配置；四项都空 = 关闭评论                                       |
-| `stats.enabled` / `stats.url`        | 统计开关；`url` 留空表示同源接口                                                                |
+| `stats.enabled` / `stats.url`        | 统计开关；`url` 留空表示同源接口 |
+| `guestbook.enabled` / `guestbook.url` | 匿名留言板开关；`url` 留空表示同源接口                                                                |
 | `redirects`                          | 旧路径到新路径的跳转表，示例条目可以删掉                                                        |
 | `contentRoot`、`publicDir`、`outDir`、`assetSource` | 内容、静态资源、构建产物的位置；也可以把内容仓库放在模板之外                     |
 | `discovery.awp`                      | 可选的 AWP 实验开关，默认关闭                                                                   |
@@ -226,7 +227,7 @@ proofPoints: [已有 2000 位用户在用]
 | `name`                                         | 你的 Worker 名字                                            |
 | `d1_databases[0].database_name` / `database_id` | 你创建的 D1 数据库（`npx wrangler d1 create <名字>`，把 id 填回来） |
 | `routes[0].pattern`                            | 你的自定义域名；不想绑定域名就删掉整个 `routes` 段，用 `*.workers.dev` |
-| `ratelimits[0].namespace_id`                   | 你自己的限流命名空间 id                                      |
+| `ratelimits[0].namespace_id`                   | 你自己的限流命名空间 id（统计与留言板各一个）                                      |
 
 ```sh
 npx wrangler login
@@ -241,6 +242,8 @@ D1 数据库名也出现在 `package.json` 的 `db:migrate` / `db:migrate:local`
 
 统计是运行时可选的：接口不可用时组件会自己隐藏，页面其余部分不受影响。点赞只按每周轮换的 HMAC 假名去重，
 不保存 IP。把 `stats.enabled` 设为 `false` 就能移除组件和对应的校验。
+
+留言板（`/guestbook/`）复用同一套身份和同一份 D1：发帖、点赞、撤回都走 `/api/guestbook/*`，作者哈希只在服务端参与判断，不会返回给浏览器。它需要 `npx wrangler secret put STATS_ACTOR_SECRET`（与点赞共用），缺少时整个留言板返回 503 并自动隐藏；把 `guestbook.enabled` 设为 `false` 即可关闭。
 
 ### 可选：Live Ask
 
@@ -278,6 +281,7 @@ PUBLIC_TURNSTILE_SITE_KEY=your_site_key npm run build
 | `npm run test:related`      | 相关文章选取的测试                                                                  |
 | `npm run test:comments`     | giscus 配置测试                                                                    |
 | `npm run test:stats`        | 统计 Worker 与前端组件测试                                                          |
+| `npm run test:guestbook` | 留言板前端与交互测试 |
 | `npm run sync:github`       | 从 GitHub 刷新 `content/github-activity.json` 和项目 star 数                        |
 | `npm run collect-assets`    | 把外部图库同步进 `public/asset`（没配 `assetSource` 时什么都不做）                   |
 | `npm run dev:worker`        | `wrangler dev`：同时跑构建产物和统计接口                                             |

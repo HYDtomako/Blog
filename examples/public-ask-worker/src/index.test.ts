@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { handleAsk, handleLearningExport } from "./index.ts";
+import { handleAsk, handleLearningExport, executeAskAction } from "./index.ts";
 import { digestApiKeySecret } from "./api-keys.ts";
 import { NO_REFERENCE_ANSWER_VARIANTS } from "./no-reference-answer.ts";
+import { FALLBACK_GROUNDING_SCORE } from "./retrieval.ts";
 
 class MemoryExactCache implements Pick<Cache, "match" | "put"> {
   readonly entries = new Map<string, Response>();
@@ -21,6 +22,12 @@ function cacheRuntime(cache: Pick<Cache, "match" | "put">) {
     async flush() { await Promise.all(writes.splice(0)); },
     writes,
   };
+}
+
+/** Canned answers resolve their guide tokens, so match on the approved opening. */
+function isApprovedNoReferenceAnswer(text: string) {
+  return NO_REFERENCE_ANSWER_VARIANTS.some((variant) => text.startsWith(variant.split("{")[0]))
+    && !/\{(answers|topics)\}/.test(text);
 }
 
 function abuseStateDb() {
@@ -354,7 +361,8 @@ test("no-reference summarize responses use an approved variant without model cal
 
   assert.equal(response.status, 200);
   assert.ok(summary?.text);
-  assert.ok(NO_REFERENCE_ANSWER_VARIANTS.includes(summary.text as typeof NO_REFERENCE_ANSWER_VARIANTS[number]));
+  assert.ok(isApprovedNoReferenceAnswer(summary.text));
+  assert.match(summary.text, /https:\/\/refined-x\.com\/(answers|topics)\//);
   assert.equal(events[0].answer?.text, summary.text);
   assert.equal(events[0].answer?.model, "none");
   assert.equal(fetchCalls, 1);
@@ -387,7 +395,8 @@ test("streamed no-reference summarize responses stay on the normal SearchSummary
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("content-type"), "text/event-stream; charset=utf-8");
   assert.ok(result?.item?.text);
-  assert.ok(NO_REFERENCE_ANSWER_VARIANTS.includes(result.item.text as typeof NO_REFERENCE_ANSWER_VARIANTS[number]));
+  assert.ok(isApprovedNoReferenceAnswer(result.item.text));
+  assert.match(result.item.text, /https:\/\/refined-x\.com\/(answers|topics)\//);
 });
 
 test("never returns more than eight deduplicated AI Search sources", async () => {
@@ -1678,4 +1687,186 @@ test("non-persistent security rejections update abuse state without an audit que
   assert.equal(state.violations.length, 1);
   assert.match(logs[0], /"event":"security_decision"/);
   assert.doesNotMatch(logs.join("\n"), /203\.0\.113\.7|\{\"query\":/);
+});
+
+test("rescues a zero-source retrieval at the lower fallback floor", async (t) => {
+  const thresholds: number[] = [];
+  const logs: string[] = [];
+  let upstreamCalls = 0;
+  t.mock.method(console, "log", (line: string) => { logs.push(line); });
+  t.mock.method(globalThis, "fetch", async () => {
+    upstreamCalls += 1;
+    return upstreamCalls === 1
+      ? Response.json({ success: true, hostname: "refined-x.com", action: "public-ask" })
+      : Response.json({ choices: [{ message: { content: "低置信度回答" } }] });
+  });
+  const env = acceptedEnv({
+    PUBLIC_CONTENT: {
+      async search(options: { ai_search_options: { retrieval: { match_threshold: number } } }) {
+        thresholds.push(options.ai_search_options.retrieval.match_threshold);
+        return { chunks: [
+          { id: "weak", score: 0.34, text: "weak evidence", item: { key: "/weak", metadata: { title: "Weak" } } },
+          { id: "below", score: 0.2, text: "noise", item: { key: "/noise", metadata: { title: "Noise" } } },
+        ] };
+      },
+    },
+    DB: {
+      prepare(sql: string) {
+        return {
+          bind() {
+            return {
+              async first() {
+                return sql.includes("generation_reserved") ? { generation_reserved: 1 } : { accepted_requests: 1 };
+              },
+              async run() {},
+            };
+          },
+        };
+      },
+    },
+  });
+  const response = await handleAsk(new Request("https://ask.refined-x.com/ask", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "cf-connecting-ip": "203.0.113.7",
+      "cf-turnstile-response": "valid-token",
+    },
+    body: JSON.stringify({ query: { text: "中文问题" }, prefer: { mode: "summarize" } }),
+  }), env);
+  const body = await response.json() as { results: Array<Record<string, unknown>> };
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(thresholds, [FALLBACK_GROUNDING_SCORE]);
+  assert.equal(upstreamCalls, 2);
+  assert.ok(body.results.some((result) => result["@type"] === "Article" && result.url === "https://refined-x.com/weak"));
+  assert.ok(!body.results.some((result) => result.url === "https://refined-x.com/noise"));
+  assert.ok(body.results.some((result) => result["@type"] === "SearchSummary" && result.text === "低置信度回答"));
+  assert.match(logs[0], /"event":"public_ask_ok"/);
+  assert.match(logs[0], /"grounding":"low"/);
+});
+
+test("prefers sources above the configured floor over rescued ones", async (t) => {
+  const logs: string[] = [];
+  let upstreamCalls = 0;
+  t.mock.method(console, "log", (line: string) => { logs.push(line); });
+  t.mock.method(globalThis, "fetch", async () => {
+    upstreamCalls += 1;
+    return upstreamCalls === 1
+      ? Response.json({ success: true, hostname: "refined-x.com", action: "public-ask" })
+      : Response.json({ choices: [{ message: { content: "正常回答" } }] });
+  });
+  const env = acceptedEnv({
+    PUBLIC_CONTENT: {
+      async search() {
+        return { chunks: [
+          { id: "strong", score: 0.9, text: "strong evidence", item: { key: "/strong", metadata: { title: "Strong" } } },
+          { id: "weak", score: 0.34, text: "weak evidence", item: { key: "/weak", metadata: { title: "Weak" } } },
+        ] };
+      },
+    },
+    DB: {
+      prepare(sql: string) {
+        return {
+          bind() {
+            return {
+              async first() {
+                return sql.includes("generation_reserved") ? { generation_reserved: 1 } : { accepted_requests: 1 };
+              },
+              async run() {},
+            };
+          },
+        };
+      },
+    },
+  });
+  const response = await handleAsk(new Request("https://ask.refined-x.com/ask", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "cf-connecting-ip": "203.0.113.7",
+      "cf-turnstile-response": "valid-token",
+    },
+    body: JSON.stringify({ query: { text: "中文问题" }, prefer: { mode: "summarize" } }),
+  }), env);
+  const body = await response.json() as { results: Array<Record<string, unknown>> };
+
+  assert.equal(response.status, 200);
+  assert.ok(body.results.some((result) => result.url === "https://refined-x.com/strong"));
+  assert.ok(!body.results.some((result) => result.url === "https://refined-x.com/weak"));
+  assert.match(logs[0], /"event":"public_ask_ok"/);
+  assert.match(logs[0], /"grounding":"strict"/);
+});
+
+test("logs a distinguishable event when an answer is served without grounding", async (t) => {
+  const logs: string[] = [];
+  t.mock.method(console, "log", (line: string) => { logs.push(line); });
+  t.mock.method(globalThis, "fetch", async () =>
+    Response.json({ success: true, hostname: "refined-x.com", action: "public-ask" }));
+  const response = await handleAsk(new Request("https://ask.refined-x.com/ask", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "cf-connecting-ip": "203.0.113.7",
+      "cf-turnstile-response": "valid-token",
+    },
+    body: JSON.stringify({ query: { text: "x" }, prefer: { mode: "summarize" } }),
+  }), acceptedEnv());
+  const body = await response.json() as { results: Array<{ "@type": string; text?: string }> };
+
+  assert.equal(response.status, 200);
+  assert.equal(body.results.length, 1);
+  assert.equal(body.results[0]["@type"], "SearchSummary");
+  assert.match(logs[0], /"event":"public_ask_no_grounding"/);
+  assert.match(logs[0], /"grounding":"none"/);
+  assert.match(logs[0], /"resultCount":1/);
+});
+
+test("fails loudly when the actor HMAC key is missing", async (t) => {
+  const logs: string[] = [];
+  let searchCalls = 0;
+  t.mock.method(console, "error", (line: string) => { logs.push(line); });
+  const env = acceptedEnv({
+    ACTOR_HMAC_KEY: undefined,
+    PUBLIC_CONTENT: { async search() { searchCalls += 1; return { chunks: [] }; } },
+  });
+  const response = await handleAsk(new Request("https://ask.refined-x.com/ask", {
+    method: "POST",
+    headers: { "content-type": "application/json", "cf-connecting-ip": "203.0.113.7" },
+    body: JSON.stringify({ query: { text: "x" }, prefer: { mode: "list" } }),
+  }), env);
+  const body = await response.json() as { error: { code: string } };
+
+  assert.equal(response.status, 500);
+  assert.equal(body.error.code, "INTERNAL_ERROR");
+  assert.equal(searchCalls, 0);
+  assert.match(logs[0], /"event":"actor_key_missing"/);
+});
+
+test("ask actions fail closed when the actor HMAC key is blank", async (t) => {
+  const logs: string[] = [];
+  let searchCalls = 0;
+  t.mock.method(console, "error", (line: string) => { logs.push(line); });
+  const env = acceptedEnv({
+    ACTOR_HMAC_KEY: "   ",
+    PUBLIC_CONTENT: { async search() { searchCalls += 1; return { chunks: [] }; } },
+  });
+  const result = await executeAskAction({
+    requestId: "request-id",
+    createdAt: new Date(0).toISOString(),
+    method: "POST",
+    route: "/mcp",
+    remoteIp: "203.0.113.7",
+    authorization: null,
+    turnstileToken: null,
+    preAuthCompleted: true,
+    payloadProvider: async () => ({ query: { text: "x" } }),
+    signal: new AbortController().signal,
+  }, env);
+
+  assert.ok(!result.ok);
+  assert.equal(result.code, "INTERNAL_ERROR");
+  assert.equal(result.status, 500);
+  assert.equal(searchCalls, 0);
+  assert.match(logs[0], /"event":"actor_key_missing"/);
 });

@@ -6,7 +6,7 @@ import {
   type NlWebRequest,
   type NlWebResult,
 } from "./protocol.ts";
-import { deriveAnonymousActor } from "./actor.ts";
+import { deriveAnonymousActor, MissingActorKeyError } from "./actor.ts";
 import { RequestEnvelopeProblem } from "./request-envelope.ts";
 import { verifyBrowserChallenge, type AccessClass } from "./access-guard.ts";
 import {
@@ -35,7 +35,7 @@ import {
   type ExactCache,
 } from "./exact-cache.ts";
 import { getKnowledgeVersion } from "./knowledge-version.ts";
-import { aiSearchOptions, RETRIEVAL_CONFIG, sourceResults } from "./retrieval.ts";
+import { aiSearchOptions, FALLBACK_GROUNDING_SCORE, resolveMinGroundingScore, RETRIEVAL_CONFIG, sourceResults } from "./retrieval.ts";
 import { selectNoReferenceAnswer } from "./no-reference-answer.ts";
 import {
   classifyRequestViolation,
@@ -121,7 +121,7 @@ async function generateSummary(
 ): Promise<{ text: string; usage: TokenUsage }> {
   if (sources.length === 0) {
     return {
-      text: selectNoReferenceAnswer(Math.random, policy.language),
+      text: selectNoReferenceAnswer(Math.random, policy.language, policy.siteUrl),
       usage: { promptTokens: null, completionTokens: null, totalTokens: null },
     };
   }
@@ -323,10 +323,21 @@ export async function executeAskAction(
     language: responseLanguage,
   });
   
-  const actorId = await deriveAnonymousActor(
-    remoteIp,
-    env.ACTOR_HMAC_KEY,
-  );
+  let actorId: string;
+  try {
+    actorId = await deriveAnonymousActor(
+      remoteIp,
+      env.ACTOR_HMAC_KEY,
+    );
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: error instanceof MissingActorKeyError ? "actor_key_missing" : "actor_derivation_failed",
+      requestId,
+      route,
+      errorType: errorType(error),
+    }));
+    return internalErrorRejection(responseLanguage);
+  }
 
   if (!context.preAuthCompleted) {
     const preAuth = await runPreAuthChecks(
@@ -540,6 +551,9 @@ export async function executeAskAction(
       retrieval: RETRIEVAL_CONFIG,
     });
     let retrievalMiss = true;
+    const groundingFloor = resolveMinGroundingScore(env);
+    /** Index-side floor: broad enough for both the strict filter and the rescued one. */
+    const retrievalFloor = Math.min(FALLBACK_GROUNDING_SCORE, groundingFloor);
     let sources: NlWebResult[] | null = null;
     if (cacheAllowed && exactCache) {
       const cached = await readExactCache<{ sources: NlWebResult[] }>(exactCache, retrievalKey);
@@ -555,14 +569,18 @@ export async function executeAskAction(
       try {
         search = await deadline.run("ai_search", AI_SEARCH_TIMEOUT_MS, () => env.PUBLIC_CONTENT.search({
           query: parsed.query.text,
-          ai_search_options: aiSearchOptions(),
+          ai_search_options: aiSearchOptions(retrievalFloor),
         }));
       } catch (error) {
         if (error instanceof DeadlineExceeded) throw new UpstreamProblem("AI_SEARCH_TIMEOUT");
         if (error instanceof RequestCancelled) throw error;
         throw new UpstreamProblem("AI_SEARCH_FAILED");
       }
-      sources = sourceResults(search, policy.siteUrl);
+      sources = sourceResults(search, policy.siteUrl, groundingFloor);
+      // Chinese queries often sit just under the floor; a rescued set beats a canned no-answer.
+      if (sources.length === 0 && retrievalFloor < groundingFloor) {
+        sources = sourceResults(search, policy.siteUrl, retrievalFloor);
+      }
     }
     const answerKey = await buildCacheRequest("answer", knowledgeVersion, {
       query: normalizedQuery,
@@ -719,13 +737,19 @@ export async function executeAskAction(
       }
     }
 
+    // Rescued sets carry scores below the configured floor: low confidence, but still grounded.
+    const lowConfidence = sources.length > 0 && sources.every((source) => {
+      const score = (source.grounding as { score?: number } | undefined)?.score ?? 0;
+      return score < groundingFloor;
+    });
     console.log(JSON.stringify({
-      event: "public_ask_ok",
+      event: sources.length === 0 ? "public_ask_no_grounding" : "public_ask_ok",
       requestId,
       actorId: durableActorId,
       keyId: durableKeyId,
       accessClass,
       resultCount: results.length,
+      grounding: sources.length === 0 ? "none" : lowConfidence ? "low" : "strict",
       redactionCategories: [...new Set([...redactedRequest.categories, ...redactedResults.categories])].sort(),
     }));
     return { ok: true, results, answerId, text: safeAnswer, streaming: parsed.prefer?.streaming };

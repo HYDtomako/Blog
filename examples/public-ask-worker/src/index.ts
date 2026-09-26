@@ -4,7 +4,7 @@ import {
   streamResponse,
   NLWEB_VERSION,
 } from "./protocol.ts";
-import { deriveAnonymousActor } from "./actor.ts";
+import { deriveAnonymousActor, MissingActorKeyError } from "./actor.ts";
 import { handleMcp } from "./mcp-server.ts";
 import { PUBLIC_ASK_CORS_ALLOW_HEADERS, PUBLIC_ASK_CORS_EXPOSE_HEADERS } from "./cors.ts";
 import { readRequestEnvelope, readJsonBody } from "./request-envelope.ts";
@@ -73,7 +73,18 @@ export async function handleAsk(request: Request, env: Env, runtime: AskRuntime 
   }
 
   const remoteIp = request.headers.get("cf-connecting-ip") ?? "unknown";
-  const actorId = await deriveAnonymousActor(remoteIp, env.ACTOR_HMAC_KEY);
+  let actorId: string;
+  try {
+    actorId = await deriveAnonymousActor(remoteIp, env.ACTOR_HMAC_KEY);
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: error instanceof MissingActorKeyError ? "actor_key_missing" : "actor_derivation_failed",
+      requestId,
+      route: "/ask",
+      errorType: errorType(error),
+    }));
+    return failureResponse(requestId, "INTERNAL_ERROR", publicMessage(defaultLanguage, "internalError"), 500, headers);
+  }
   const actorSubject = { type: "actor", id: actorId } as const;
 
   if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {

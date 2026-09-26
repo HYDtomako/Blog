@@ -1,0 +1,55 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import GuestbookBoard from '../GuestbookBoard.astro';
+import { siteConfig } from '../../../site.config.mjs';
+import { breadcrumbJsonLd, webPageJsonLd } from '../../lib/public-data';
+import { localeFromPath, localizedHref, localizedSitePath } from '../../lib/locale';
+import { getSiteCopy } from '../../lib/site-copy';
+
+const locale = localeFromPath(Astro.url.pathname);
+const UI = getSiteCopy(locale).ui;
+const guestbook = UI.guestbook;
+const guestbookEnabled = siteConfig.guestbook?.enabled === true;
+const guestbookPath = localizedSitePath(locale, '/guestbook/');
+const structuredData = [
+	webPageJsonLd({
+		path: guestbookPath,
+		name: guestbook.heading,
+		description: guestbook.lede,
+		locale,
+	}),
+	breadcrumbJsonLd([
+		{ name: UI.common.home, path: localizedSitePath(locale, '/') },
+		{ name: guestbook.heading, path: guestbookPath },
+	]),
+];
+---
+
+<StarlightPage
+  frontmatter={{
+    title: guestbook.heading,
+    description: guestbook.lede,
+    template: 'splash',
+    contentType: 'page',
+    slug: 'guestbook',
+    llmSummary: guestbook.summary,
+  }}
+>
+  {structuredData.map((value) => (
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(value)} />
+  ))}
+  <div class="wrap page">
+    <div class="crumbs"><a href={localizedHref(locale, '/')}>{UI.common.home}</a><span class="sep">/</span><span>{guestbook.heading}</span></div>
+    <h1 id="guestbook-heading" class="display page-heading">{guestbook.heading}</h1>
+    <p class="lede page-lede">{guestbook.lede}</p>
+    {guestbookEnabled ? <GuestbookBoard /> : <p class="mono guestbook-offline">{guestbook.unavailable}</p>}
+  </div>
+</StarlightPage>
+
+<style>
+  .guestbook-offline {
+    margin: 24px 0 0;
+    color: var(--faint);
+    font-size: 12.5px;
+  }
+</style>
