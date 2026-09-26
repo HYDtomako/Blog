@@ -226,13 +226,6 @@ export const en: UiCopy = {
 		noScript: 'The guestbook needs JavaScript enabled in this browser.',
 		emojiToggle: 'Insert emoji',
 		emojiPanel: 'Emoji picker',
-		emojiGroups: {
-			faces: 'Faces',
-			gestures: 'Gestures',
-			hearts: 'Hearts',
-			nature: 'Nature',
-			objects: 'Things',
-		},
 		errors: {
 			invalid_message: 'That message did not look right. Edit it and send again.',
 			message_too_long: 'A message holds at most 500 characters. The extra part was not sent.',

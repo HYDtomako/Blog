@@ -1,6 +1,5 @@
 /** Locale UI chrome for Refined-X (not brand/content identity). */
 
-import type { EmojiGroupId } from '../scripts/emoji-catalog';
 import type { GuestbookErrorCode } from '../scripts/guestbook';
 
 export type UiCopy = {
@@ -229,8 +228,6 @@ export type UiCopy = {
 		noScript: string;
 		emojiToggle: string;
 		emojiPanel: string;
-		/** Group headings for the emoji picker, keyed by `EMOJI_GROUPS` ids. */
-		emojiGroups: Record<EmojiGroupId, string>;
 		errors: Record<GuestbookErrorCode, string>;
 	};
 	footer: {

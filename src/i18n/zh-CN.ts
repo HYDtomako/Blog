@@ -225,13 +225,6 @@ export const zhCN: UiCopy = {
 		noScript: '留言板需要浏览器启用 JavaScript 才能加载。',
 		emojiToggle: '插入 Emoji 表情',
 		emojiPanel: 'Emoji 表情面板',
-		emojiGroups: {
-			faces: '表情',
-			gestures: '手势',
-			hearts: '爱心',
-			nature: '自然',
-			objects: '物品',
-		},
 		errors: {
 			invalid_message: '这条留言看起来不太对，改一下再发。',
 			message_too_long: '一条留言最多 500 字，超出的部分还没发出去。',

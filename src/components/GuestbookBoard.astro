@@ -1,5 +1,5 @@
 ---
-import { EMOJI_GROUPS } from '../scripts/emoji-catalog';
+import { EMOJI_ITEMS } from '../scripts/emoji-catalog';
 import { MAX_MESSAGE_LENGTH } from '../scripts/guestbook';
 import { localeFromPath } from '../lib/locale';
 import { withBase } from '../lib/paths';
@@ -108,16 +108,11 @@ const labels = {
 			aria-label={guestbook.emojiPanel}
 			hidden
 		>
-			{EMOJI_GROUPS.map((group) => (
-				<div class="gb-emoji-group">
-					<p class="mono gb-emoji-label">{guestbook.emojiGroups[group.id]}</p>
-					<div class="gb-emoji-grid" data-guestbook-emoji-grid={group.id}>
-						{group.items.map((emoji) => (
-							<button class="gb-emoji" type="button" data-guestbook-emoji>{emoji}</button>
-						))}
-					</div>
-				</div>
-			))}
+			<div class="gb-emoji-grid" data-guestbook-emoji-grid>
+				{EMOJI_ITEMS.map((emoji) => (
+					<button class="gb-emoji" type="button" data-guestbook-emoji>{emoji}</button>
+				))}
+			</div>
 		</div>
 	</div>
 
@@ -269,14 +264,6 @@ const labels = {
 		border-radius: var(--r-lg);
 		background: var(--surface);
 		box-shadow: var(--shadow);
-	}
-	.gb-emoji-group + .gb-emoji-group {
-		margin-top: 12px;
-	}
-	.gb-emoji-label {
-		margin: 0 0 6px;
-		color: var(--faint);
-		font-size: 11px;
 	}
 	.gb-emoji-grid {
 		display: grid;

@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The guestbook emoji picker is now one flat grid: the category headings (表情 / 手势 / 爱心 / 自然 / 物品) are gone
+- The Transformer note links 炮哥带你学 and 3Blue1Brown to their Bilibili sources
 - The blog archive's year label no longer draws a rule under itself: it read as a stray full-width line lying across the tops of the article cards, and the label now sits further above them. The closing 站点统计 block on the home page is three separate cards instead of one divided strip
 - School details removed from the site: `person.yaml` drops `education`/`educationHistory` (the home page's education section is gone), the bio, About page, and author answer no longer name a school, and `/openapi.json` stops advertising the education fields
 - `/ask` and its overlay stop promising a live answer when the build has no `ask.askUrl`: the page says it searches the published content, submit runs the static index only, and the overlay's fallback link points at that search instead of "live AI"
