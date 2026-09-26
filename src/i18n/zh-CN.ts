@@ -172,6 +172,7 @@ export const zhCN: UiCopy = {
 		notFoundTitle: '页面未找到',
 		notFoundLede: '检查 URL 是否正确，或直接向站点提问。',
 		backHome: '返回首页',
+		backToTop: '回到顶部',
 		browseWriting: '浏览博客',
 		prevPage: '← 上一页',
 		nextPage: '下一页 →',

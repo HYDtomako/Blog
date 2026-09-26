@@ -56,6 +56,16 @@ npm run dev:worker         # ./dist assets plus /api/stats/* and /api/guestbook/
 npm run test:guestbook     # board tests; the worker tests run under npm run test:stats
 ```
 
+## Reading progress ball
+
+Articles (every entry rendered by `src/components/MarkdownContent.astro`), `/projects/`, and `/about/`
+mount `src/components/ScrollWaterBall.astro`: a fixed bottom-right ball that fills with ink as the page
+is scrolled. `src/scripts/scroll-water-ball.ts` computes `scrollY / (scrollHeight - innerHeight)` and
+writes it to the `--ball-progress` custom property, recomputing on resize and whenever the document
+height changes. It is decorative apart from the button, which scrolls back to the top (instantly under
+`prefers-reduced-motion`). `site.config.mjs` gates it with `readingProgress.enabled` and
+`npm run test:ui` covers the ratio maths and the click.
+
 ## Documentation
 
 - Product positioning: `PRODUCT.md`

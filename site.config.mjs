@@ -69,6 +69,10 @@ const defaults = {
 		enabled: true,
 		url: '',
 	},
+	/** Corner water ball that fills with the reading progress of articles, /projects/, and /about/. */
+	readingProgress: {
+		enabled: true,
+	},
 	/** Anonymous guestbook at /guestbook/. Keep `url` empty for same-origin; point it at `wrangler dev` while developing the API. */
 	guestbook: {
 		enabled: true,
@@ -210,6 +214,7 @@ const merged = {
 	ask: { ...defaults.ask, ...(overlayRest.ask ?? {}) },
 	stats: { ...defaults.stats, ...(overlayRest.stats ?? {}) },
 	guestbook: { ...defaults.guestbook, ...(overlayRest.guestbook ?? {}) },
+	readingProgress: { ...defaults.readingProgress, ...(overlayRest.readingProgress ?? {}) },
 	comments: resolveCommentsConfig({ ...defaults.comments, ...(overlayRest.comments ?? {}) }),
 	brand: mergedBrand,
 	discovery: { ...defaults.discovery, ...(overlayRest.discovery ?? {}) },

@@ -217,6 +217,41 @@ try {
 	failures.push(`Guestbook integration verification failed: ${error.message}`);
 }
 
+try {
+	const progressEnabled = siteConfig.readingProgress?.enabled === true;
+	const progressPages = [
+		...siteConfig.locales.list.flatMap((locale) => {
+			const prefix = localePrefixOf(locale).replace(/^\//, '');
+			return [`${prefix}projects/index.html`, `${prefix}about/index.html`];
+		}),
+		...(await listHtmlFiles(distRoot))
+			.map((file) => path.relative(distRoot, file).replaceAll('\\', '/'))
+			.filter((relativePath) => articlePattern.test(relativePath)),
+	];
+	let checked = 0;
+	for (const relativePath of progressPages) {
+		let html;
+		try {
+			html = await readFile(path.join(distRoot, relativePath), 'utf8');
+		} catch {
+			continue;
+		}
+		checked += 1;
+		const hasBall = html.includes('data-water-ball');
+		if (progressEnabled && !hasBall) {
+			failures.push(`${relativePath} is missing the reading progress ball`);
+		}
+		if (!progressEnabled && hasBall) {
+			failures.push(`${relativePath} includes the reading progress ball while it is disabled`);
+		}
+	}
+	if (checked === 0) {
+		failures.push('No page carries the reading progress ball surface');
+	}
+} catch (error) {
+	failures.push(`Reading progress verification failed: ${error.message}`);
+}
+
 if (failures.length > 0) {
 	console.error('verify failed:\n' + failures.map((line) => `- ${line}`).join('\n'));
 	process.exit(1);

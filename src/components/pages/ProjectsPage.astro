@@ -2,11 +2,13 @@
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import { getCollection } from 'astro:content';
 import GitHubActivity from '../GitHubActivity.astro';
+import ScrollWaterBall from '../ScrollWaterBall.astro';
 import Icon from '../Icon.astro';
 import { breadcrumbJsonLd, collectionPageJsonLd, entryLocale, getPublicProfile } from '../../lib/public-data';
 import { withBase } from '../../lib/paths';
 import { DEFAULT_LOCALE, localeFromPath, localizedHref, localizedSitePath } from '../../lib/locale';
 import { getSiteCopy } from '../../lib/site-copy';
+import { siteConfig } from '../../../site.config.mjs';
 
 const COURSE_CABINET_SIZE = 3;
 
@@ -293,6 +295,7 @@ const structuredData = [
       </section>
     )}
   </div>
+  {siteConfig.readingProgress?.enabled && <ScrollWaterBall />}
 </StarlightPage>
 
 <style>
