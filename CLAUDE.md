@@ -35,6 +35,27 @@ npm run db:migrate         # apply migrations to the remote D1
 npm run deploy             # build + verify + migrate + wrangler deploy
 ```
 
+## Guestbook
+
+`/guestbook/` and `/en/guestbook/` render `src/components/pages/GuestbookPage.astro`, which mounts
+`src/components/GuestbookBoard.astro`: an anonymous message board served by the same site Worker
+(`worker/guestbook-service.ts`, `worker/guestbook-store.ts`, D1 `hydblog-stats`) on the same-origin
+`/api/guestbook/*` paths, gated by `guestbook.enabled` in `site.config.mjs`. Messages are plain text,
+two levels deep (a top-level message plus its replies), with per-visitor likes and retraction of your
+own fresh messages; the board stays hidden when the API is unreachable.
+
+Identity and abuse control reuse the stats machinery: `worker/actor.ts` derives a weekly IP pseudonym
+from `STATS_ACTOR_SECRET` (without that secret every guestbook route answers 503
+`guestbook_unavailable`), `GUESTBOOK_RATE_LIMITER` throttles each visitor, and the store enforces a
+10 second cooldown plus per-minute and per-day caps. The actor hash never leaves the server — the API
+returns only `mine`, `liked`, and a 4-character `handle`.
+
+```sh
+npm run db:migrate:local   # applies worker/migrations, including 0002_guestbook.sql
+npm run dev:worker         # ./dist assets plus /api/stats/* and /api/guestbook/*
+npm run test:guestbook     # board tests; the worker tests run under npm run test:stats
+```
+
 ## Documentation
 
 - Product positioning: `PRODUCT.md`

@@ -90,7 +90,8 @@ template with an overlay file `instance.config.mjs` (git-ignored) or the
 | `social.github`                    | GitHub link; its owner drives `npm run sync:github` (contribution snapshot + project stars) |
 | `ask.askUrl` / `mcpUrl` / `healthUrl` | Optional Live Ask endpoints; leave empty for the static-only site                      |
 | `comments.repo` / `repoId` / `category` / `categoryId` | Optional giscus identifiers; all four empty = comments off         |
-| `stats.enabled` / `stats.url`      | Counters on/off; `url` empty means same-origin                                            |
+| `stats.enabled` / `stats.url`      | Counters on/off; `url` empty means same-origin  |
+| `guestbook.enabled` / `guestbook.url` | Anonymous guestbook on/off; `url` empty means same-origin                                            |
 | `redirects`                        | Old path → new path map; delete the sample entries                                        |
 | `contentRoot`, `publicDir`, `outDir`, `assetSource` | Where content, assets and build output live; keep a vault outside the template if you like |
 | `discovery.awp`                    | Optional AWP experiment, off by default                                                    |
@@ -233,7 +234,7 @@ Step-by-step notes: [`docs/deploy-static.md`](docs/deploy-static.md).
 | `name`                               | Your Worker name                                             |
 | `d1_databases[0].database_name` / `database_id` | The D1 database you create (`npx wrangler d1 create <name>`, then paste the id) |
 | `routes[0].pattern`                  | Your custom domain, or drop the `routes` block to stay on `*.workers.dev` |
-| `ratelimits[0].namespace_id`         | A namespace id of your own for the stats rate limiter         |
+| `ratelimits[0].namespace_id`         | A namespace id of your own per rate limiter (stats and guestbook)         |
 
 ```sh
 npx wrangler login
@@ -249,6 +250,8 @@ work, and `npm run db:migrate:local` applies the migrations to the local databas
 Counters are optional at runtime: when the API is unreachable the widgets hide themselves and the
 rest of the page is unaffected. Likes are stored against a weekly HMAC pseudonym; no IP addresses
 are kept. Set `stats.enabled` to `false` to remove the widgets and their verification.
+
+The guestbook (`/guestbook/`) reuses the same identity and the same D1 database: posting, liking, and retracting all go through `/api/guestbook/*`, and the author hash stays on the server. It needs `npx wrangler secret put STATS_ACTOR_SECRET` (shared with likes); without it every guestbook route answers 503 and the board hides itself. Set `guestbook.enabled` to `false` to remove it.
 
 ### Optional: Live Ask
 
@@ -286,6 +289,7 @@ Full checklist and troubleshooting: [`docs/deploy-live-ask.md`](docs/deploy-live
 | `npm run test:related`      | Related-articles selection tests                                                         |
 | `npm run test:comments`     | giscus configuration tests                                                               |
 | `npm run test:stats`        | Counter Worker and client tests                                                          |
+| `npm run test:guestbook`    | Guestbook client and interaction tests                                                   |
 | `npm run sync:github`       | Refreshes `content/github-activity.json` and project `stars` from GitHub                 |
 | `npm run collect-assets`    | Copies an external image library into `public/asset` (no-op unless `assetSource` is set)  |
 | `npm run dev:worker`        | `wrangler dev` — built assets plus the counters API                                      |

@@ -17,9 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ask.staticNote`, `askSearch.noResults`, and `askSearch.aiFallbackSearch` copy for builds without a remote Ask endpoint
 - Site stats and per-article counters: the site Worker serves same-origin `/api/stats/page` and `/api/stats/total` from a new D1 database (`worker/`, binding `STATS_DB`); the home page shows post/note counts plus total views (`src/components/SiteStats.astro`) and every article/note shows views with a like button (`src/components/PageStats.astro`). Counts are IP-free (likes dedupe through a weekly HMAC pseudonym) and the widget hides itself when the API is unavailable
 - `npm run deploy`, `npm run db:migrate`, `npm run db:migrate:local`, `npm run dev:worker`, and `npm run test:stats` scripts
+- Anonymous guestbook at `/guestbook/` (and `/en/guestbook/`): one composer with a newline-friendly textarea, a send button and a 100-emoji picker on top of a public message wall with cursor paging, per-visitor likes, two-level replies, and retraction of your own messages within 10 minutes. It is served by the same site Worker from the same D1 database (`worker/migrations/0002_guestbook.sql`, `/api/guestbook/*`, `GUESTBOOK_RATE_LIMITER`), keeps author hashes server-side, and hides itself when the API is unreachable. `npm run test:guestbook` covers the board
 
 ### Changed
 
+- Home page lists stop reading as one welded block: the 博客/随笔/开源 sections render every entry as its own bordered card with real spacing (`section-cards` in `src/styles/refined-x.css`), and the closing 站点统计 block is three separate cards instead of a single divided strip
 - School details removed from the site: `person.yaml` drops `education`/`educationHistory` (the home page's education section is gone), the bio, About page, and author answer no longer name a school, and `/openapi.json` stops advertising the education fields
 - `/ask` and its overlay stop promising a live answer when the build has no `ask.askUrl`: the page says it searches the published content, submit runs the static index only, and the overlay's fallback link points at that search instead of "live AI"
 - `/api/search-index.json` also indexes notes (new `notes` array, `items[].type: 'note'`), so ⌘K and `/ask` search notes alongside articles and curated answers
@@ -31,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Live Ask could not answer most Chinese questions: retrieval returned nothing above the grounding floor, so the worker streamed a canned "no evidence" reply and logged it as success. Retrieval now reads a configurable floor (`MIN_GROUNDING_SCORE`, default 0.48) with one low-confidence fallback pass at 0.30, an empty retrieval logs `public_ask_no_grounding` instead of `public_ask_ok`, the canned copy says what to try next, `/ask?q=…` and the homepage chips now reach the live agent, and a missing `ACTOR_HMAC_KEY` fails loudly instead of hashing with an empty key
 - `/openapi.json` no longer ships the NLWeb Ask/MCP schemas in static mode, and its `info.description` states that no remote endpoint is configured
 - Curated-answer links inside `/ask` search results lost the locale prefix and deploy base (`/ask/?q=…` was hardcoded)
 - Entries without a `series` no longer publish `专栏：Article` in `/llms-full.txt` or `seriesName: "Article"` in the search index

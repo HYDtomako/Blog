@@ -162,7 +162,7 @@ const homeStructuredData = {
     </section>
 
     {featuredArticles.length > 0 && (
-      <section class="wrap section section-compact-top" aria-labelledby="home-writing-heading">
+      <section class="wrap section section-compact-top section-cards" aria-labelledby="home-writing-heading">
         <div class="section-head">
           <h2 id="home-writing-heading" class="section-title">{UI.home.latestHeading}</h2>
           <a class="more-link" href={localizedHref(locale, '/writing/')}>{UI.home.blogLink} <Icon name="arrow-right" size={14} /></a>
@@ -172,7 +172,7 @@ const homeStructuredData = {
     )}
 
     {featuredNotes.length > 0 && (
-      <section class="wrap section section-compact-top" aria-labelledby="home-notes-heading">
+      <section class="wrap section section-compact-top section-cards" aria-labelledby="home-notes-heading">
         <div class="section-head">
           <h2 id="home-notes-heading" class="section-title">{UI.home.notesHeading}</h2>
           <a class="more-link" href={localizedHref(locale, '/notes/')}>{UI.home.notesLink} <Icon name="arrow-right" size={14} /></a>
@@ -182,7 +182,7 @@ const homeStructuredData = {
     )}
 
     {openSourceEntries.length > 0 && (
-      <section class="wrap section section-compact-top" aria-labelledby="home-oss-heading">
+      <section class="wrap section section-compact-top section-cards" aria-labelledby="home-oss-heading">
         <div class="section-head">
           <h2 id="home-oss-heading" class="section-title">{UI.home.ossHeading}</h2>
           <a class="more-link" href={localizedHref(locale, '/projects/')}>{UI.home.ossLink} <Icon name="arrow-right" size={14} /></a>

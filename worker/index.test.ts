@@ -1,12 +1,17 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { deriveAnonymousActor } from './actor.ts'
 import type { D1Database, Env, RateLimiter } from './env.ts'
+import { MAX_MESSAGE_BYTES } from './guestbook-service.ts'
 import worker from './index.ts'
 import { createStatsDatabase } from './test/d1-sqlite.ts'
 
 const PAGE_URL = 'https://hydblog.xyz/api/stats/page'
 const TOTAL_URL = 'https://hydblog.xyz/api/stats/total'
 const HEALTH_URL = 'https://hydblog.xyz/api/stats/health'
+const GUESTBOOK_URL = 'https://hydblog.xyz/api/guestbook'
+const GUESTBOOK_LIKE_URL = 'https://hydblog.xyz/api/guestbook/like'
+const GUESTBOOK_REMOVE_URL = 'https://hydblog.xyz/api/guestbook/remove'
 const SECRET = 'test-actor-secret'
 const VISITOR = '203.0.113.7'
 const OTHER_VISITOR = '198.51.100.9'
@@ -15,15 +20,18 @@ type TestEnv = {
 	env: Env
 	assets: string[]
 	limiterKeys: string[]
+	guestbookLimiterKeys: string[]
 }
 
 function createEnv(options: {
 	db?: D1Database
 	secret?: string
 	limiter?: 'allow' | 'deny'
+	guestbookLimiter?: 'allow' | 'deny'
 } = {}): TestEnv {
 	const assets: string[] = []
 	const limiterKeys: string[] = []
+	const guestbookLimiterKeys: string[] = []
 	const env: Env = {
 		STATS_DB: options.db ?? createStatsDatabase(),
 		ASSETS: {
@@ -43,7 +51,16 @@ function createEnv(options: {
 		}
 		env.STATS_RATE_LIMITER = limiter
 	}
-	return { env, assets, limiterKeys }
+	if (options.guestbookLimiter !== undefined) {
+		const limiter: RateLimiter = {
+			async limit({ key }) {
+				guestbookLimiterKeys.push(key)
+				return { success: options.guestbookLimiter === 'allow' }
+			},
+		}
+		env.GUESTBOOK_RATE_LIMITER = limiter
+	}
+	return { env, assets, limiterKeys, guestbookLimiterKeys }
 }
 
 function pageRequest(
@@ -62,6 +79,53 @@ const post = (env: Env, body: unknown, init?: RequestInit & { ip?: string }) =>
 	worker.fetch(pageRequest(body, init), env)
 
 const json = async (response: Response) => (await response.json()) as Record<string, unknown>
+
+const errorCode = async (response: Response) =>
+	((await json(response)).error as { code: string }).code
+
+type GuestbookReplyJson = {
+	id: number
+	body: string
+	handle: string
+	mine: boolean
+	createdAt: string
+	likes: number
+	liked: boolean
+}
+
+type GuestbookMessageJson = GuestbookReplyJson & {
+	replyCount?: number
+	replies?: GuestbookReplyJson[]
+}
+
+type GuestbookListJson = {
+	messages: GuestbookMessageJson[]
+	nextBefore: number | null
+	total: number
+}
+
+function guestbookRequest(
+	url: string,
+	body: unknown,
+	{ ip = VISITOR, headers = {}, ...init }: RequestInit & { ip?: string } = {},
+): Request {
+	return new Request(url, {
+		method: 'POST',
+		body: typeof body === 'string' ? body : JSON.stringify(body),
+		...init,
+		headers: { 'content-type': 'application/json', 'cf-connecting-ip': ip, ...headers },
+	})
+}
+
+const postGuestbook = (env: Env, url: string, body: unknown, init?: RequestInit & { ip?: string }) =>
+	worker.fetch(guestbookRequest(url, body, init), env)
+
+const guestbookJson = async (response: Response) => (await response.json()) as GuestbookMessageJson
+
+const readGuestbook = (env: Env, ip = VISITOR) =>
+	worker.fetch(new Request(GUESTBOOK_URL, { headers: { 'cf-connecting-ip': ip } }), env)
+
+const guestbookList = async (response: Response) => (await response.json()) as GuestbookListJson
 
 test('the first view reports views 1 with normalized path and no-store', async () => {
 	const { env } = createEnv({ secret: SECRET })
@@ -306,9 +370,228 @@ test('every other path falls through to the assets fetcher', async () => {
 	assert.deepEqual(assets, ['/', '/about/', '/2026/04/04/notes/', '/api/stats/unknown', '/api/stats'])
 })
 
+test('guestbook routes refuse other methods with 405 and an allow header', async () => {
+	const { env } = createEnv({ secret: SECRET })
+	for (const method of ['GET', 'PUT', 'DELETE', 'OPTIONS', 'HEAD']) {
+		for (const url of [GUESTBOOK_LIKE_URL, GUESTBOOK_REMOVE_URL]) {
+			const response = await worker.fetch(new Request(url, { method }), env)
+			assert.equal(response.status, 405, `${method} ${url}`)
+			assert.equal(response.headers.get('allow'), 'POST')
+			assert.equal(response.headers.get('cache-control'), 'no-store')
+			assert.equal(await errorCode(response), 'method_not_allowed')
+		}
+	}
+	for (const method of ['PUT', 'DELETE', 'OPTIONS', 'HEAD']) {
+		const response = await worker.fetch(new Request(GUESTBOOK_URL, { method }), env)
+		assert.equal(response.status, 405, method)
+		assert.equal(response.headers.get('allow'), 'GET, POST')
+		assert.equal(response.headers.get('cache-control'), 'no-store')
+		assert.equal(await errorCode(response), 'method_not_allowed')
+	}
+})
+
+test('guestbook writes require a JSON content type before the body is read', async () => {
+	const { env } = createEnv({ secret: SECRET })
+	for (const url of [GUESTBOOK_URL, GUESTBOOK_LIKE_URL, GUESTBOOK_REMOVE_URL]) {
+		const response = await postGuestbook(env, url, 'body=hello', {
+			headers: { 'content-type': 'application/x-www-form-urlencoded' },
+		})
+		assert.equal(response.status, 415, url)
+		assert.equal(await errorCode(response), 'invalid_content_type')
+		assert.equal(response.headers.get('cache-control'), 'no-store')
+	}
+})
+
+test('guestbook bodies over the message byte cap are refused with 413', async () => {
+	const { env } = createEnv({ secret: SECRET })
+	const oversized = JSON.stringify({ body: 'x'.repeat(MAX_MESSAGE_BYTES) })
+
+	const declared = await postGuestbook(env, GUESTBOOK_URL, oversized, {
+		headers: { 'content-length': '9000' },
+	})
+	assert.equal(declared.status, 413)
+	assert.equal(await errorCode(declared), 'invalid_body')
+	assert.equal(declared.headers.get('cache-control'), 'no-store')
+
+	const measured = await postGuestbook(env, GUESTBOOK_URL, oversized)
+	assert.equal(measured.status, 413)
+	assert.equal(await errorCode(measured), 'invalid_body')
+})
+
+test('the guestbook happy path posts, replies, lists, likes, and removes', async () => {
+	const { env } = createEnv({ secret: SECRET })
+
+	const created = await postGuestbook(env, GUESTBOOK_URL, { body: '  first post  ' })
+	assert.equal(created.status, 201)
+	assert.equal(created.headers.get('cache-control'), 'no-store')
+	const thread = await guestbookJson(created)
+	assert.deepEqual(Object.keys(thread), [
+		'id',
+		'body',
+		'handle',
+		'mine',
+		'createdAt',
+		'likes',
+		'liked',
+		'replyCount',
+		'replies',
+	])
+	assert.equal(thread.body, 'first post')
+	assert.equal(thread.mine, true)
+	assert.equal(thread.likes, 0)
+	assert.equal(thread.liked, false)
+	assert.equal(thread.replyCount, 0)
+	assert.deepEqual(thread.replies, [])
+	assert.match(thread.handle, /^[0-9a-f]{4}$/)
+	assert.match(thread.createdAt, /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)
+	assert.equal(JSON.stringify(thread).includes('actor_id'), false)
+
+	const replied = await postGuestbook(env, GUESTBOOK_URL, { body: 'a reply', parentId: thread.id }, {
+		ip: OTHER_VISITOR,
+	})
+	assert.equal(replied.status, 201)
+	assert.equal(replied.headers.get('cache-control'), 'no-store')
+	const reply = await guestbookJson(replied)
+	assert.deepEqual(Object.keys(reply), ['id', 'body', 'handle', 'mine', 'createdAt', 'likes', 'liked'])
+	assert.equal(reply.mine, true)
+
+	const listedResponse = await readGuestbook(env)
+	assert.equal(listedResponse.status, 200)
+	assert.equal(listedResponse.headers.get('cache-control'), 'no-store')
+	const listed = await guestbookList(listedResponse)
+	assert.deepEqual(Object.keys(listed), ['messages', 'nextBefore', 'total'])
+	assert.equal(listed.total, 1)
+	assert.equal(listed.nextBefore, null)
+	assert.equal(listed.messages.length, 1)
+	assert.equal(listed.messages[0].body, 'first post')
+	assert.equal(listed.messages[0].mine, true)
+	assert.equal(listed.messages[0].replyCount, 1)
+	assert.equal(listed.messages[0].replies?.[0].body, 'a reply')
+	assert.equal(listed.messages[0].replies?.[0].mine, false)
+
+	const liked = await postGuestbook(env, GUESTBOOK_LIKE_URL, { id: thread.id, liked: true })
+	assert.equal(liked.status, 200)
+	assert.equal(liked.headers.get('cache-control'), 'no-store')
+	assert.deepEqual(await json(liked), { id: thread.id, likes: 1, liked: true })
+
+	const likedAgain = await postGuestbook(env, GUESTBOOK_LIKE_URL, { id: thread.id, liked: true })
+	assert.deepEqual(await json(likedAgain), { id: thread.id, likes: 1, liked: true })
+
+	const likedByOther = await postGuestbook(env, GUESTBOOK_LIKE_URL, { id: thread.id, liked: true }, {
+		ip: OTHER_VISITOR,
+	})
+	assert.deepEqual(await json(likedByOther), { id: thread.id, likes: 2, liked: true })
+
+	const unliked = await postGuestbook(env, GUESTBOOK_LIKE_URL, { id: thread.id, liked: false })
+	assert.deepEqual(await json(unliked), { id: thread.id, likes: 1, liked: false })
+
+	const removed = await postGuestbook(env, GUESTBOOK_REMOVE_URL, { id: thread.id })
+	assert.equal(removed.status, 200)
+	assert.equal(removed.headers.get('cache-control'), 'no-store')
+	assert.deepEqual(await json(removed), { id: thread.id, removed: true })
+
+	const emptiedResponse = await readGuestbook(env)
+	assert.equal(emptiedResponse.status, 200)
+	assert.equal(emptiedResponse.headers.get('cache-control'), 'no-store')
+	const emptied = await guestbookList(emptiedResponse)
+	assert.equal(emptied.total, 0)
+	assert.deepEqual(emptied.messages, [])
+})
+
+test('guestbook reads and writes reject malformed ids and messages', async () => {
+	const { env } = createEnv({ secret: SECRET })
+
+	const tooLong = await postGuestbook(env, GUESTBOOK_URL, { body: '😀'.repeat(501) })
+	assert.equal(tooLong.status, 400)
+	assert.equal(await errorCode(tooLong), 'message_too_long')
+
+	const badParent = await postGuestbook(env, GUESTBOOK_URL, { body: 'hello', parentId: 404 })
+	assert.equal(badParent.status, 400)
+	assert.equal(await errorCode(badParent), 'invalid_parent')
+
+	const badId = await postGuestbook(env, GUESTBOOK_LIKE_URL, { id: 0, liked: true })
+	assert.equal(badId.status, 400)
+	assert.equal(await errorCode(badId), 'invalid_id')
+
+	const badCursor = await worker.fetch(new Request(`${GUESTBOOK_URL}?before=0`), env)
+	assert.equal(badCursor.status, 400)
+	assert.equal(await errorCode(badCursor), 'invalid_id')
+	assert.equal(badCursor.headers.get('cache-control'), 'no-store')
+})
+
+test('guestbook reports a missing message and an unauthorized removal', async () => {
+	const { env } = createEnv({ secret: SECRET })
+	const thread = await guestbookJson(await postGuestbook(env, GUESTBOOK_URL, { body: 'mine' }))
+
+	const missing = await postGuestbook(env, GUESTBOOK_LIKE_URL, { id: thread.id + 999, liked: true })
+	assert.equal(missing.status, 404)
+	assert.equal(await errorCode(missing), 'message_not_found')
+	assert.equal(missing.headers.get('cache-control'), 'no-store')
+
+	const refused = await postGuestbook(env, GUESTBOOK_REMOVE_URL, { id: thread.id }, {
+		ip: OTHER_VISITOR,
+	})
+	assert.equal(refused.status, 403)
+	assert.equal(await errorCode(refused), 'not_author')
+	assert.equal(refused.headers.get('cache-control'), 'no-store')
+})
+
+test('the guestbook is unavailable without STATS_ACTOR_SECRET', async () => {
+	const { env } = createEnv()
+	const listed = await worker.fetch(new Request(GUESTBOOK_URL), env)
+	assert.equal(listed.status, 503)
+	assert.equal(await errorCode(listed), 'guestbook_unavailable')
+	assert.equal(listed.headers.get('cache-control'), 'no-store')
+
+	const writes: [string, unknown][] = [
+		[GUESTBOOK_URL, { body: 'hello' }],
+		[GUESTBOOK_LIKE_URL, { id: 1, liked: true }],
+		[GUESTBOOK_REMOVE_URL, { id: 1 }],
+	]
+	for (const [url, body] of writes) {
+		const response = await postGuestbook(env, url, body)
+		assert.equal(response.status, 503, url)
+		assert.equal(await errorCode(response), 'guestbook_unavailable')
+		assert.equal(response.headers.get('cache-control'), 'no-store')
+	}
+})
+
+test('the guestbook limiter keys on the visitor pseudonym and returns 429 with retry-after', async () => {
+	const { env, guestbookLimiterKeys } = createEnv({ secret: SECRET, guestbookLimiter: 'deny' })
+	const response = await postGuestbook(env, GUESTBOOK_URL, { body: 'hello' })
+
+	assert.equal(response.status, 429)
+	assert.equal(response.headers.get('retry-after'), '60')
+	assert.equal(response.headers.get('cache-control'), 'no-store')
+	assert.equal(await errorCode(response), 'rate_limited')
+	assert.match(guestbookLimiterKeys[0] ?? '', /^[0-9a-f]{64}$/)
+	assert.equal(guestbookLimiterKeys[0]?.includes(VISITOR), false)
+})
+
+test('the guestbook write policy reports rate_limited with the seconds to wait', async () => {
+	const db = createStatsDatabase()
+	const { env } = createEnv({ db, secret: SECRET })
+	const actorId = await deriveAnonymousActor(VISITOR, SECRET)
+	for (let index = 0; index < 3; index += 1) {
+		await db
+			.prepare(
+				`INSERT INTO guestbook_messages (body, actor_id, created_at) VALUES (?1, ?2, datetime('now', '-30 seconds'))`,
+			)
+			.bind('seed', actorId)
+			.run()
+	}
+
+	const response = await postGuestbook(env, GUESTBOOK_URL, { body: 'one too many' })
+	assert.equal(response.status, 429)
+	assert.equal(response.headers.get('retry-after'), '60')
+	assert.equal(response.headers.get('cache-control'), 'no-store')
+	assert.equal(await errorCode(response), 'rate_limited')
+})
+
 function unreachableDatabase(): D1Database {
 	const fail = () => {
 		throw new Error('database unavailable')
 	}
 	return { prepare: fail, batch: fail, exec: fail }
 }
+

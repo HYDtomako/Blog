@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { askPublicAgent, consumeNlWebSse, PublicAskError } from './ask-agent.ts';
+import { askPublicAgent, consumeNlWebSse, createLiveAskFallback, PublicAskError } from './ask-agent.ts';
 import { findExactAnswer, normalizeAskQuery } from './ask-search.ts';
 
 function chunkedStream(chunks: string[]) {
@@ -199,4 +199,46 @@ test('normalizes NLWeb failure responses', async () => {
 		(error: unknown) =>
 			error instanceof PublicAskError && error.code === 'RATE_LIMITED' && error.status === 429,
 	);
+});
+
+function clickableStub() {
+	const listeners: Array<() => void> = [];
+	const element = {
+		hidden: false,
+		addEventListener(type: string, listener: () => void) {
+			if (type === 'click') listeners.push(listener);
+		},
+	} as unknown as HTMLElement;
+	return { element, click: () => listeners.forEach((listener) => listener()) };
+}
+
+test('offers the live agent for a curated answer and re-runs its own query', () => {
+	const container = clickableStub();
+	const button = clickableStub();
+	const asked: string[] = [];
+	const fallback = createLiveAskFallback({
+		container: container.element,
+		button: button.element,
+		onAsk: (query) => asked.push(query),
+	});
+
+	assert.equal(container.element.hidden, true);
+	button.click();
+	assert.deepEqual(asked, []);
+
+	fallback.show(' 如何开始使用？ ');
+	assert.equal(container.element.hidden, false);
+	button.click();
+	assert.deepEqual(asked, ['如何开始使用？']);
+
+	fallback.show('');
+	assert.equal(container.element.hidden, true);
+	button.click();
+	assert.deepEqual(asked, ['如何开始使用？']);
+
+	fallback.show('另一个问题');
+	fallback.hide();
+	assert.equal(container.element.hidden, true);
+	button.click();
+	assert.deepEqual(asked, ['如何开始使用？']);
 });

@@ -75,13 +75,6 @@ const askOverlayNote = UI.answers.label;
 	document.querySelectorAll<HTMLElement>('[data-open-ask]').forEach((trigger) => {
 		trigger.addEventListener('click', () => openAsk(trigger.dataset.query ?? ''));
 	});
-	document.querySelectorAll<HTMLFormElement>('[data-ask-form]').forEach((form) => {
-		form.addEventListener('submit', (event) => {
-			event.preventDefault();
-			const field = form.querySelector<HTMLInputElement>('input[name="query"]');
-			openAsk(field?.value ?? '');
-		});
-	});
 	document.querySelectorAll<HTMLElement>('[data-close-ask]').forEach((button) => {
 		button.addEventListener('click', () => dialog instanceof HTMLDialogElement && dialog.close());
 	});

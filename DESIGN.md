@@ -131,8 +131,11 @@ Flat elsewhere. No nested cards. Ask stage uses full-width sunken band + lifted 
 | `.btn-solid` / `.btn-ghost` | Ink fill vs outline |
 | `.answer-index-item` | Full-width FAQ rows, no side stripes |
 | `.prose` | Article body, editorial measure |
+| `.gb-*` | Guestbook composer, message rows, emoji popover; chrome stays monochrome so the picked emoji read as the only colour |
 
 Header wordmark: Spectral, from `site.config.mjs` `brand[locale].wordmark`. User-facing persona comes from `brand[locale].persona` (per-locale brand copy, default locale `zh-CN`).
+
+**Guestbook** (`/guestbook/`): one composer for every message (`Enter` keeps its newline, the button sends), a floating emoji picker, and a quiet message list. Replies indent one level and carry no side stripes; the neutral chrome is deliberate, keep it that way.
 
 ## Do's and Don'ts
 

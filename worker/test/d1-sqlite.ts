@@ -1,16 +1,24 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite'
 import { fileURLToPath } from 'node:url'
 import type { D1Database, D1PreparedStatement, D1Result } from '../env.ts'
 
-const MIGRATION_PATH = fileURLToPath(new URL('../migrations/0001_page_stats.sql', import.meta.url))
+const MIGRATIONS_DIR = fileURLToPath(new URL('../migrations/', import.meta.url))
+
+/** Every migration in worker/migrations, applied in filename order. */
+const MIGRATIONS_SQL = readdirSync(MIGRATIONS_DIR)
+	.filter((name) => name.endsWith('.sql'))
+	.sort()
+	.map((name) => readFileSync(join(MIGRATIONS_DIR, name), 'utf8'))
+	.join('\n')
 
 type Row = Record<string, unknown>
 
 /** D1 stand-in over node:sqlite so the worker tests exercise the real schema and SQL. */
 export function createStatsDatabase(): D1Database {
 	const db = new DatabaseSync(':memory:')
-	db.exec(readFileSync(MIGRATION_PATH, 'utf8'))
+	db.exec(MIGRATIONS_SQL)
 
 	const statement = (sql: string, values: unknown[] = []): D1PreparedStatement => {
 		const params = () => values as SQLInputValue[]

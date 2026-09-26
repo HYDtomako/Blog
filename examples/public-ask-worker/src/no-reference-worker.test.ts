@@ -3,6 +3,12 @@ import test from "node:test";
 import { handleAsk } from "./index.ts";
 import { NO_REFERENCE_ANSWER_VARIANTS } from "./no-reference-answer.ts";
 
+/** Canned answers resolve their guide tokens, so match on the approved opening. */
+function isApprovedNoReferenceAnswer(text: string) {
+  return NO_REFERENCE_ANSWER_VARIANTS.some((variant) => text.startsWith(variant.split("{")[0]))
+    && !/\{(answers|topics)\}/.test(text);
+}
+
 function acceptedEnv(overrides: Record<string, unknown> = {}) {
   return {
     ACTOR_HMAC_KEY: "test-secret",
@@ -53,7 +59,7 @@ test("no-reference summarize responses use an approved variant without model cal
 
   assert.equal(response.status, 200);
   assert.ok(summary?.text);
-  assert.ok(NO_REFERENCE_ANSWER_VARIANTS.includes(summary.text as typeof NO_REFERENCE_ANSWER_VARIANTS[number]));
+  assert.ok(isApprovedNoReferenceAnswer(summary.text));
   assert.equal(events[0].answer?.text, summary.text);
   assert.equal(events[0].answer?.model, "none");
   assert.equal(fetchCalls, 1);
@@ -86,5 +92,5 @@ test("streamed no-reference summarize responses stay on the normal SearchSummary
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("content-type"), "text/event-stream; charset=utf-8");
   assert.ok(result?.item?.text);
-  assert.ok(NO_REFERENCE_ANSWER_VARIANTS.includes(result.item.text as typeof NO_REFERENCE_ANSWER_VARIANTS[number]));
+  assert.ok(isApprovedNoReferenceAnswer(result.item.text));
 });

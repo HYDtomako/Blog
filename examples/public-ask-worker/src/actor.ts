@@ -7,11 +7,20 @@ function isoWeek(date: Date): string {
   return `${utc.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
 }
 
+/** Thrown instead of hashing with an empty key, which would collapse every actor to one id. */
+export class MissingActorKeyError extends Error {
+  constructor() {
+    super("missing_actor_hmac_key");
+    this.name = "MissingActorKeyError";
+  }
+}
+
 export async function deriveAnonymousActor(
   clientIp: string,
   secret: string,
   now = new Date(),
 ): Promise<string> {
+  if (typeof secret !== "string" || secret.trim() === "") throw new MissingActorKeyError();
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
     "raw",
