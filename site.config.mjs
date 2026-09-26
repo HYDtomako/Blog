@@ -73,6 +73,10 @@ const defaults = {
 	readingProgress: {
 		enabled: true,
 	},
+	/** Deep-sea diving instrument intro on the home page (see `src/components/DeepSeaIntro.astro`). */
+	intro: {
+		enabled: true,
+	},
 	/** Anonymous guestbook at /guestbook/. Keep `url` empty for same-origin; point it at `wrangler dev` while developing the API. */
 	guestbook: {
 		enabled: true,
@@ -215,6 +219,7 @@ const merged = {
 	stats: { ...defaults.stats, ...(overlayRest.stats ?? {}) },
 	guestbook: { ...defaults.guestbook, ...(overlayRest.guestbook ?? {}) },
 	readingProgress: { ...defaults.readingProgress, ...(overlayRest.readingProgress ?? {}) },
+	intro: { ...defaults.intro, ...(overlayRest.intro ?? {}) },
 	comments: resolveCommentsConfig({ ...defaults.comments, ...(overlayRest.comments ?? {}) }),
 	brand: mergedBrand,
 	discovery: { ...defaults.discovery, ...(overlayRest.discovery ?? {}) },

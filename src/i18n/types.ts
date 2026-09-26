@@ -181,6 +181,10 @@ export type UiCopy = {
 		updated: string;
 		readingMinutes: (n: number) => string;
 	};
+	intro: {
+		/** Escape hatch on the home page's deep-sea instrument intro. */
+		skip: string;
+	};
 	stats: {
 		heading: string;
 		articles: string;

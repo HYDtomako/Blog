@@ -32,6 +32,7 @@
     "test:stats": "node --test worker/*.test.ts src/scripts/page-stats.test.ts src/scripts/site-stats.test.ts",
     "test:guestbook": "node --test src/scripts/guestbook.test.ts",
     "test:ui": "node --test src/scripts/scroll-water-ball.test.ts",
+    "test:intro": "node --test src/scripts/deep-sea-intro.test.ts",
     "sync-content": "astro sync --force",
     "predev": "npm run collect-assets",
     "prebuild": "npm run sync:github && npm run collect-assets && npm run sync-content",

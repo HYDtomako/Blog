@@ -1,0 +1,263 @@
+---
+import { getSiteCopy } from '../lib/site-copy';
+
+interface Props {
+	locale: string;
+}
+
+const { locale } = Astro.props;
+const copy = getSiteCopy(locale);
+
+/** Deterministic drift/size values so the build output stays reproducible. */
+function makeRandom(seed: number) {
+	let state = seed >>> 0;
+	return () => {
+		state = (state * 1664525 + 1013904223) >>> 0;
+		return state / 0x100000000;
+	};
+}
+
+const CENTRE = 200;
+const TICK_COUNT = 120;
+const TICK_SWEEP = 300;
+const TICK_OUTER = 186;
+/** A second, coarser ring of ticks inside the fine one, as the brief asks for. */
+const COARSE_COUNT = 25;
+const COARSE_OUTER = 162;
+const COARSE_INNER = 152;
+const ARC_RADIUS = 196;
+const ARC_LENGTH = 2 * Math.PI * ARC_RADIUS * (TICK_SWEEP / 360);
+const ARC_CIRCUMFERENCE = 2 * Math.PI * ARC_RADIUS;
+const DIAL_RADIUS = 146;
+const INNER_RADIUS = 122;
+const SCAN_RADIUS = 136;
+
+function pointAt(angle: number, radius: number) {
+	const radians = (angle * Math.PI) / 180;
+	return {
+		x: (CENTRE + Math.sin(radians) * radius).toFixed(2),
+		y: (CENTRE - Math.cos(radians) * radius).toFixed(2),
+	};
+}
+
+/** Fine instrument dial: a tick every 2.5°, medium every fifth, long every fifteenth. */
+const ticks = Array.from({ length: TICK_COUNT }, (_, index) => {
+	const angle = -TICK_SWEEP / 2 + (TICK_SWEEP * index) / (TICK_COUNT - 1);
+	const major = index % 15 === 0;
+	const medium = !major && index % 5 === 0;
+	const length = major ? 18 : medium ? 11 : 6;
+	const outer = pointAt(angle, TICK_OUTER);
+	const inner = pointAt(angle, TICK_OUTER - length);
+	return {
+		angle,
+		outer,
+		inner,
+		tone: major ? 'ds-tick--major' : medium ? 'ds-tick--medium' : '',
+	};
+});
+
+/** The second tick ring: fewer, shorter, heavier marks just inside the fine scale. */
+const coarseTicks = Array.from({ length: COARSE_COUNT }, (_, index) => ({
+	outer: pointAt(-TICK_SWEEP / 2 + (TICK_SWEEP * index) / (COARSE_COUNT - 1), COARSE_OUTER),
+	inner: pointAt(-TICK_SWEEP / 2 + (TICK_SWEEP * index) / (COARSE_COUNT - 1), COARSE_INNER),
+}));
+
+/** Four bezel indexes on the diagonals: the case markings of a real instrument. */
+const guides = [45, 135, 225, 315].map((angle) => ({
+	outer: pointAt(angle, 214),
+	inner: pointAt(angle, 199),
+}));
+
+/** Marine snow: slow, sparse, and never bright enough to read as a particle effect. */
+const random = makeRandom(20260926);
+const particles = Array.from({ length: 14 }, (_, index) => {
+	const size = 1.4 + random() * 2.4;
+	const style = [
+		`--ds-x:${(random() * 100).toFixed(2)}%`,
+		`--ds-size:${size.toFixed(2)}px`,
+		`--ds-alpha:${(0.05 + random() * 0.13).toFixed(3)}`,
+		`--ds-duration:${(17 + random() * 19).toFixed(1)}s`,
+		`--ds-delay:${(-random() * 30).toFixed(1)}s`,
+		`--ds-drift:${(random() * 9 - 4.5).toFixed(1)}vw`,
+	].join(';');
+	return { index, style };
+});
+
+/** Corner readouts, kept faint so they never compete with the dial. */
+const gauges = [
+	{ tone: 'ds-hud--top-left', rows: [{ label: 'DEVICE', value: 'HYD-DSV-01' }] },
+	{ tone: 'ds-hud--top-right', rows: [{ label: 'SEA LEVEL', value: '000 m' }] },
+	{
+		tone: 'ds-hud--bottom-left',
+		rows: [
+			{ label: 'LAT', value: '12.4° N' },
+			{ label: 'LONG', value: '143.2° E' },
+		],
+	},
+	{ tone: 'ds-hud--bottom-right', rows: [{ label: 'SYSTEM', value: 'DESCENT' }] },
+];
+
+/** The status line under the dial, one word at a time. */
+const statuses = [
+	{ key: 'initialized', text: 'SYSTEM INITIALIZED' },
+	{ key: 'descending', text: 'DESCENDING' },
+	{ key: 'pressure', text: 'PRESSURE RISING' },
+	{ key: 'deep-sea', text: 'DEEP WATER' },
+	{ key: 'reached', text: 'DEPTH REACHED' },
+];
+
+const letters = ['H', 'Y', 'D'];
+---
+
+<div class="deep-intro" data-deep-intro data-ds-phase="boot" data-ds-label="initialized">
+	<div class="ds-stage" aria-hidden="true">
+		<div class="ds-bg ds-bg--shallow"></div>
+		<div class="ds-bg ds-bg--deep"></div>
+
+		<div class="ds-ripples">
+			<span class="ds-ripple"></span>
+			<span class="ds-ripple"></span>
+			<span class="ds-ripple"></span>
+		</div>
+
+		<div class="ds-rays">
+			<span class="ds-ray ds-ray--a"></span>
+			<span class="ds-ray ds-ray--b"></span>
+			<span class="ds-ray ds-ray--c"></span>
+		</div>
+
+		<div class="ds-snow">
+			{particles.map((particle) => <span class="ds-flake" style={particle.style} />)}
+		</div>
+
+		<div class="ds-grain"></div>
+
+		{gauges.map((hud) => (
+			<div class={`ds-hud ${hud.tone}`}>
+				{hud.rows.map((row) => (
+					<p class="ds-hud-row">
+						<span class="ds-hud-label">{row.label}</span>
+						<span class="ds-hud-value">{row.value}</span>
+					</p>
+				))}
+			</div>
+		))}
+
+		<div class="ds-expand">
+			<div class="ds-core">
+				<svg class="ds-gauge" viewBox="0 0 400 400" role="presentation">
+					<defs>
+						<radialGradient id="ds-halo">
+							<stop class="ds-stop ds-stop--core" offset="0%"></stop>
+							<stop class="ds-stop ds-stop--halo" offset="72%"></stop>
+							<stop class="ds-stop ds-stop--void" offset="100%"></stop>
+						</radialGradient>
+					</defs>
+
+					<circle class="ds-halo" cx="200" cy="200" r="150"></circle>
+
+					<g class="ds-guides">
+						{guides.map((guide) => (
+							<line
+								class="ds-guide"
+								x1={guide.inner.x}
+								y1={guide.inner.y}
+								x2={guide.outer.x}
+								y2={guide.outer.y}
+								vector-effect="non-scaling-stroke"
+							/>
+						))}
+					</g>
+
+					<circle class="ds-ring ds-ring--outer" cx="200" cy="200" r={ARC_RADIUS}></circle>
+
+					<g class="ds-ticks">
+						{ticks.map((tick) => (
+							<line
+								class={`ds-tick ${tick.tone}`}
+								x1={tick.outer.x}
+								y1={tick.outer.y}
+								x2={tick.inner.x}
+								y2={tick.inner.y}
+								vector-effect="non-scaling-stroke"
+							/>
+						))}
+					</g>
+
+					<g class="ds-coarse">
+						{coarseTicks.map((tick) => (
+							<line
+								class="ds-tick ds-tick--coarse"
+								x1={tick.outer.x}
+								y1={tick.outer.y}
+								x2={tick.inner.x}
+								y2={tick.inner.y}
+								vector-effect="non-scaling-stroke"
+							/>
+						))}
+					</g>
+
+					<circle class="ds-ring ds-ring--dial" cx="200" cy="200" r={DIAL_RADIUS}></circle>
+					<circle class="ds-ring ds-ring--inner" cx="200" cy="200" r={INNER_RADIUS}></circle>
+
+					<g class="ds-scan">
+						<circle class="ds-scan-dots" cx="200" cy="200" r={SCAN_RADIUS}></circle>
+					</g>
+
+					<circle
+						class="ds-arc"
+						cx="200"
+						cy="200"
+						r={ARC_RADIUS}
+						style={`--ds-arc-length:${ARC_LENGTH.toFixed(2)}px;--ds-arc-circumference:${ARC_CIRCUMFERENCE.toFixed(2)}px`}></circle>
+
+					<circle class="ds-pulse" cx="200" cy="200" r="150"></circle>
+
+					<g class="ds-needle">
+						<line class="ds-needle-body" x1="200" y1="114" x2="200" y2="70"></line>
+						<circle class="ds-needle-tip" cx="200" cy="70" r="2.6"></circle>
+					</g>
+				</svg>
+
+				<div class="ds-readout-wrap">
+					<div class="ds-readout">
+						<p class="ds-label">DEPTH</p>
+						<p class="ds-value" data-ds-depth>000 m</p>
+						<div class="ds-panel">
+							<p class="ds-cell">
+								<span class="ds-label ds-label--cell">PRESSURE</span>
+								<span class="ds-cell-value" data-ds-pressure>1.0 BAR</span>
+							</p>
+							<p class="ds-cell">
+								<span class="ds-label ds-label--cell">TEMP</span>
+								<span class="ds-cell-value" data-ds-temp>18.0 °C</span>
+							</p>
+						</div>
+					</div>
+					<div class="ds-wordmark">
+						<p class="ds-letters">
+							{letters.map((letter) => <span>{letter}</span>)}
+						</p>
+						<p class="ds-tagline">BELOW THE SURFACE</p>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<p class="ds-status">
+			{statuses.map((status) => <span data-ds-for={status.key}>{status.text}</span>)}
+		</p>
+
+		<div class="ds-lens"></div>
+	</div>
+
+	<button class="ds-skip" type="button" data-ds-skip aria-label={copy.ui.intro.skip}>
+		{copy.ui.intro.skip}
+	</button>
+</div>
+
+<script>
+	import { initDeepSeaIntro } from '../scripts/deep-sea-intro.ts';
+
+	initDeepSeaIntro();
+</script>

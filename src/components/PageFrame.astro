@@ -1,8 +1,17 @@
 ---
 import Footer from './Footer.astro';
 import AskOverlay from './AskOverlay.astro';
+import DeepSeaIntro from './DeepSeaIntro.astro';
+import { localeFromPath, stripLocalePrefix } from '../lib/locale';
+import { siteConfig } from '../../site.config.mjs';
+
+const pathname = Astro.url.pathname;
+const locale = localeFromPath(pathname);
+const isHome = stripLocalePrefix(pathname) === '/';
+const showsIntro = isHome && siteConfig.intro?.enabled !== false;
 ---
 <div class="shell">
+  {showsIntro && <DeepSeaIntro locale={locale} />}
   <slot name="header" />
   <div class="main-frame"><slot /></div>
   <Footer {...Astro.props} />

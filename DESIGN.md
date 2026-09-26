@@ -96,6 +96,8 @@ Neutral-only system, plus one blue wash: the page canvas fades from a cool blue 
 
 No chromatic accent in v1. AI "tech" feeling comes from elevation, motion, and scale on ask surfaces, not hue.
 
+**Sanctioned blues.** Two surfaces are allowed to leave the neutral system, both derived from the same two anchors (`#d5e6fb` canvas blue, `#005fcc` focus blue): the reading-progress `.water-ball`, and the home-page deep-sea intro — a bounded set of ocean blues (`--ds-shallow #7fb4d8`, `--ds-mid #2d6f9c`, `--ds-deep #0b2942`, `--ds-abyss #061c2e`, lifting to the canvas blue `#d5e6fb` as it hands off to the hero, with `#04121f` / `#17243d` in the dark theme). The intro never uses pure black, never neon, and exists only on `/` and `/en/`.
+
 ## Typography
 
 - **Display / section titles**: Spectral, medium weight, tight tracking on heroes and page headings.
@@ -132,11 +134,14 @@ Flat elsewhere. No nested cards. Ask stage uses full-width sunken band + lifted 
 | `.answer-index-item` | Full-width FAQ rows, no side stripes |
 | `.prose` | Article body, editorial measure |
 | `.gb-*` | Guestbook composer, message rows, emoji popover; chrome stays monochrome so the picked emoji read as the only colour |
-| `.water-ball` | Reading progress ball on articles, `/projects/`, `/about/`; its water is the one sanctioned blue besides the page canvas wash |
+| `.water-ball` | Reading progress ball on articles, `/projects/`, `/about/`; one of the two sanctioned blue surfaces |
+| `.deep-intro` / `.ds-*` | Home-page deep-sea intro: one fine-ticked pressure dial, three readouts, four quiet corner labels, marine snow, slow water ripples, a `SKIP INTRO` control. Home only, 7.5 s, removed from the DOM when it ends |
 
 Header wordmark: Spectral, from `site.config.mjs` `brand[locale].wordmark`. User-facing persona comes from `brand[locale].persona` (per-locale brand copy, default locale `zh-CN`).
 
 **Guestbook** (`/guestbook/`): one composer for every message (`Enter` keeps its newline, the button sends), a floating emoji picker, and a quiet message list. Replies indent one level and carry no side stripes; the neutral chrome is deliberate, keep it that way.
+
+**Deep-sea intro** (`/` and `/en/`): the visitor descends through one instrument rather than watching a loading bar. One dial, hairline ticks, a floating pointer, three readouts (depth, pressure, temperature), four corner labels, faint light shafts, marine snow and slow ripples. Keep it to that: no photographs, no fish, no extra HUD for its own sake. The run is 7.5 s in six beats — start-up (each layer has its own ramp), descent, the pause at 2000 m, HYD, then the dial opening into the hero through a pale-blue water lens that lands on the exact blue `--bg-canvas` starts on. `HYD` is set in the sans stack on purpose: it is the instrument's own label, not the Spectral brand mark. Motion is transform/opacity only, never layout; `prefers-reduced-motion` skips it, `SKIP INTRO` exits immediately, and the whole overlay leaves the DOM when it ends.
 
 ## Do's and Don'ts
 
@@ -147,10 +152,11 @@ Header wordmark: Spectral, from `site.config.mjs` `brand[locale].wordmark`. User
 - Use spark icon for ask affordances consistently
 - Respect keyboard: overlay ⌘K, form submit, chip triggers
 - Tint neutrals slightly; use `color-mix` for borders and focus halos
+- Keep the intro's blues inside the documented `--ds-*` set, and keep the intro on the home page only
 
 **Don't**
 
-- Add brand gradients beyond the page canvas wash, or SaaS card grids
+- Add brand gradients beyond the page canvas wash and the two sanctioned blue surfaces, or SaaS card grids
 - Use gradient text, glassmorphism, or hero metric templates
 - Put heavy motion on article pages or navigation chrome
 - Use left/right accent stripes on list items

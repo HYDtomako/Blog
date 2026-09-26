@@ -5,6 +5,9 @@ import { sitePath, withBase } from '../lib/paths';
 import { localeFromPath, localePath, stripLocalePrefix } from '../lib/locale';
 import { seriesName } from '../lib/articles';
 import { DEFAULT_SEO_IMAGE, normalizeSeoHead, type SeoHeadTag } from '../lib/seo';
+import { introBootScript } from '../scripts/deep-sea-intro.ts';
+import introStyles from '../styles/deep-sea-intro.css?url';
+import { siteConfig } from '../../site.config.mjs';
 
 const { entry, head } = Astro.locals.starlightRoute;
 const locale = localeFromPath(Astro.url.pathname);
@@ -16,6 +19,7 @@ const homePath = localePath(locale, '/');
 const contentType = entry.data.contentType;
 const structuredData: Record<string, unknown>[] = [];
 const normalizedHead = normalizeSeoHead({ head, entry, pathname: Astro.url.pathname, locale });
+const showsIntro = isHome && siteConfig.intro?.enabled !== false;
 
 if (contentType === 'article') {
 	const profile = await getPublicProfile(locale);
@@ -141,6 +145,40 @@ if (contentType === 'article') {
 		setStored(starlightKey, resolvedTheme);
 	})();
 </script>
+{showsIntro && (
+	<>
+		{/*
+			Critical intro layer: the overlay is hidden unless the boot script below arms it,
+			so a visitor without JavaScript, or with a failed bundle, goes straight to the page.
+		*/}
+		<style is:inline>
+			.deep-intro {
+				display: none;
+				position: fixed;
+				inset: 0;
+				z-index: 120;
+				background: #0b2942;
+			}
+			html[data-theme="dark"] .deep-intro {
+				background: #04121f;
+			}
+			html[data-intro="play"] .deep-intro {
+				display: block;
+			}
+			html[data-intro="play"],
+			html[data-intro="play"] body {
+				overflow: hidden;
+			}
+			@media (prefers-reduced-motion: reduce) {
+				html[data-intro="play"] .deep-intro {
+					display: none;
+				}
+			}
+		</style>
+		<script is:inline set:html={introBootScript()} />
+		<link rel="stylesheet" href={withBase(introStyles)} />
+	</>
+)}
 {normalizedHead.map(({ tag: Tag, attrs, content }: SeoHeadTag) => <Tag {...attrs} set:html={content} />)}
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
