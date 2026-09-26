@@ -74,6 +74,10 @@ const defaults = {
 		enabled: false,
 		url: '',
 	},
+	/** Deep-sea diving instrument intro on the home page (see `src/components/DeepSeaIntro.astro`). */
+	intro: {
+		enabled: true,
+	},
 	/** Renamed pages keep their old URLs working: `{ '/old-path': '/new-path/' }`. */
 	redirects: {},
 	/** Per-locale public identity and page copy, keyed by locale id. */
@@ -205,6 +209,7 @@ const merged = {
 	social: { ...defaults.social, ...(overlayRest.social ?? {}) },
 	ask: { ...defaults.ask, ...(overlayRest.ask ?? {}) },
 	stats: { ...defaults.stats, ...(overlayRest.stats ?? {}) },
+	intro: { ...defaults.intro, ...(overlayRest.intro ?? {}) },
 	comments: resolveCommentsConfig({ ...defaults.comments, ...(overlayRest.comments ?? {}) }),
 	brand: mergedBrand,
 	discovery: { ...defaults.discovery, ...(overlayRest.discovery ?? {}) },

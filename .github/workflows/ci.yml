@@ -40,6 +40,9 @@ jobs:
       - name: Test stats
         run: npm run test:stats
 
+      - name: Test intro
+        run: npm run test:intro
+
       - name: Build
         # The build embeds the public Turnstile site key into /ask; without one, verify fails on a
         # page that ships no widget. Set the repository variable to your own widget's site key when

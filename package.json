@@ -30,6 +30,7 @@
     "test:related": "node --test src/lib/related-articles.test.ts",
     "test:comments": "node --test src/lib/comments.test.mjs src/scripts/giscus-comments.test.ts",
     "test:stats": "node --test worker/*.test.ts src/scripts/page-stats.test.ts src/scripts/site-stats.test.ts",
+    "test:intro": "node --test src/scripts/deep-sea-intro.test.ts",
     "sync-content": "astro sync --force",
     "predev": "npm run collect-assets",
     "prebuild": "npm run sync:github && npm run collect-assets && npm run sync-content",

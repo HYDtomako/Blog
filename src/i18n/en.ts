@@ -182,6 +182,9 @@ export const en: UiCopy = {
 		updated: 'Updated',
 		readingMinutes: (n) => `${n} min read`,
 	},
+	intro: {
+		skip: 'Skip intro',
+	},
 	stats: {
 		heading: 'Site stats',
 		articles: 'Posts',
