@@ -91,7 +91,8 @@ template with an overlay file `instance.config.mjs` (git-ignored) or the
 | `ask.askUrl` / `mcpUrl` / `healthUrl` | Optional Live Ask endpoints; leave empty for the static-only site                      |
 | `comments.repo` / `repoId` / `category` / `categoryId` | Optional giscus identifiers; all four empty = comments off         |
 | `stats.enabled` / `stats.url`      | Counters on/off; `url` empty means same-origin  |
-| `guestbook.enabled` / `guestbook.url` | Anonymous guestbook on/off; `url` empty means same-origin                                            |
+| `guestbook.enabled` / `guestbook.url` | Anonymous guestbook on/off; `url` empty means same-origin |
+| `readingProgress.enabled` | Corner water ball on articles, `/projects/`, and `/about/`                                            |
 | `redirects`                        | Old path → new path map; delete the sample entries                                        |
 | `contentRoot`, `publicDir`, `outDir`, `assetSource` | Where content, assets and build output live; keep a vault outside the template if you like |
 | `discovery.awp`                    | Optional AWP experiment, off by default                                                    |

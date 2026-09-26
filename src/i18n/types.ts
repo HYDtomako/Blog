@@ -170,6 +170,7 @@ export type UiCopy = {
 		notFoundTitle: string;
 		notFoundLede: string;
 		backHome: string;
+		backToTop: string;
 		browseWriting: string;
 		prevPage: string;
 		nextPage: string;

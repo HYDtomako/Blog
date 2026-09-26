@@ -2,10 +2,12 @@
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import { getCollection, render } from 'astro:content';
 import Icon from '../Icon.astro';
+import ScrollWaterBall from '../ScrollWaterBall.astro';
 import { absoluteUrl, breadcrumbJsonLd, entryLocale, getPublicProfile, personJsonLd } from '../../lib/public-data';
 import { withBase } from '../../lib/paths';
 import { DEFAULT_LOCALE, localeFromPath, localizedHref, localizedSitePath } from '../../lib/locale';
 import { getSiteCopy } from '../../lib/site-copy';
+import { siteConfig } from '../../../site.config.mjs';
 
 const locale = localeFromPath(Astro.url.pathname);
 const copy = getSiteCopy(locale);
@@ -124,6 +126,7 @@ const aboutStructuredData = {
       </div>
     </div>
   </div>
+  {siteConfig.readingProgress?.enabled && <ScrollWaterBall />}
 </StarlightPage>
 
 <style>

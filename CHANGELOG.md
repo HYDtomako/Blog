@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Water ball reading progress: every article (and future ones), `/projects/`, and `/about/` show a transparent ball in the bottom-right corner that fills with ink as you scroll, sized down on phones. Clicking it returns to the top, and `readingProgress.enabled` in `site.config.mjs` turns it off
 - Favicons generated from the avatar: `favicon.png` and `apple-touch-icon.png` are derived from `public/asset/avatar.jpg`, the same image the home hero and About page use
 - Live Ask for this instance: `https://ask.hydblog.xyz` (Cloudflare Worker + AI Search + D1 + Turnstile + DeepSeek) serves `POST /ask`, `POST /mcp`, and `GET /health` for `https://hydblog.xyz`
 - `src/lib/public-surfaces.ts`: the single source of truth for the machine-readable endpoints the footer links (locale-scoped vs site-wide)

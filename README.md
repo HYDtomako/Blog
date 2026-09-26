@@ -87,7 +87,8 @@ overlay 的字段会覆盖默认值。
 | `ask.askUrl` / `mcpUrl` / `healthUrl` | 可选的 Live Ask 接口；留空就是纯静态站点                                                        |
 | `comments.repo` / `repoId` / `category` / `categoryId` | 可选的 giscus 配置；四项都空 = 关闭评论                                       |
 | `stats.enabled` / `stats.url`        | 统计开关；`url` 留空表示同源接口 |
-| `guestbook.enabled` / `guestbook.url` | 匿名留言板开关；`url` 留空表示同源接口                                                                |
+| `guestbook.enabled` / `guestbook.url` | 匿名留言板开关；`url` 留空表示同源接口 |
+| `readingProgress.enabled` | 右下角水球阅读进度开关（文章页 / 项目页 / 关于页）                                                                |
 | `redirects`                          | 旧路径到新路径的跳转表，示例条目可以删掉                                                        |
 | `contentRoot`、`publicDir`、`outDir`、`assetSource` | 内容、静态资源、构建产物的位置；也可以把内容仓库放在模板之外                     |
 | `discovery.awp`                      | 可选的 AWP 实验开关，默认关闭                                                                   |
