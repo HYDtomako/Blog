@@ -1,0 +1,1115 @@
+---
+import Icon from './Icon.astro';
+import { formatDepth } from '../../shared/link-metadata.ts';
+import { layoutSignals, summarizeSignals } from '../lib/links';
+import { readLinks } from '../lib/links-file';
+import { localeFromPath } from '../lib/locale';
+import { withBase } from '../lib/paths';
+import { getSiteCopy } from '../lib/site-copy';
+import { siteConfig } from '../../site.config.mjs';
+
+const locale = localeFromPath(Astro.url.pathname);
+const copy = getSiteCopy(locale);
+const UI = copy.ui;
+const links = UI.links;
+const hub = copy.brand.persona;
+
+/**
+ * The sonar is a pure function of `content/links.json`: every dot keeps the same spot
+ * on every build, and the page ships with its dots in the markup, so it works without JS.
+ */
+const signals = layoutSignals(await readLinks());
+const summary = summarizeSignals(signals);
+const submitEnabled = siteConfig.links?.enabled === true;
+const linksBase = import.meta.env.PUBLIC_LINKS_URL ?? '';
+const endpoint = withBase(`${linksBase}/api/links`);
+
+/** The URLs already drawn on the sonar, so the wall below can mark them as picked up. */
+const joined = signals.map((signal) => signal.url);
+
+const labels = {
+	connect: links.connect,
+	connecting: links.connecting,
+	received: links.received,
+	receivedNote: links.receivedNote,
+	wallLoading: links.wallLoading,
+	wallEmpty: links.wallEmpty,
+	wallFailed: links.wallFailed,
+	wallWaiting: links.wallWaiting,
+	wallJoined: links.wallJoined,
+	errorTitle: links.errorTitle,
+	openSiteTemplate: links.openSite('__NAME__'),
+	errors: { ...links.errors },
+};
+
+/**
+ * Environment readouts of the station the sonar belongs to. They are instrument language like
+ * the home page's diving dial — decorative, never a claim about any site.
+ */
+const station = 'LAT 12.4° N · LONG 143.2° E · TEMP 18.0 °C · PRESSURE 1.0 BAR';
+
+/** Hairline scale around the rim: a tick every 10°, a longer one every 90°. */
+const ticks = Array.from({ length: 36 }, (_, index) => index * 10).map((degrees) => {
+	const radians = (degrees * Math.PI) / 180;
+	const inner = degrees % 90 === 0 ? 43.4 : 46;
+	return {
+		x1: (50 + inner * Math.cos(radians)).toFixed(2),
+		y1: (50 + inner * Math.sin(radians)).toFixed(2),
+		x2: (50 + 48.6 * Math.cos(radians)).toFixed(2),
+		y2: (50 + 48.6 * Math.sin(radians)).toFixed(2),
+		long: degrees % 90 === 0,
+	};
+});
+
+/** Marine snow: a fixed handful of specks, never re-randomised. */
+const particles: [number, number, number][] = [
+	[14.5, 27.5, 0.5],
+	[27.8, 78.4, 0.35],
+	[38.6, 12.8, 0.45],
+	[55.4, 88.6, 0.4],
+	[71.2, 22.4, 0.55],
+	[83.6, 57.2, 0.35],
+	[47.5, 41.2, 0.3],
+	[64.8, 68.9, 0.45],
+	[19.4, 55.6, 0.3],
+	[91.2, 34.8, 0.25],
+];
+---
+
+<section
+	class="ls"
+	data-links-sonar
+	data-links-endpoint={submitEnabled ? endpoint : ''}
+	data-links-joined={JSON.stringify(submitEnabled ? joined : [])}
+	data-links-locale={locale}
+	data-links-labels={JSON.stringify(labels)}
+	aria-labelledby="links-heading"
+>
+	<div class="ls-stage" data-links-stage>
+		<svg class="ls-figure" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+			<g class="ls-rings">
+				<circle cx="50" cy="50" r="12" />
+				<circle cx="50" cy="50" r="22" />
+				<circle cx="50" cy="50" r="32" />
+				<circle cx="50" cy="50" r="40" />
+				<circle class="ls-rim" cx="50" cy="50" r="50" />
+			</g>
+			<g class="ls-axis">
+				<line x1="50" y1="1" x2="50" y2="99" />
+				<line x1="1" y1="50" x2="99" y2="50" />
+			</g>
+			<g class="ls-radials">
+				<line x1="59.9" y1="59.9" x2="82.5" y2="82.5" />
+				<line x1="40.1" y1="59.9" x2="17.5" y2="82.5" />
+				<line x1="40.1" y1="40.1" x2="17.5" y2="17.5" />
+				<line x1="59.9" y1="40.1" x2="82.5" y2="17.5" />
+			</g>
+			<g class="ls-ticks">
+				{ticks.map((tick) => (
+					<line
+						class={tick.long ? 'ls-tick ls-tick--long' : 'ls-tick'}
+						x1={tick.x1}
+						y1={tick.y1}
+						x2={tick.x2}
+						y2={tick.y2}
+					/>
+				))}
+			</g>
+			<g class="ls-particles">
+				{particles.map(([x, y, r]) => <circle cx={x} cy={y} r={r} />)}
+			</g>
+		</svg>
+
+		<span class="ls-sweep" aria-hidden="true"></span>
+		<span class="ls-grain" aria-hidden="true"></span>
+
+		<div class="ls-hub" aria-hidden="true">
+			<span class="ls-hub-ring"></span>
+			<span class="ls-hub-halo"></span>
+			<span class="ls-hub-core"></span>
+			<span class="ls-hub-label mono">{hub}</span>
+		</div>
+
+		{signals.map((signal) => (
+			<a
+				class="ls-signal"
+				href={signal.url}
+				target="_blank"
+				rel="noopener noreferrer"
+				data-links-signal
+				data-x={signal.x.toFixed(4)}
+				data-y={signal.y.toFixed(4)}
+				data-variant={signal.variant}
+				data-card-side={signal.x <= 0.5 ? 'right' : 'left'}
+				style={`--ls-x:${(signal.x * 100).toFixed(2)}%;--ls-y:${(signal.y * 100).toFixed(2)}%;--ls-turn:${signal.turn.toFixed(4)};--ls-i:${signal.index};--ls-scale:${signal.scale.toFixed(3)}`}
+				aria-label={links.signalAria(signal.name, signal.depthLabel)}
+			>
+				<span class="ls-dot" aria-hidden="true" />
+				<span class="ls-card" aria-hidden="true">
+					<span class="ls-card-head mono">{signal.signalLabel}</span>
+					<span class="ls-card-main">
+						<span class="ls-card-icon">
+							<span class="ls-card-initial">{signal.name.slice(0, 1).toUpperCase()}</span>
+							{signal.icon && (
+								<img
+									src={signal.icon}
+									alt=""
+									width="30"
+									height="30"
+									loading="lazy"
+									decoding="async"
+									referrerpolicy="no-referrer"
+								/>
+							)}
+						</span>
+						<span class="ls-card-text">
+							<span class="ls-card-name">{signal.name}</span>
+							{signal.description && <span class="ls-card-desc">{signal.description}</span>}
+						</span>
+					</span>
+					<span class="ls-card-foot mono">
+						<span class="ls-card-domain">{signal.domain}</span>
+						<span class="ls-card-depth">DEPTH {signal.depthLabel}</span>
+						<Icon name="external" size={12} />
+					</span>
+				</span>
+			</a>
+		))}
+	</div>
+
+	<div class="ls-hud mono">
+		<span>{links.signalsDetected} <b>{String(summary.count).padStart(2, '0')}</b></span>
+		{summary.count > 0 && (
+			<span>{links.depthRange} <b>{formatDepth(summary.minDepth)} – {formatDepth(summary.maxDepth)}</b></span>
+		)}
+	</div>
+	<p class="ls-hud ls-hud-env mono" aria-hidden="true">{station}</p>
+	<p class="ls-note mono">{links.depthNote}</p>
+
+	<div class="ls-cta" data-links-cta>
+		<p class="ls-cta-line mono">{links.cta}</p>
+		{submitEnabled ? (
+			<details class="ls-add" data-links-add>
+				<summary class="ls-add-toggle">{links.ctaButton}<Icon name="external" size={14} /></summary>
+				<form class="ls-form" data-links-form novalidate>
+					<p class="ls-form-title mono">{links.formTitle}</p>
+					<label class="ls-field">
+						<span class="ls-field-label">{links.urlLabel}</span>
+						<input
+							class="ls-input"
+							data-links-input
+							type="url"
+							name="url"
+							inputmode="url"
+							autocomplete="url"
+							spellcheck="false"
+							placeholder={links.placeholder}
+							required
+						/>
+					</label>
+					<button class="btn btn-solid ls-submit" type="submit" data-links-submit>{links.connect}</button>
+					<p class="ls-status mono" data-links-status data-state="idle" role="status" aria-live="polite"></p>
+					<p class="ls-form-note">{links.formNote}</p>
+					<noscript><p class="ls-form-note mono">{links.noScript}</p></noscript>
+				</form>
+			</details>
+		) : (
+			<p class="ls-offline mono">{links.unavailable}</p>
+		)}
+	</div>
+
+	<section class="ls-wall" data-links-wall aria-labelledby="links-wall-heading">
+		<h2 id="links-wall-heading" class="ls-wall-heading mono">{links.wallHeading}</h2>
+		<p class="ls-wall-lede">{links.wallLede}</p>
+		<p class="ls-wall-status mono" data-links-wall-status></p>
+		<ul class="ls-wall-list" data-links-wall-list hidden></ul>
+		<p class="ls-wall-empty" data-links-wall-empty hidden>{links.wallEmpty}</p>
+	</section>
+
+	<template data-links-wall-template>
+		<li class="ls-row">
+			<a class="ls-row-link" target="_blank" rel="noopener noreferrer nofollow ugc">
+				<span class="ls-row-icon">
+					<span class="ls-row-initial" data-links-field="initial"></span>
+					<img data-links-field="icon" alt="" width="26" height="26" loading="lazy" decoding="async" referrerpolicy="no-referrer" hidden />
+				</span>
+				<span class="ls-row-text">
+					<span class="ls-row-name" data-links-field="name"></span>
+					<span class="ls-row-domain mono" data-links-field="domain"></span>
+				</span>
+				<span class="ls-row-meta mono">
+					<span class="ls-row-state" data-links-field="state"></span>
+					<span data-links-field="date"></span>
+				</span>
+			</a>
+		</li>
+	</template>
+</section>
+
+<style>
+	.ls {
+		--ls-accent: #005fcc;
+		--ls-glow: color-mix(in srgb, var(--ls-accent) 42%, transparent);
+		--ls-hair: color-mix(in srgb, var(--ink) 13%, transparent);
+		--ls-hair-soft: color-mix(in srgb, var(--ink) 7%, transparent);
+		--ls-size: min(80vw, 700px);
+		--ls-sweep: 18s;
+		position: relative;
+		margin-top: 40px;
+	}
+
+	:global([data-theme='dark']) .ls {
+		--ls-accent: #7fb4d8;
+	}
+
+	/* ---- stage ---- */
+	.ls-stage {
+		position: relative;
+		width: var(--ls-size);
+		aspect-ratio: 1 / 1;
+		margin: 0 auto;
+		isolation: isolate;
+	}
+
+	/* Deep-sea fog and the light coming down through it: radial and linear ramps only, no edges. */
+	.ls-stage::before {
+		content: '';
+		position: absolute;
+		inset: -3%;
+		border-radius: 50%;
+		pointer-events: none;
+		background:
+			radial-gradient(circle at 50% 46%, color-mix(in srgb, var(--ls-accent) 12%, transparent) 0%, transparent 58%),
+			radial-gradient(70% 52% at 42% 2%, color-mix(in srgb, var(--ls-accent) 14%, transparent) 0%, transparent 74%),
+			linear-gradient(180deg, color-mix(in srgb, var(--ls-accent) 8%, transparent) 0%, transparent 34%);
+	}
+
+	.ls-figure {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		color: var(--ls-hair);
+		overflow: visible;
+		animation: ls-in 260ms var(--ease-out-quart) backwards;
+	}
+
+	.ls-rings circle {
+		fill: none;
+		stroke: var(--ls-hair-soft);
+		stroke-width: 0.35;
+		animation: ls-ring-in 620ms var(--ease-out-quart) backwards;
+	}
+
+	.ls-rings circle:nth-child(1) {
+		animation-delay: 150ms;
+	}
+
+	.ls-rings circle:nth-child(2) {
+		animation-delay: 230ms;
+	}
+
+	.ls-rings circle:nth-child(3) {
+		animation-delay: 310ms;
+	}
+
+	.ls-rings circle:nth-child(4) {
+		animation-delay: 390ms;
+	}
+
+	.ls-rings circle:nth-child(5) {
+		animation-delay: 470ms;
+	}
+
+	.ls-rings circle.ls-rim {
+		stroke: var(--ls-hair);
+		stroke-width: 0.5;
+	}
+
+	.ls-axis line {
+		stroke: var(--ls-hair-soft);
+		stroke-width: 0.3;
+		stroke-dasharray: 1 3;
+	}
+
+	/* A few measurement guides on the diagonals, fainter than the crosshair. */
+	.ls-radials line {
+		stroke: var(--ls-hair-soft);
+		stroke-width: 0.25;
+		stroke-dasharray: 0.6 6;
+		opacity: 0.7;
+	}
+
+	.ls-tick {
+		stroke: var(--ls-hair-soft);
+		stroke-width: 0.3;
+	}
+
+	.ls-tick--long {
+		stroke: var(--ls-hair);
+	}
+
+	/*
+	 * The sweep is a rotating conic gradient rather than an SVG path: the browser composites one
+	 * layer instead of repainting the beam, and the tail behind the leading edge comes for free.
+	 * The bright edge starts at the top (0°) and the tail trails 60° behind it.
+	 */
+	.ls-sweep {
+		position: absolute;
+		inset: 0;
+		border-radius: 50%;
+		pointer-events: none;
+		background: conic-gradient(
+			from -60deg,
+			transparent 0deg,
+			color-mix(in srgb, var(--ls-accent) 7%, transparent) 34deg,
+			color-mix(in srgb, var(--ls-accent) 16%, transparent) 55deg,
+			color-mix(in srgb, var(--ls-accent) 30%, transparent) 60deg,
+			transparent 60deg
+		);
+		-webkit-mask: radial-gradient(circle at 50% 50%, #000 0%, #000 84%, transparent 100%);
+		mask: radial-gradient(circle at 50% 50%, #000 0%, #000 84%, transparent 100%);
+		will-change: transform;
+		animation:
+			ls-spin var(--ls-sweep) linear infinite,
+			ls-sweep-in 700ms var(--ease-out-quart) 420ms backwards;
+	}
+
+	/* Very faint grain, so the field never reads as flat vector art. */
+	.ls-grain {
+		position: absolute;
+		inset: 0;
+		border-radius: 50%;
+		pointer-events: none;
+		opacity: 0.05;
+		mix-blend-mode: overlay;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+	}
+
+	.ls-particles circle {
+		fill: var(--ls-accent);
+		opacity: 0.22;
+	}
+
+	/* ---- centre node: the core carries three hairline rings and breathes ---- */
+	.ls-hub {
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		width: 0;
+		height: 0;
+		animation: ls-hub-in 560ms var(--ease-out-quart) backwards;
+	}
+
+	.ls-hub-ring,
+	.ls-hub-halo,
+	.ls-hub-core {
+		position: absolute;
+		left: 0;
+		top: 0;
+		border-radius: 50%;
+		transform: translate(-50%, -50%);
+	}
+
+	.ls-hub-ring {
+		width: 104px;
+		height: 104px;
+		border: 1px solid color-mix(in srgb, var(--ls-accent) 18%, transparent);
+		opacity: 0.45;
+		animation: ls-breathe-outer 9s ease-in-out infinite;
+	}
+
+	.ls-hub-halo {
+		width: 74px;
+		height: 74px;
+		border: 1px solid color-mix(in srgb, var(--ls-accent) 34%, transparent);
+		opacity: 0.55;
+		animation: ls-breathe 6.4s ease-in-out infinite;
+	}
+
+	.ls-hub-core {
+		width: 30px;
+		height: 30px;
+		border: 1px solid var(--ls-accent);
+		background: color-mix(in srgb, var(--ls-accent) 18%, transparent);
+		box-shadow: 0 0 0 6px color-mix(in srgb, var(--ls-accent) 8%, transparent);
+	}
+
+	.ls-hub-core::after {
+		content: '';
+		position: absolute;
+		inset: 9px;
+		border-radius: 50%;
+		background: var(--ls-accent);
+		animation: ls-hub-pulse 3.2s ease-in-out infinite;
+	}
+
+	.ls-hub-label {
+		position: absolute;
+		left: 0;
+		top: 22px;
+		transform: translateX(-50%);
+		white-space: nowrap;
+		font-size: 10.5px;
+		letter-spacing: 0.2em;
+		color: var(--muted);
+	}
+
+	/* ---- signals ---- */
+	/* The anchor owns a real 26px hit area centred on its dot, so touch and tooling can reach it. */
+	.ls-signal {
+		position: absolute;
+		left: var(--ls-x);
+		top: var(--ls-y);
+		width: 26px;
+		height: 26px;
+		margin: -13px 0 0 -13px;
+		display: grid;
+		place-items: center;
+		color: inherit;
+		text-decoration: none;
+		transition: opacity var(--duration-mid) var(--ease-out-quart);
+		animation: ls-in 420ms var(--ease-out-quart) backwards;
+		animation-delay: calc(620ms + min(var(--ls-i, 0), 14) * 42ms);
+	}
+
+	.ls-dot {
+		position: relative;
+		width: calc(9px * var(--ls-scale, 1));
+		height: calc(9px * var(--ls-scale, 1));
+		border-radius: 50%;
+		background: var(--ls-accent);
+		opacity: 0.82;
+		box-shadow: 0 0 10px var(--ls-glow);
+		transition:
+			transform var(--duration-mid) var(--ease-out-quart),
+			opacity var(--duration-mid),
+			box-shadow var(--duration-mid);
+	}
+
+	/* The scan crossing a dot: a short pulse on the core plus one ripple ring per revolution. */
+	.ls-dot::before,
+	.ls-dot::after {
+		content: '';
+		position: absolute;
+		border-radius: 50%;
+		animation: ls-pass var(--ls-sweep) linear infinite;
+		animation-delay: calc((var(--ls-turn, 0) + 0.25) * var(--ls-sweep));
+	}
+
+	.ls-dot::before {
+		inset: 0;
+		background: var(--ls-accent);
+		opacity: 0;
+	}
+
+	.ls-dot::after {
+		inset: -5px;
+		border: 1px solid var(--ls-accent);
+		opacity: 0;
+		animation-name: ls-ping;
+	}
+
+	/* Roughly one signal in eight reads as ◉; the difference stays deliberately tiny. */
+	.ls-signal[data-variant='ring'] .ls-dot {
+		background: color-mix(in srgb, var(--ls-accent) 30%, transparent);
+		box-shadow:
+			0 0 0 1.5px var(--ls-accent),
+			0 0 10px var(--ls-glow);
+	}
+
+	.ls-signal:hover .ls-dot,
+	.ls-signal[data-open] .ls-dot,
+	.ls-signal:focus-visible .ls-dot {
+		opacity: 1;
+		transform: scale(1.35);
+		box-shadow:
+			0 0 0 5px color-mix(in srgb, var(--ls-accent) 16%, transparent),
+			0 0 14px var(--ls-glow);
+	}
+
+	.ls-signal:focus-visible {
+		outline: none;
+	}
+
+	.ls-signal:focus-visible .ls-card {
+		outline: 2px solid var(--focus);
+		outline-offset: 2px;
+	}
+
+	/* ---- the wall: links other people sent in, public the moment they arrive ---- */
+	.ls-wall {
+		display: grid;
+		gap: 10px;
+		width: min(620px, 100%);
+		margin: 44px auto 0;
+		text-align: left;
+	}
+
+	/* `hidden` only wins when no author `display` rule applies to the element. */
+	.ls-wall[hidden] {
+		display: none;
+	}
+
+	.ls-wall-heading {
+		margin: 0;
+		font-size: 10.5px;
+		font-weight: 500;
+		letter-spacing: 0.2em;
+		text-transform: uppercase;
+		color: var(--faint);
+	}
+
+	.ls-wall-lede {
+		margin: 0;
+		font-size: 12.5px;
+		line-height: 1.6;
+		color: var(--muted);
+	}
+
+	.ls-wall-status,
+	.ls-wall-empty {
+		margin: 0;
+		font-size: 11.5px;
+		color: var(--faint);
+	}
+
+	.ls-wall-status:empty,
+	.ls-wall-empty[hidden],
+	.ls-wall-list[hidden] {
+		display: none;
+	}
+
+	.ls-wall-list {
+		display: grid;
+		margin: 2px 0 0;
+		padding: 0;
+		list-style: none;
+		border-top: 1px solid var(--line-soft);
+	}
+
+	.ls-row {
+		border-bottom: 1px solid var(--line-soft);
+	}
+
+	.ls-row-link {
+		display: grid;
+		grid-template-columns: 26px minmax(0, 1fr) auto;
+		align-items: center;
+		gap: 10px;
+		padding: 10px 0;
+		color: inherit;
+		text-decoration: none;
+	}
+
+	.ls-row-link:hover .ls-row-name {
+		color: var(--ink);
+	}
+
+	.ls-row-link:focus-visible {
+		outline: 2px solid var(--focus);
+		outline-offset: 2px;
+	}
+
+	.ls-row-icon {
+		position: relative;
+		display: grid;
+		place-items: center;
+		width: 26px;
+		height: 26px;
+		border: 1px solid var(--line-soft);
+		border-radius: var(--r);
+		overflow: hidden;
+	}
+
+	.ls-row-initial {
+		font-family: var(--mono);
+		font-size: 11px;
+		color: var(--faint);
+		text-transform: uppercase;
+	}
+
+	.ls-row-icon img {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
+		background: var(--surface);
+	}
+
+	.ls-row-text {
+		display: grid;
+		gap: 2px;
+		min-width: 0;
+	}
+
+	.ls-row-name {
+		font-size: 14px;
+		color: var(--text);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.ls-row-domain {
+		font-size: 10.5px;
+		color: var(--faint);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.ls-row-meta {
+		display: flex;
+		align-items: baseline;
+		gap: 10px;
+		font-size: 10.5px;
+		color: var(--faint);
+	}
+
+	.ls-row-state {
+		color: var(--muted);
+	}
+
+	/* A link the owner has picked up for the sonar reads in the same blue as the dots. */
+	.ls-row[data-joined='true'] .ls-row-state {
+		color: var(--ls-accent);
+	}
+
+	/* While one card is open, the rest of the field steps back. */
+	.ls-stage[data-active] .ls-signal:not([data-open]) {
+		opacity: 0.45;
+	}
+
+	/* ---- card ---- */
+	.ls-card {
+		position: absolute;
+		left: 13px;
+		top: 13px;
+		width: max-content;
+		max-width: min(268px, 64vw);
+		display: grid;
+		gap: 9px;
+		padding: 12px 14px;
+		border: 1px solid var(--line);
+		border-radius: var(--r-lg);
+		background: color-mix(in srgb, var(--surface) 94%, transparent);
+		backdrop-filter: blur(6px);
+		box-shadow: var(--shadow);
+		opacity: 0;
+		visibility: hidden;
+		pointer-events: none;
+		transition:
+			opacity 200ms var(--ease-out-quart),
+			transform 260ms var(--ease-out-quart),
+			visibility 200ms;
+		transform: translate3d(var(--ls-card-x, 0px), calc(var(--ls-card-y, 0px) + 8px), 0);
+	}
+
+	.ls-signal[data-open] .ls-card {
+		opacity: 1;
+		visibility: visible;
+		transform: translate3d(var(--ls-card-x, 0px), var(--ls-card-y, 0px), 0);
+	}
+
+	/* The hairline leaves the card at the dot's own height, not at its middle. */
+	.ls-card::before {
+		content: '';
+		position: absolute;
+		top: var(--ls-link-y, 50%);
+		width: 12px;
+		height: 1px;
+		background: var(--line);
+	}
+
+	.ls-signal[data-card-side='right'] .ls-card::before {
+		left: -12px;
+	}
+
+	.ls-signal[data-card-side='left'] .ls-card::before {
+		right: -12px;
+	}
+
+	.ls-card-head {
+		font-size: 10px;
+		letter-spacing: 0.18em;
+		color: var(--faint);
+	}
+
+	.ls-card-main {
+		display: grid;
+		grid-template-columns: 34px minmax(0, 1fr);
+		gap: 10px;
+		align-items: start;
+	}
+
+	.ls-card-icon {
+		position: relative;
+		display: grid;
+		place-items: center;
+		width: 34px;
+		height: 34px;
+		border: 1px solid var(--line-soft);
+		border-radius: var(--r);
+		overflow: hidden;
+	}
+
+	.ls-card-initial {
+		font-family: var(--mono);
+		font-size: 13px;
+		color: var(--faint);
+		text-transform: uppercase;
+	}
+
+	.ls-card-icon img {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
+		background: var(--surface);
+	}
+
+	.ls-card-text {
+		display: grid;
+		gap: 3px;
+		min-width: 0;
+	}
+
+	.ls-card-name {
+		font-size: 14px;
+		font-weight: 500;
+		color: var(--ink);
+		overflow-wrap: anywhere;
+	}
+
+	.ls-card-desc {
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 3;
+		line-clamp: 3;
+		overflow: hidden;
+		font-size: 12.5px;
+		line-height: 1.45;
+		color: var(--muted);
+		overflow-wrap: anywhere;
+	}
+
+	.ls-card-foot {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		font-size: 10.5px;
+		color: var(--faint);
+	}
+
+	.ls-card-domain {
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	/* ---- readouts ---- */
+	.ls-hud {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px 22px;
+		justify-content: center;
+		margin-top: 26px;
+		font-size: 11px;
+		letter-spacing: 0.14em;
+		color: var(--faint);
+	}
+
+	.ls-hud b {
+		font-weight: 500;
+		color: var(--ink);
+	}
+
+	/* The station's own readouts: the faintest line on the page, pure instrument atmosphere. */
+	.ls-hud-env {
+		margin-top: 10px;
+		max-width: 100%;
+		font-size: 10px;
+		letter-spacing: 0.16em;
+		color: var(--faint);
+		opacity: 0.7;
+	}
+
+	.ls-note {
+		margin: 8px 0 0;
+		text-align: center;
+		font-size: 10.5px;
+		line-height: 1.6;
+		color: var(--faint);
+		opacity: 0.85;
+	}
+
+	/* ---- join the network ---- */
+	.ls-cta {
+		display: grid;
+		justify-items: center;
+		gap: 14px;
+		margin-top: 52px;
+	}
+
+	/* `hidden` only wins when no author `display` rule applies to the element. */
+	.ls-cta[hidden] {
+		display: none;
+	}
+
+	.ls-cta-line {
+		margin: 0;
+		font-size: 11.5px;
+		letter-spacing: 0.22em;
+		color: var(--faint);
+	}
+
+	.ls-add {
+		width: min(420px, 100%);
+	}
+
+	.ls-add-toggle {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		padding: 10px 18px;
+		min-height: 44px;
+		border: 1px solid var(--ink);
+		border-radius: var(--r);
+		background: var(--ink);
+		color: var(--bg);
+		font-size: 14px;
+		font-weight: 500;
+		cursor: pointer;
+		list-style: none;
+	}
+
+	.ls-add-toggle::-webkit-details-marker {
+		display: none;
+	}
+
+	.ls-add-toggle:hover {
+		opacity: 0.85;
+	}
+
+	.ls-add[open] .ls-add-toggle {
+		background: transparent;
+		color: var(--ink);
+	}
+
+	.ls-form {
+		display: grid;
+		gap: 12px;
+		margin-top: 18px;
+		padding: 18px;
+		border: 1px solid var(--line);
+		border-radius: var(--r-lg);
+		background: var(--bg-sunken);
+	}
+
+	.ls-form-title {
+		margin: 0;
+		font-size: 10.5px;
+		letter-spacing: 0.2em;
+		color: var(--faint);
+	}
+
+	.ls-field {
+		display: grid;
+		gap: 6px;
+	}
+
+	.ls-field-label {
+		font-size: 12.5px;
+		color: var(--muted);
+	}
+
+	.ls-input {
+		width: 100%;
+		padding: 11px 12px;
+		border: 1px solid var(--line);
+		border-radius: var(--r);
+		background: var(--field);
+		color: var(--ink);
+		font-family: var(--mono);
+		font-size: 13px;
+	}
+
+	.ls-input:focus-visible {
+		outline: 2px solid var(--focus);
+		outline-offset: 1px;
+		border-color: var(--ink);
+	}
+
+	.ls-submit {
+		justify-self: start;
+	}
+
+	.ls-submit[disabled] {
+		opacity: 0.6;
+		cursor: progress;
+	}
+
+	.ls-status {
+		margin: 0;
+		min-height: 1.2em;
+		font-size: 11px;
+		line-height: 1.6;
+		color: var(--muted);
+	}
+
+	.ls-status[data-state='error'] {
+		color: var(--ink);
+	}
+
+	.ls-status:empty {
+		display: none;
+	}
+
+	.ls-form-note {
+		margin: 0;
+		font-size: 11.5px;
+		line-height: 1.6;
+		color: var(--faint);
+	}
+
+	.ls-offline {
+		margin: 0;
+		font-size: 11.5px;
+		color: var(--faint);
+	}
+
+	@keyframes ls-spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	@keyframes ls-in {
+		from {
+			opacity: 0;
+		}
+	}
+
+	/* The start-up beats of the brief: the node lights, the rings arrive, the sweep wakes up. */
+	@keyframes ls-hub-in {
+		from {
+			opacity: 0;
+			transform: scale(0.72);
+		}
+	}
+
+	@keyframes ls-ring-in {
+		from {
+			opacity: 0;
+			transform: scale(0.94);
+		}
+	}
+
+	@keyframes ls-sweep-in {
+		from {
+			opacity: 0;
+		}
+	}
+
+	@keyframes ls-hub-pulse {
+		0%,
+		100% {
+			opacity: 0.7;
+		}
+		50% {
+			opacity: 1;
+		}
+	}
+
+	/* The sweep crossing a dot: one short pulse on the core, one ripple ring, per revolution. */
+	@keyframes ls-pass {
+		0%,
+		2% {
+			opacity: 0.9;
+			transform: scale(1.5);
+		}
+		9%,
+		100% {
+			opacity: 0;
+			transform: scale(1);
+		}
+	}
+
+	@keyframes ls-ping {
+		0%,
+		2% {
+			opacity: 0.7;
+			transform: scale(1);
+		}
+		11%,
+		100% {
+			opacity: 0;
+			transform: scale(2.8);
+		}
+	}
+
+	@keyframes ls-breathe {
+		0%,
+		100% {
+			opacity: 0.4;
+			transform: translate(-50%, -50%) scale(1);
+		}
+		50% {
+			opacity: 0.7;
+			transform: translate(-50%, -50%) scale(1.08);
+		}
+	}
+
+	@keyframes ls-breathe-outer {
+		0%,
+		100% {
+			opacity: 0.3;
+			transform: translate(-50%, -50%) scale(1);
+		}
+		50% {
+			opacity: 0.5;
+			transform: translate(-50%, -50%) scale(1.05);
+		}
+	}
+
+	@media (max-width: 720px) {
+		.ls {
+			--ls-size: min(80vw, 460px);
+		}
+
+		.ls-grain,
+		.ls-radials {
+			display: none;
+		}
+
+		.ls-card {
+			max-width: min(230px, 70vw);
+			padding: 10px 12px;
+		}
+
+		.ls-card-desc {
+			display: none;
+		}
+	}
+
+	/* The global guard only stops durations; the start-up beats must not hold anything back. */
+	@media (prefers-reduced-motion: reduce) {
+		.ls-hub,
+		.ls-rings circle,
+		.ls-sweep,
+		.ls-signal {
+			animation-delay: 0ms !important;
+		}
+	}
+</style>
+
+<script>
+	import { initLinksSonar } from '../scripts/links-sonar';
+
+	initLinksSonar();
+</script>

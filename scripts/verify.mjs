@@ -20,7 +20,7 @@ const distRoot = siteConfig.outDir;
 const defaultLocale = siteConfig.locales.default;
 const prefixedLocales = siteConfig.locales.list.filter((locale) => locale !== defaultLocale);
 const localePrefixOf = (locale) => (locale === defaultLocale ? '' : `/${locale}`);
-const hubPages = ['/', '/about/', '/projects/', '/guestbook/', '/writing/', '/notes/', '/ask/', '/answers/'];
+const hubPages = ['/', '/about/', '/projects/', '/links/', '/guestbook/', '/writing/', '/notes/', '/ask/', '/answers/'];
 const localeFiles = [
 	'/api/profile.json',
 	'/api/articles.json',
@@ -215,6 +215,40 @@ try {
 	}
 } catch (error) {
 	failures.push(`Guestbook integration verification failed: ${error.message}`);
+}
+
+try {
+	const linksEnabled = siteConfig.links?.enabled === true;
+	const authoredLinks = JSON.parse(
+		await readFile(path.join(siteConfig.contentRoot, 'links.json'), 'utf8').catch(() => '[]'),
+	);
+	const linksAuthored = Array.isArray(authoredLinks) && authoredLinks.length > 0;
+	for (const locale of siteConfig.locales.list) {
+		const relativePath = `${localePrefixOf(locale).replace(/^\//, '')}links/index.html`;
+		let html;
+		try {
+			html = await readFile(path.join(distRoot, relativePath), 'utf8');
+		} catch {
+			continue;
+		}
+		const hasSonar = html.includes('data-links-sonar');
+		const hasSubmit = html.includes('data-links-submit');
+		if (!hasSonar) failures.push(`${relativePath} is a links page but is missing the sonar surface`);
+		if (linksAuthored && !html.includes('data-links-signal')) {
+			failures.push(`${relativePath} ships no signals for the authored links`);
+		}
+		if (linksEnabled && !hasSubmit) {
+			failures.push(`${relativePath} is missing the links submission surface`);
+		}
+		if (linksEnabled && !html.includes('data-links-wall')) {
+			failures.push(`${relativePath} is missing the public links wall`);
+		}
+		if (!linksEnabled && hasSubmit) {
+			failures.push(`${relativePath} includes the links submission surface while links submissions are disabled`);
+		}
+	}
+} catch (error) {
+	failures.push(`Links integration verification failed: ${error.message}`);
 }
 
 try {

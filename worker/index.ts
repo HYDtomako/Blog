@@ -15,6 +15,14 @@ import {
 import { createMessage, readThread, removeMessage, toggleMessageLike } from './guestbook-store.ts'
 import { clientIp, failure, isRateLimited, json, readJsonBody, toErrorResponse } from './http.ts'
 import {
+	LinksProblem,
+	MAX_URL_BODY_BYTES,
+	fetchSiteMetadata,
+	parseSubmitRequest,
+	type LinksSubmitRequest,
+} from './links-service.ts'
+import { createSubmission, readWall } from './links-store.ts'
+import {
 	MAX_BODY_BYTES,
 	isJsonContentType,
 	parsePageRequest,
@@ -190,6 +198,52 @@ async function handleGuestbookRemove(request: Request, env: Env): Promise<Respon
 	}
 }
 
+/** `GET` shows the public wall of submitted links; `POST` adds one to it. */
+async function handleLinks(request: Request, env: Env): Promise<Response> {
+	if (request.method === 'GET') return handleLinksWall(request, env)
+	if (request.method === 'POST') return handleLinksSubmit(request, env)
+	return failure(405, 'method_not_allowed', 'use GET or POST /api/links', { allow: 'GET, POST' })
+}
+
+async function handleLinksWall(request: Request, env: Env): Promise<Response> {
+	if (await isRateLimited(env.LINKS_RATE_LIMITER, await guestbookActor(request, env))) {
+		return failure(429, 'rate_limited', 'too many requests', { 'retry-after': '60' })
+	}
+	return json(await readWall(env.STATS_DB))
+}
+
+async function handleLinksSubmit(request: Request, env: Env): Promise<Response> {
+	if (!isJsonContentType(request.headers.get('content-type'))) {
+		return failure(415, 'invalid_content_type', 'content-type must be application/json')
+	}
+
+	// Submissions are keyed to the same weekly pseudonym as the guestbook, so they need the secret.
+	const actorId = await guestbookActor(request, env)
+	if (actorId === null) {
+		return failure(503, 'links_unavailable', 'links require STATS_ACTOR_SECRET')
+	}
+	if (await isRateLimited(env.LINKS_RATE_LIMITER, actorId)) {
+		return failure(429, 'rate_limited', 'too many requests', { 'retry-after': '60' })
+	}
+
+	let parsed: LinksSubmitRequest
+	try {
+		parsed = parseSubmitRequest(await readJsonBody(request, MAX_URL_BODY_BYTES))
+	} catch (error) {
+		return toErrorResponse(error)
+	}
+
+	try {
+		const metadata = await fetchSiteMetadata(parsed.url)
+		return json(await createSubmission(env.STATS_DB, actorId, parsed.url, metadata), 201)
+	} catch (error) {
+		if (error instanceof LinksProblem && error.retryAfter !== undefined) {
+			return failure(error.status, error.code, error.message, { 'retry-after': String(error.retryAfter) })
+		}
+		return toErrorResponse(error)
+	}
+}
+
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
 		const { pathname } = new URL(request.url)
@@ -199,6 +253,7 @@ export default {
 		if (pathname === '/api/guestbook') return handleGuestbook(request, env)
 		if (pathname === '/api/guestbook/like') return handleGuestbookLike(request, env)
 		if (pathname === '/api/guestbook/remove') return handleGuestbookRemove(request, env)
+		if (pathname === '/api/links') return handleLinks(request, env)
 		return env.ASSETS.fetch(request)
 	},
 }
