@@ -17,6 +17,7 @@
 | 模块       | 内容                                                                                                                     |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------ |
 | 阅读       | 博客（`/writing/`）、随笔（`/notes/`）、项目（`/projects/`）、常见问题（`/answers/`）、关于（`/about/`）、标签聚合、明暗主题、默认双语（`zh-CN` 在 `/`，`en` 在 `/en/`） |
+| 友链       | `/links/` 的深海声纳：每个友链是一个信号点，位置由网址哈希稳定决定；悬停/轻触看卡片，点击直达对方站点，页面底部还有一面公开的「收到的信号」墙 |
 | 提问       | `⌘K` 浮层与 `/ask` 页面，在常见问题、文章与随笔里检索；可选接入实时 AI 回答                                                |
 | 机器可读   | `/llms.txt`、`/llms-full.txt`、每个页面的 Markdown 镜像、`/api/*.json`、`/openapi.json`、`/.well-known/about.json`、`/rss.xml`、`/robots.txt`、站点地图 |
 | 统计       | 可选：首页显示站点总量，文章/随笔显示浏览量并支持点赞，由同源的 Cloudflare Worker + D1 提供                              |
@@ -25,7 +26,7 @@
 ## 技术栈
 
 Astro 7 + Starlight（覆盖了部分主题组件）、Markdown/YAML 内容集合、TypeScript 工具链；可选 Cloudflare
-Workers（站点静态资源、统计接口、Live Ask）与 D1；GitHub Actions 跑 CI。需要 Node.js 24+。
+Workers（站点静态资源、统计接口、友链墙、Live Ask）与 D1；GitHub Actions 跑 CI。需要 Node.js 24+。
 
 ## 快速开始
 
@@ -44,6 +45,7 @@ npm run check           # astro check：类型与内容 schema
 npm run test:public-ask
 npm run test:related
 npm run test:stats
+npm run test:links
 npm run build
 npm run verify          # 缺页面或接口不符合约定时会失败
 ```
@@ -65,9 +67,10 @@ npm run verify          # 缺页面或接口不符合约定时会失败
 | 6  | 头像、首页大图、分享图、favicon、项目封面                   | `public/asset/avatar.jpg`、`public/asset/hero-home.jpg`、`public/asset/og-default.png`、`public/favicon.png`、`public/apple-touch-icon.png`、`public/projects/**` |
 | 7  | 导航与界面文案                                              | `src/i18n/zh-CN.ts`、`src/i18n/en.ts`                                                        |
 | 8  | 统计（可选）                                                | `wrangler.jsonc`、`package.json`（`db:migrate*` 脚本）                                        |
-| 9  | Live Ask（可选）                                            | `site.config.mjs`（`ask`）、`.env`、`examples/public-ask-worker/`                              |
-| 10 | 仓库信息                                                    | `package.json`、`README.md`、`LICENSE`                                                        |
-| 11 | 示例内容与上游专用文件                                      | [删掉不需要的东西](#8-删掉不需要的东西)                                                          |
+| 9  | 友链（可选）                                                | `content/links.json`                                                                          |
+| 10 | Live Ask（可选）                                            | `site.config.mjs`（`ask`）、`.env`、`examples/public-ask-worker/`                              |
+| 11 | 仓库信息                                                    | `package.json`、`README.md`、`LICENSE`                                                        |
+| 12 | 示例内容与上游专用文件                                      | [删掉不需要的东西](#8-删掉不需要的东西)                                                          |
 
 ### 1. 站点身份 —— `site.config.mjs`
 
@@ -87,6 +90,7 @@ overlay 的字段会覆盖默认值。
 | `ask.askUrl` / `mcpUrl` / `healthUrl` | 可选的 Live Ask 接口；留空就是纯静态站点                                                        |
 | `comments.repo` / `repoId` / `category` / `categoryId` | 可选的 giscus 配置；四项都空 = 关闭评论                                       |
 | `stats.enabled` / `stats.url`        | 统计开关，模板默认关闭（`false`）；部署好 `worker/` 后改成 `true`；`url` 留空表示同源接口             |
+| `links.enabled` / `links.url`        | 友链页底部的「发送信号」与公开信号墙开关，默认打开；没有部署 `worker/` 时页面会自己把这一块隐藏        |
 | `redirects`                          | 旧路径到新路径的跳转表，示例条目可以删掉                                                        |
 | `contentRoot`、`publicDir`、`outDir`、`assetSource` | 内容、静态资源、构建产物的位置；也可以把内容仓库放在模板之外                     |
 | `discovery.awp`                      | 可选的 AWP 实验开关，默认关闭                                                                   |
@@ -199,12 +203,36 @@ proofPoints: [已有 2000 位用户在用]
 | `PRODUCT.md`、`DESIGN.md`、`ROADMAP.md`、`CHANGELOG.md`、`CONTRIBUTING.md`、`SECURITY.md`、`.github/ISSUE_TEMPLATE/`、`docs/` | 上游项目文档。部署指南留着自己用，其余随你删            |
 | `examples/public-ask-worker/`                                      | 只有要接实时 AI 回答时才需要                                                                         |
 
+### 9. 友链 —— `content/links.json`
+
+友链页（`/links/`、`/en/links/`）把每个友链画成一张深海声纳上的信号点，你只需要写网址：
+
+```json
+[
+  { "url": "https://example.com/" },
+  { "url": "https://friend.example.org/", "name": "朋友的名字" }
+]
+```
+
+`npm run sync:links`（已挂在 `npm run build` 之前）会读取每个站点的 `og:title`、`og:description`
+与图标，补进 `name` / `description` / `icon`：你手写的字段永远不会被覆盖，站点连不上时保留旧值并只打印
+警告。信号点的位置由网址哈希决定（虚拟深度 60–900 m 决定半径），同一个站点每次构建都落在同一处；页面上
+的 `DEPTH` 只是世界观参数，不代表站点质量或排名。
+
+页面底部的「发送信号」是一面公开的信号墙：任何人贴上网址后，它会立刻出现在墙里（所有人可见，
+`GET/POST /api/links`），并读取对方站点的名称与图标。墙上的每一行都标着「待接入」或「已接入」——
+后者只说明这个网址已经出现在上面的声纳里。要不要收录完全由你决定：把网址手动加进
+`content/links.json` 即可，没有任何自动公开的路径；`links.enabled: false` 会连同表单和墙一起隐藏。
+
+墙上的链接一律带 `rel="nofollow ugc"`（别人贴的链接不该替你传递权重）；只有你亲手写进
+`content/links.json`、出现在声纳上的链接才是编辑推荐。
+
 ## 部署
 
 | 方式                              | 什么时候用                                              | 怎么做                                                                          |
 | --------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | 纯静态托管                        | 只要站点、Markdown 镜像和 JSON 接口                      | `npm run build`，把 `dist/` 发布出去                                             |
-| Cloudflare Worker + 静态资源      | 还想要浏览量统计（或者想一次部署全部）                    | `npm run deploy`：构建、校验、迁移 D1，并把 `dist/` 作为 Worker 静态资源上传       |
+| Cloudflare Worker + 静态资源      | 还想要浏览量统计、友链信号墙（或者想一次部署全部）        | `npm run deploy`：构建、校验、迁移 D1，并把 `dist/` 作为 Worker 静态资源上传       |
 | 静态站 + Live Ask Worker          | 要实时 AI 回答和 MCP 入口                                | 静态托管，外加 [`examples/public-ask-worker`](examples/public-ask-worker/README.md) |
 
 **Cloudflare Pages**：构建命令 `npm run build`，输出目录 `dist`，Node.js 版本 `24`。
@@ -224,7 +252,7 @@ proofPoints: [已有 2000 位用户在用]
 | `name`                                         | 你的 Worker 名字                                            |
 | `d1_databases[0].database_name` / `database_id` | 你创建的 D1 数据库（`npx wrangler d1 create <名字>`，把 id 填回来） |
 | `routes[0].pattern`                            | 你的自定义域名；不想绑定域名就删掉整个 `routes` 段，用 `*.workers.dev` |
-| `ratelimits[0].namespace_id`                   | 你自己的限流命名空间 id                                      |
+| `ratelimits[].namespace_id`                    | 你自己的限流命名空间 id（统计与友链各一个）                   |
 
 ```sh
 npx wrangler login
@@ -239,6 +267,10 @@ D1 数据库名也出现在 `package.json` 的 `db:migrate` / `db:migrate:local`
 
 统计是运行时可选的：接口不可用时组件会自己隐藏，页面其余部分不受影响。点赞只按每周轮换的 HMAC 假名去重，
 不保存 IP。模板默认 `stats.enabled: false`，构建里不会出现统计组件；部署好 Worker 后把它改成 `true` 即可。
+
+友链信号墙走 `POST /api/links` 与 `GET /api/links`，复用同一份 D1（`worker/migrations/0003_links.sql`）和
+同一套匿名假名机制。它需要 `npx wrangler secret put STATS_ACTOR_SECRET`；缺少时发帖返回 503 并显示为
+不可用，而页面在没有这个接口时会把整块「发送信号」与信号墙安静地隐藏——所以纯静态托管也不会出现坏掉的框。
 
 ### 可选：Live Ask
 
@@ -276,7 +308,9 @@ PUBLIC_TURNSTILE_SITE_KEY=your_site_key npm run build
 | `npm run test:related`      | 相关文章选取的测试                                                                  |
 | `npm run test:comments`     | giscus 配置测试                                                                    |
 | `npm run test:stats`        | 统计 Worker 与前端组件测试                                                          |
+| `npm run test:links`        | 友链：URL/metadata 解析、信号布局与页面交互测试                                       |
 | `npm run sync:github`       | 从 GitHub 刷新 `content/github-activity.json` 和项目 star 数                        |
+| `npm run sync:links`        | 从各友链站点刷新 `content/links.json` 的名称、简介与图标                              |
 | `npm run collect-assets`    | 把外部图库同步进 `public/asset`（没配 `assetSource` 时什么都不做）                   |
 | `npm run dev:worker`        | `wrangler dev`：同时跑构建产物和统计接口                                             |
 | `npm run db:migrate:local` / `db:migrate` | 把 `worker/migrations` 应用到本地 / 线上 D1                            |
@@ -292,6 +326,7 @@ content/                # 你的内容，按集合与语言分组
   profile/<locale>/{person.yaml,cooperation.yaml,resume.md}
   projects/<locale>/*.yaml
   series/<locale>/{series.json,<slug>.yaml}
+  links.json            # 友链网址清单（名称、简介、图标由 npm run sync:links 补齐）
 public/
   asset/                # 头像、首屏大图、分享图、文章配图
   projects/             # 项目封面
@@ -302,7 +337,7 @@ src/
   lib/                  # 配置、语言、能力声明与 SEO 工具
   pages/                # 路由与机器可读接口（/llms.txt、/api/* 等）
   content.config.ts     # 内容集合与 frontmatter schema
-worker/                 # 统计 Worker（D1）及其迁移
+worker/                 # 站点 Worker：统计、友链信号墙（D1）及其迁移
 wrangler.jsonc          # Worker 名称、D1 绑定、路由
 examples/public-ask-worker/  # 可选的 Live Ask Worker
 scripts/                # 构建期脚本（校验、同步、站点地图、图库收集）
@@ -319,6 +354,7 @@ docs/                   # 部署指南与上游设计笔记
 | `/api/articles.json`          | 文章目录                                       |
 | `/api/topics.json`            | 标签目录                                       |
 | `/api/search-index.json`      | `⌘K` 与 `/ask` 使用的检索语料                   |
+| `/api/links`                  | 友链信号墙：公开读取，贴一条网址即可加入         |
 | `/openapi.json`               | 接口契约，以及配置过的 Ask/MCP 远端             |
 | `/.well-known/about.json`     | 能力概览                                       |
 | `/rss.xml`、`/robots.txt`、站点地图 | 订阅与发现                                |

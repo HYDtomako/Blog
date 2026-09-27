@@ -40,6 +40,9 @@ jobs:
       - name: Test stats
         run: npm run test:stats
 
+      - name: Test links
+        run: npm run test:links
+
       - name: Test intro
         run: npm run test:intro
 

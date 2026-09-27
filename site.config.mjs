@@ -78,6 +78,15 @@ const defaults = {
 	intro: {
 		enabled: true,
 	},
+	/**
+	 * Links page: `content/links.json` is always rendered as the sonar; `enabled` only
+	 * controls the "send a signal" box and the public wall under it, which need the site Worker.
+	 * Keep `url` empty for same-origin; point it at `wrangler dev` while developing the API.
+	 */
+	links: {
+		enabled: true,
+		url: '',
+	},
 	/** Renamed pages keep their old URLs working: `{ '/old-path': '/new-path/' }`. */
 	redirects: {},
 	/** Per-locale public identity and page copy, keyed by locale id. */
@@ -210,6 +219,7 @@ const merged = {
 	ask: { ...defaults.ask, ...(overlayRest.ask ?? {}) },
 	stats: { ...defaults.stats, ...(overlayRest.stats ?? {}) },
 	intro: { ...defaults.intro, ...(overlayRest.intro ?? {}) },
+	links: { ...defaults.links, ...(overlayRest.links ?? {}) },
 	comments: resolveCommentsConfig({ ...defaults.comments, ...(overlayRest.comments ?? {}) }),
 	brand: mergedBrand,
 	discovery: { ...defaults.discovery, ...(overlayRest.discovery ?? {}) },

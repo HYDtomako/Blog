@@ -15,15 +15,18 @@ type TestEnv = {
 	env: Env
 	assets: string[]
 	limiterKeys: string[]
+	linksLimiterKeys: string[]
 }
 
 function createEnv(options: {
 	db?: D1Database
 	secret?: string
 	limiter?: 'allow' | 'deny'
+	linksLimiter?: 'allow' | 'deny'
 } = {}): TestEnv {
 	const assets: string[] = []
 	const limiterKeys: string[] = []
+	const linksLimiterKeys: string[] = []
 	const env: Env = {
 		STATS_DB: options.db ?? createStatsDatabase(),
 		ASSETS: {
@@ -43,7 +46,16 @@ function createEnv(options: {
 		}
 		env.STATS_RATE_LIMITER = limiter
 	}
-	return { env, assets, limiterKeys }
+	if (options.linksLimiter !== undefined) {
+		const limiter: RateLimiter = {
+			async limit({ key }) {
+				linksLimiterKeys.push(key)
+				return { success: options.linksLimiter === 'allow' }
+			},
+		}
+		env.LINKS_RATE_LIMITER = limiter
+	}
+	return { env, assets, limiterKeys, linksLimiterKeys }
 }
 
 function pageRequest(
@@ -312,3 +324,164 @@ function unreachableDatabase(): D1Database {
 	}
 	return { prepare: fail, batch: fail, exec: fail }
 }
+
+const LINKS_URL = 'https://example.com/api/links'
+const SITE_HTML = `<html><head><title>Rui&#39;s Blog</title>
+<meta name="description" content="Code and indie making">
+<link rel="icon" href="/icon.png"></head></html>`
+
+function linksRequest(
+	body: unknown,
+	{ ip = VISITOR, headers = {}, ...init }: RequestInit & { ip?: string } = {},
+): Request {
+	return new Request(LINKS_URL, {
+		method: 'POST',
+		body: typeof body === 'string' ? body : JSON.stringify(body),
+		...init,
+		headers: { 'content-type': 'application/json', 'cf-connecting-ip': ip, ...headers },
+	})
+}
+
+const postLinks = (env: Env, body: unknown, init?: RequestInit & { ip?: string }) =>
+	worker.fetch(linksRequest(body, init), env)
+
+const errorCodeOf = async (response: Response) =>
+	((await json(response)).error as { code: string }).code
+
+/** The submit route reads the target site over the global fetch; this stands in for it. */
+function stubSiteFetch(html: string, init: { status?: number; url?: string; type?: string } = {}) {
+	const original = globalThis.fetch
+	const status = init.status ?? 200
+	globalThis.fetch = (async () => ({
+		ok: status >= 200 && status < 300,
+		status,
+		url: init.url ?? 'https://example.com/',
+		headers: new Headers({ 'content-type': init.type ?? 'text/html; charset=utf-8' }),
+		text: async () => html,
+	})) as unknown as typeof fetch
+	return () => {
+		globalThis.fetch = original
+	}
+}
+
+test('a submitted url is read from the site and lands on the wall', async () => {
+	const restore = stubSiteFetch(SITE_HTML)
+	try {
+		const db = createStatsDatabase()
+		const { env, linksLimiterKeys } = createEnv({ db, secret: SECRET, linksLimiter: 'allow' })
+		const response = await postLinks(env, { url: 'example.com' })
+
+		assert.equal(response.status, 201)
+		assert.equal(response.headers.get('cache-control'), 'no-store')
+		const payload = await json(response)
+		assert.equal(payload.url, 'https://example.com/')
+		assert.equal(payload.name, "Rui's Blog")
+		assert.equal(payload.description, 'Code and indie making')
+		assert.equal(payload.icon, 'https://example.com/icon.png')
+		assert.equal(payload.domain, 'example.com')
+		assert.match(String(payload.createdAt), /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)
+
+		const row = await db
+			.prepare('SELECT url, status FROM link_submissions WHERE url = ?1')
+			.bind('https://example.com/')
+			.first<{ url: string, status: string }>()
+		assert.deepEqual(row, { url: 'https://example.com/', status: 'pending' })
+
+		assert.match(linksLimiterKeys[0] ?? '', /^[0-9a-f]{64}$/)
+		assert.equal(linksLimiterKeys[0]?.includes(VISITOR), false)
+	} finally {
+		restore()
+	}
+})
+
+test('an unreachable site answers 502 signal_lost', async () => {
+	const restore = stubSiteFetch('gone', { status: 404 })
+	try {
+		const { env } = createEnv({ secret: SECRET, linksLimiter: 'allow' })
+		const response = await postLinks(env, { url: 'https://example.com/' })
+
+		assert.equal(response.status, 502)
+		assert.equal(response.headers.get('cache-control'), 'no-store')
+		assert.equal(await errorCodeOf(response), 'signal_lost')
+	} finally {
+		restore()
+	}
+})
+
+test('the wall is public and only submission methods are refused', async () => {
+	const restore = stubSiteFetch(SITE_HTML)
+	try {
+		const { env } = createEnv({ secret: SECRET, linksLimiter: 'allow' })
+
+		// Whatever people send in is visible to everybody, newest first, with no pseudonym in it.
+		const empty = await worker.fetch(new Request(LINKS_URL, { headers: { 'cf-connecting-ip': VISITOR } }), env)
+		assert.equal(empty.status, 200)
+		assert.deepEqual(await json(empty), { submissions: [], total: 0 })
+
+		await postLinks(env, { url: 'example.com' })
+		await postLinks(env, { url: 'https://other.example.org/' }, { ip: OTHER_VISITOR })
+
+		const wall = await worker.fetch(new Request(LINKS_URL, { headers: { 'cf-connecting-ip': VISITOR } }), env)
+		assert.equal(wall.status, 200)
+		assert.equal(wall.headers.get('cache-control'), 'no-store')
+		const body = (await json(wall)) as unknown as { submissions: Record<string, unknown>[], total: number }
+		assert.equal(body.total, 2)
+		assert.equal(JSON.stringify(body).includes('actor'), false)
+
+		// The wall renders without STATS_ACTOR_SECRET; only writing needs it.
+		const anonymous = createEnv({ linksLimiter: 'allow' })
+		const readable = await worker.fetch(new Request(LINKS_URL, { headers: { 'cf-connecting-ip': VISITOR } }), anonymous.env)
+		assert.equal(readable.status, 200)
+
+		const wrongMethod = await worker.fetch(
+			new Request(LINKS_URL, { method: 'DELETE', headers: { 'cf-connecting-ip': VISITOR } }),
+			env,
+		)
+		assert.equal(wrongMethod.status, 405)
+		assert.equal(wrongMethod.headers.get('allow'), 'GET, POST')
+	} finally {
+		restore()
+	}
+})
+
+test('links submissions reject other content types and malformed bodies', async () => {
+	const { env } = createEnv({ secret: SECRET, linksLimiter: 'allow' })
+
+	const wrongType = await postLinks(env, 'url=example.com', { headers: { 'content-type': 'text/plain' } })
+	assert.equal(wrongType.status, 415)
+	assert.equal(await errorCodeOf(wrongType), 'invalid_content_type')
+
+	const privateHost = await postLinks(env, { url: 'http://127.0.0.1/' })
+	assert.equal(privateHost.status, 400)
+	assert.equal(await errorCodeOf(privateHost), 'invalid_url')
+
+	const unknownField = await postLinks(env, { url: 'https://example.com/', note: 'hi' })
+	assert.equal(unknownField.status, 400)
+	assert.equal(await errorCodeOf(unknownField), 'invalid_body')
+
+	const oversized = await postLinks(env, { url: `https://example.com/${'a'.repeat(2000)}` })
+	assert.equal(oversized.status, 413)
+	assert.equal(await errorCodeOf(oversized), 'invalid_body')
+
+	const notJson = await postLinks(env, '{not json')
+	assert.equal(notJson.status, 400)
+	assert.equal(await errorCodeOf(notJson), 'invalid_body')
+})
+
+test('links submissions are gated by the actor secret and the visitor limiter', async () => {
+	const withoutSecret = createEnv({ linksLimiter: 'allow' })
+	const unavailable = await postLinks(withoutSecret.env, { url: 'https://example.com/' })
+	assert.equal(unavailable.status, 503)
+	assert.equal(unavailable.headers.get('cache-control'), 'no-store')
+	assert.equal(await errorCodeOf(unavailable), 'links_unavailable')
+
+	const limited = createEnv({ secret: SECRET, linksLimiter: 'deny' })
+	const response = await postLinks(limited.env, { url: 'https://example.com/' })
+	assert.equal(response.status, 429)
+	assert.equal(response.headers.get('retry-after'), '60')
+	assert.equal(await errorCodeOf(response), 'rate_limited')
+
+	const read = await worker.fetch(new Request(LINKS_URL, { headers: { 'cf-connecting-ip': VISITOR } }), limited.env)
+	assert.equal(read.status, 429)
+	assert.equal(await errorCodeOf(read), 'rate_limited')
+})

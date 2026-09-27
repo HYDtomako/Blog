@@ -1,6 +1,14 @@
 import { deriveAnonymousActor } from './actor.ts'
 import type { Env } from './env.ts'
 import {
+	LinksProblem,
+	MAX_URL_BODY_BYTES,
+	fetchSiteMetadata,
+	parseSubmitRequest,
+	type LinksSubmitRequest,
+} from './links-service.ts'
+import { createSubmission, readWall } from './links-store.ts'
+import {
 	MAX_BODY_BYTES,
 	StatsProblem,
 	exceedsBodyLimit,
@@ -45,9 +53,31 @@ async function readPageBody(request: Request): Promise<unknown> {
 	}
 }
 
+async function readLinksBody(request: Request): Promise<unknown> {
+	const declared = Number.parseInt(request.headers.get('content-length') ?? '', 10)
+	if (declared > MAX_URL_BODY_BYTES) {
+		throw new LinksProblem('invalid_body', `body must be at most ${MAX_URL_BODY_BYTES} bytes`, 413)
+	}
+	const text = await request.text()
+	if (new TextEncoder().encode(text).byteLength > MAX_URL_BODY_BYTES) {
+		throw new LinksProblem('invalid_body', `body must be at most ${MAX_URL_BODY_BYTES} bytes`, 413)
+	}
+	try {
+		return JSON.parse(text) as unknown
+	} catch {
+		throw new LinksProblem('invalid_body', 'body must be valid JSON')
+	}
+}
+
 async function rateLimited(env: Env, actorId: string | null): Promise<boolean> {
 	if (actorId === null || env.STATS_RATE_LIMITER === undefined) return false
 	const { success } = await env.STATS_RATE_LIMITER.limit({ key: actorId })
+	return !success
+}
+
+async function linksRateLimited(env: Env, actorId: string | null): Promise<boolean> {
+	if (actorId === null || env.LINKS_RATE_LIMITER === undefined) return false
+	const { success } = await env.LINKS_RATE_LIMITER.limit({ key: actorId })
 	return !success
 }
 
@@ -103,12 +133,63 @@ async function handleHealth(request: Request, env: Env): Promise<Response> {
 	}
 }
 
+/** The wall is public to read; writing a link needs the same weekly pseudonym as a like. */
+async function handleLinks(request: Request, env: Env): Promise<Response> {
+	if (request.method === 'GET') return handleLinksWall(request, env)
+	if (request.method === 'POST') return handleLinksSubmit(request, env)
+	return failure(405, 'method_not_allowed', 'use GET or POST /api/links', { allow: 'GET, POST' })
+}
+
+async function handleLinksWall(request: Request, env: Env): Promise<Response> {
+	const secret = env.STATS_ACTOR_SECRET
+	const actorId = secret === undefined ? null : await deriveAnonymousActor(clientIp(request), secret)
+	if (await linksRateLimited(env, actorId)) {
+		return failure(429, 'rate_limited', 'too many requests', { 'retry-after': '60' })
+	}
+	return json(await readWall(env.STATS_DB))
+}
+
+async function handleLinksSubmit(request: Request, env: Env): Promise<Response> {
+	if (!isJsonContentType(request.headers.get('content-type'))) {
+		return failure(415, 'invalid_content_type', 'content-type must be application/json')
+	}
+
+	const secret = env.STATS_ACTOR_SECRET
+	const actorId = secret === undefined ? null : await deriveAnonymousActor(clientIp(request), secret)
+	if (actorId === null) {
+		return failure(503, 'links_unavailable', 'links require STATS_ACTOR_SECRET')
+	}
+	if (await linksRateLimited(env, actorId)) {
+		return failure(429, 'rate_limited', 'too many requests', { 'retry-after': '60' })
+	}
+
+	let parsed: LinksSubmitRequest
+	try {
+		parsed = parseSubmitRequest(await readLinksBody(request))
+	} catch (error) {
+		if (error instanceof LinksProblem) return failure(error.status, error.code, error.message)
+		throw error
+	}
+
+	try {
+		const metadata = await fetchSiteMetadata(parsed.url)
+		return json(await createSubmission(env.STATS_DB, actorId, parsed.url, metadata), 201)
+	} catch (error) {
+		if (error instanceof LinksProblem) {
+			if (error.retryAfter === undefined) return failure(error.status, error.code, error.message)
+			return failure(error.status, error.code, error.message, { 'retry-after': String(error.retryAfter) })
+		}
+		throw error
+	}
+}
+
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
 		const { pathname } = new URL(request.url)
 		if (pathname === '/api/stats/page') return handlePageStats(request, env)
 		if (pathname === '/api/stats/total') return handleTotalStats(request, env)
 		if (pathname === '/api/stats/health') return handleHealth(request, env)
+		if (pathname === '/api/links') return handleLinks(request, env)
 		return env.ASSETS.fetch(request)
 	},
 }

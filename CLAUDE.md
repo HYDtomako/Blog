@@ -35,6 +35,39 @@ npm run db:migrate         # apply migrations to the remote D1
 npm run deploy             # build + verify + migrate + wrangler deploy
 ```
 
+## Links
+
+`/links/` and `/en/links/` render `src/components/pages/LinksPage.astro`, which mounts
+`src/components/LinksSonar.astro`: every entry of `content/links.json` is a signal on one deep-sea
+sonar. Placement is a pure function of the URL (`src/lib/links.ts`) — `signalDepth(url)` (60–900 m)
+decides the radius, the URL hash the angle, and a deterministic relaxation pass keeps dots at least
+0.155 sonar-radii apart — so a site keeps its spot on every build, and the dots ship in the SSR
+markup, which is why the page works without JavaScript. The 18 s sweep, the pulse and ripple it
+triggers when it crosses a dot, the start-up beats (node → rings → sweep → signals) and the entry
+animation are CSS-only: `--ls-turn` delays each ripple by that dot's fraction of the revolution, and
+the sweep itself is a rotating conic gradient with a 60° tail, so the browser composites one layer
+instead of repainting a beam. Dots differ by a few percent in size and about one in eight is hollow;
+that variation is drawn from the same URL hash and means nothing.
+
+`content/links.json` is the only source of truth: `{ url, name?, description?, icon? }`. `npm run
+sync:links` (`scripts/sync-links.mjs`, wired into `prebuild`) fills the three optional fields from
+the site's own head tags, never overwrites an authored field, keeps the previous values when a site
+is unreachable, and never fails the build; the parser lives in `shared/link-metadata.ts`, so the
+Worker reads a submitted site exactly the way the build reads an authored one.
+
+`src/scripts/links-sonar.ts` is the only client code on the page. It places the HUD card inside the
+stage (hover/focus on fine pointers, first tap on coarse ones), dims the rest of the field, and drives
+the public wall below: `GET /api/links` renders the newest submissions (a row per link, `waiting` or
+`on the sonar` when its URL is already in `content/links.json`), and `POST /api/links` adds one. The
+route (`worker/links-service.ts`, `worker/links-store.ts`, D1 table from
+`worker/migrations/0003_links.sql`) reuses the weekly actor pseudonym and `LINKS_RATE_LIMITER`, fetches
+the target site (6 s timeout, HTML only, ≤256 KB, public http(s) hosts only) and stores the link. The
+wall is public the moment it is sent — nobody has to approve a row — but a row is never a sonar signal:
+publishing stays a hand edit of `content/links.json`. Wall links carry `rel="nofollow ugc"`, and the API
+never returns the actor pseudonym. `links.enabled` in `site.config.mjs` hides the composer and the wall
+together, and `npm run test:links` covers the metadata parser, the layout maths, the wall and the page
+behaviour.
+
 ## Documentation
 
 - Product positioning: `PRODUCT.md`
