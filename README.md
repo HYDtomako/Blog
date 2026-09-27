@@ -17,6 +17,7 @@
 | 模块       | 内容                                                                                                                     |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------ |
 | 阅读       | 博客（`/writing/`）、随笔（`/notes/`）、项目（`/projects/`）、常见问题（`/answers/`）、关于（`/about/`）、标签聚合、明暗主题、默认双语（`zh-CN` 在 `/`，`en` 在 `/en/`） |
+| 友链       | `/links/` 的深海声纳：每个友链是一个信号点，位置由网址哈希稳定决定；悬停/轻触看卡片，点击直达对方站点，页面底部可提交自己的网址 |
 | 提问       | `⌘K` 浮层与 `/ask` 页面，在常见问题、文章与随笔里检索；可选接入实时 AI 回答                                                |
 | 机器可读   | `/llms.txt`、`/llms-full.txt`、每个页面的 Markdown 镜像、`/api/*.json`、`/openapi.json`、`/.well-known/about.json`、`/rss.xml`、`/robots.txt`、站点地图 |
 | 统计       | 可选：首页显示站点总量，文章/随笔显示浏览量并支持点赞，由同源的 Cloudflare Worker + D1 提供                              |
@@ -204,6 +205,30 @@ proofPoints: [已有 2000 位用户在用]
 | `PRODUCT.md`、`DESIGN.md`、`ROADMAP.md`、`CHANGELOG.md`、`CONTRIBUTING.md`、`SECURITY.md`、`.github/ISSUE_TEMPLATE/`、`docs/` | 上游项目文档。部署指南留着自己用，其余随你删            |
 | `examples/public-ask-worker/`                                      | 只有要接实时 AI 回答时才需要                                                                         |
 
+### 9. 友链 —— `content/links.json`
+
+友链页（`/links/`、`/en/links/`）把每个友链画成一张深海声纳上的信号点，你只需要写网址：
+
+```json
+[
+  { "url": "https://example.com/" },
+  { "url": "https://friend.example.org/", "name": "朋友的名字" }
+]
+```
+
+`npm run sync:links`（已挂在 `npm run build` 之前）会读取每个站点的 `og:title`、`og:description`
+与图标，补进 `name` / `description` / `icon`：你手写的字段永远不会被覆盖，站点连不上时保留旧值并只打印
+警告。信号点的位置由网址哈希决定（虚拟深度 60–900 m 决定半径），同一个站点每次构建都落在同一处；页面上
+的 `DEPTH` 只是世界观参数，不代表站点质量或排名。
+
+页面底部的「发送信号」是一个公开的信号墙：任何人贴上网址后，它会立刻出现在墙里（所有人可见，
+`GET/POST /api/links`），并读取对方站点的名称与图标。墙上的每一行都标着「待接入」或「已接入」——
+后者只说明这个网址已经出现在上面的声纳里。要不要收录完全由你决定：把网址手动加进
+`content/links.json` 即可，没有任何自动公开的路径；`links.enabled: false` 会连同表单和墙一起隐藏。
+
+墙上的链接一律带 `rel="nofollow ugc"`（别人贴的链接不该替你传递权重）；只有你亲手写进
+`content/links.json`、出现在声纳上的链接才是编辑推荐。
+
 ## 部署
 
 | 方式                              | 什么时候用                                              | 怎么做                                                                          |
@@ -229,7 +254,7 @@ proofPoints: [已有 2000 位用户在用]
 | `name`                                         | 你的 Worker 名字                                            |
 | `d1_databases[0].database_name` / `database_id` | 你创建的 D1 数据库（`npx wrangler d1 create <名字>`，把 id 填回来） |
 | `routes[0].pattern`                            | 你的自定义域名；不想绑定域名就删掉整个 `routes` 段，用 `*.workers.dev` |
-| `ratelimits[0].namespace_id`                   | 你自己的限流命名空间 id（统计与留言板各一个）                                      |
+| `ratelimits[0].namespace_id`                   | 你自己的限流命名空间 id（统计、留言板、友链各一个）                                      |
 
 ```sh
 npx wrangler login
@@ -246,6 +271,8 @@ D1 数据库名也出现在 `package.json` 的 `db:migrate` / `db:migrate:local`
 不保存 IP。把 `stats.enabled` 设为 `false` 就能移除组件和对应的校验。
 
 留言板（`/guestbook/`）复用同一套身份和同一份 D1：发帖、点赞、撤回都走 `/api/guestbook/*`，作者哈希只在服务端参与判断，不会返回给浏览器。它需要 `npx wrangler secret put STATS_ACTOR_SECRET`（与点赞共用），缺少时整个留言板返回 503 并自动隐藏；把 `guestbook.enabled` 设为 `false` 即可关闭。
+
+友链的「发送信号」表单走 `POST /api/links/submit`，同样复用这份身份与 D1（`worker/migrations/0003_links.sql`）：服务端读取提交的站点后写入 `link_submissions`，状态一律是 `pending`，页面只把待接入信号显示给提交者本人。它同样需要 `STATS_ACTOR_SECRET`，缺少时表单返回 503 并显示为不可用。
 
 ### 可选：Live Ask
 
@@ -284,7 +311,9 @@ PUBLIC_TURNSTILE_SITE_KEY=your_site_key npm run build
 | `npm run test:comments`     | giscus 配置测试                                                                    |
 | `npm run test:stats`        | 统计 Worker 与前端组件测试                                                          |
 | `npm run test:guestbook` | 留言板前端与交互测试 |
+| `npm run test:links`    | 友链：URL/metadata 解析、信号布局与页面交互测试 |
 | `npm run sync:github`       | 从 GitHub 刷新 `content/github-activity.json` 和项目 star 数                        |
+| `npm run sync:links`        | 从各友链站点刷新 `content/links.json` 的名称、简介与图标                              |
 | `npm run collect-assets`    | 把外部图库同步进 `public/asset`（没配 `assetSource` 时什么都不做）                   |
 | `npm run dev:worker`        | `wrangler dev`：同时跑构建产物和统计接口                                             |
 | `npm run db:migrate:local` / `db:migrate` | 把 `worker/migrations` 应用到本地 / 线上 D1                            |
@@ -300,6 +329,7 @@ content/                # 你的内容，按集合与语言分组
   profile/<locale>/{person.yaml,cooperation.yaml,resume.md}
   projects/<locale>/*.yaml
   series/<locale>/{series.json,<slug>.yaml}
+  links.json            # 友链网址清单（名称、简介、图标由 npm run sync:links 补齐）
 public/
   asset/                # 头像、首屏大图、分享图、文章配图
   projects/             # 项目封面
@@ -310,7 +340,7 @@ src/
   lib/                  # 配置、语言、能力声明与 SEO 工具
   pages/                # 路由与机器可读接口（/llms.txt、/api/* 等）
   content.config.ts     # 内容集合与 frontmatter schema
-worker/                 # 统计 Worker（D1）及其迁移
+worker/                 # 站点 Worker：统计、留言板、友链提交（D1）及其迁移
 wrangler.jsonc          # Worker 名称、D1 绑定、路由
 examples/public-ask-worker/  # 可选的 Live Ask Worker
 scripts/                # 构建期脚本（校验、同步、站点地图、图库收集）

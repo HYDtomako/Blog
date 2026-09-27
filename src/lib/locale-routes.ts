@@ -5,7 +5,7 @@ import { entryLocale, topicSlug } from './public-data';
 import { SERIES_ORDER_BY_LOCALE } from './series.mjs';
 
 /** Page paths that exist in every locale (mirrored hub pages). */
-const HUB_PATHS = ['/', '/writing/', '/notes/', '/projects/', '/guestbook/', '/about/', '/ask/', '/answers/', '/topics/'];
+const HUB_PATHS = ['/', '/writing/', '/notes/', '/projects/', '/links/', '/guestbook/', '/about/', '/ask/', '/answers/', '/topics/'];
 
 const pathCache = new Map<string, Promise<Set<string>>>();
 

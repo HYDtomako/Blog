@@ -1,6 +1,7 @@
 /** Locale UI chrome for Refined-X (not brand/content identity). */
 
 import type { GuestbookErrorCode } from '../scripts/guestbook';
+import type { LinksErrorCode } from '../scripts/links-sonar';
 
 export type UiCopy = {
 	nav: {
@@ -8,6 +9,7 @@ export type UiCopy = {
 		notes: string;
 		projects: string;
 		guestbook: string;
+		links: string;
 		about: string;
 		primaryAria: string;
 		mobileAria: string;
@@ -235,6 +237,47 @@ export type UiCopy = {
 		emojiPanel: string;
 		errors: Record<GuestbookErrorCode, string>;
 	};
+	/**
+	 * Deep-sea sonar links page. Instrument readouts (`SIGNALS DETECTED`, `SIGNAL LOST`)
+	 * stay in the Latin HUD register in every locale, like the home-page diving instrument;
+	 * everything the visitor acts on is localized.
+	 */
+	links: {
+		heading: string;
+		eyebrow: string;
+		lede: string;
+		/** Machine-facing one-liner for the page `llmSummary` and structured data. */
+		summary: string;
+		indexDescription: string;
+		signalsDetected: string;
+		depthRange: string;
+		depthNote: string;
+		cta: string;
+		ctaButton: string;
+		formTitle: string;
+		urlLabel: string;
+		placeholder: string;
+		connect: string;
+		connecting: string;
+		formNote: string;
+		received: string;
+		receivedNote: string;
+		/** The public wall of submitted links. */
+		wallHeading: string;
+		wallLede: string;
+		wallLoading: string;
+		wallEmpty: string;
+		wallFailed: string;
+		/** State chips on a wall row. */
+		wallWaiting: string;
+		wallJoined: string;
+		unavailable: string;
+		noScript: string;
+		signalAria: (name: string, depth: string) => string;
+		openSite: (name: string) => string;
+		errorTitle: string;
+		errors: Record<LinksErrorCode, string>;
+	};
 	footer: {
 		content: string;
 		site: string;
@@ -244,8 +287,7 @@ export type UiCopy = {
 		/** Series links carry a prefix so they cannot read as a duplicate of the collection above them. */
 		seriesLink: (title: string) => string;
 		badge: string;
-	};
-	theme: {
+	};	theme: {
 		light: string;
 		dark: string;
 		toggleAria: (next: string) => string;

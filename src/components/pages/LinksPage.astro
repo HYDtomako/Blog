@@ -1,0 +1,41 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import LinksSonar from '../LinksSonar.astro';
+import { breadcrumbJsonLd, webPageJsonLd } from '../../lib/public-data';
+import { localeFromPath, localizedHref, localizedSitePath } from '../../lib/locale';
+import { getSiteCopy } from '../../lib/site-copy';
+
+const locale = localeFromPath(Astro.url.pathname);
+const UI = getSiteCopy(locale).ui;
+const links = UI.links;
+const linksPath = localizedSitePath(locale, '/links/');
+const structuredData = [
+	webPageJsonLd({ path: linksPath, name: links.heading, description: links.lede, locale }),
+	breadcrumbJsonLd([
+		{ name: UI.common.home, path: localizedSitePath(locale, '/') },
+		{ name: links.heading, path: linksPath },
+	]),
+];
+---
+
+<StarlightPage
+  frontmatter={{
+    title: links.heading,
+    description: links.indexDescription,
+    template: 'splash',
+    contentType: 'page',
+    slug: 'links',
+    llmSummary: links.summary,
+  }}
+>
+  {structuredData.map((value) => (
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(value)} />
+  ))}
+  <div class="wrap page">
+    <div class="crumbs"><a href={localizedHref(locale, '/')}>{UI.common.home}</a><span class="sep">/</span><span>{links.heading}</span></div>
+    <p class="eyebrow">{links.eyebrow}</p>
+    <h1 id="links-heading" class="display page-heading page-heading-after-label">{links.heading}</h1>
+    <p class="lede page-lede">{links.lede}</p>
+    <LinksSonar />
+  </div>
+</StarlightPage>

@@ -82,6 +82,14 @@ const defaults = {
 		enabled: true,
 		url: '',
 	},
+	/**
+	 * Links page: `content/links.json` is always rendered as the sonar; `enabled` only
+	 * controls the "send a signal" submission form, which posts to the site Worker.
+	 */
+	links: {
+		enabled: true,
+		url: '',
+	},
 	/** Renamed answers keep their old URLs working. */
 	redirects: {
 		'/answers/what-is-refined-x': '/answers/what-is-this-site/',
@@ -218,6 +226,7 @@ const merged = {
 	ask: { ...defaults.ask, ...(overlayRest.ask ?? {}) },
 	stats: { ...defaults.stats, ...(overlayRest.stats ?? {}) },
 	guestbook: { ...defaults.guestbook, ...(overlayRest.guestbook ?? {}) },
+	links: { ...defaults.links, ...(overlayRest.links ?? {}) },
 	readingProgress: { ...defaults.readingProgress, ...(overlayRest.readingProgress ?? {}) },
 	intro: { ...defaults.intro, ...(overlayRest.intro ?? {}) },
 	comments: resolveCommentsConfig({ ...defaults.comments, ...(overlayRest.comments ?? {}) }),

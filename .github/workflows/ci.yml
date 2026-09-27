@@ -43,6 +43,9 @@ jobs:
       - name: Test guestbook
         run: npm run test:guestbook
 
+      - name: Test links
+        run: npm run test:links
+
       - name: Test ui
         run: npm run test:ui
 
