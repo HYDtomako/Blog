@@ -30,6 +30,7 @@ import {
 	needleTestAt,
 	phaseAt,
 	pressureFor,
+	reserveScrollbarGutter,
 	shouldPlayIntro,
 	temperatureFor,
 } from './deep-sea-intro.ts';
@@ -44,8 +45,17 @@ const PRESSURE_CHECKPOINTS = [
 /** When a checkpoint is reached, in timeline milliseconds. */
 const checkpointAt = (index: number) => INTRO_BOOT_MS + DESCENT_MARKS[index] * DESCENT_MS;
 
-function createIntro(options: { reducedMotion?: boolean; search?: string; seen?: boolean } = {}) {
+function createIntro(
+	options: {
+		reducedMotion?: boolean;
+		search?: string;
+		seen?: boolean;
+		/** Width of the classic scrollbar the fake layout reports; 0 mimics overlay scrollbars. */
+		scrollbar?: number;
+	} = {},
+) {
 	const styles = new Map<string, string>();
+	const htmlStyles = new Map<string, string>();
 	const attributes = new Map<string, string>();
 	const windowListeners = new Map<string, Listener>();
 	const documentListeners = new Map<string, Listener>();
@@ -93,6 +103,13 @@ function createIntro(options: { reducedMotion?: boolean; search?: string; seen?:
 	const documentElement = {
 		setAttribute: (name: string, value: string) => attributes.set(name, value),
 		removeAttribute: (name: string) => attributes.delete(name),
+		clientWidth: 1280 - (options.scrollbar ?? 15),
+		style: {
+			overflowY: '',
+			setProperty: (name: string, value: string) => {
+				htmlStyles.set(name, value);
+			},
+		},
 	};
 	const doc = {
 		documentElement,
@@ -103,6 +120,7 @@ function createIntro(options: { reducedMotion?: boolean; search?: string; seen?:
 	} as unknown as Document;
 	const win = {
 		location: { search: options.search ?? '' },
+		innerWidth: 1280,
 		localStorage: {
 			getItem: (key: string) => stored.get(key) ?? null,
 			setItem: (key: string, value: string) => stored.set(key, value),
@@ -124,6 +142,7 @@ function createIntro(options: { reducedMotion?: boolean; search?: string; seen?:
 
 	return {
 		styles,
+		htmlStyles,
 		attributes,
 		timers,
 		stored,
@@ -287,6 +306,22 @@ test('phaseAt walks boot, descent, reached, hyd and reveal', () => {
 	assert.equal(phaseAt(INTRO_HYD_START_MS + 799), 'hyd');
 	assert.equal(phaseAt(INTRO_HYD_START_MS + 800), 'reveal');
 	assert.equal(phaseAt(INTRO_TOTAL_MS), 'reveal');
+});
+
+test('the scroll lock reserves the classic scrollbar so the page does not jump at hand-off', () => {
+	const board = createIntro();
+	initDeepSeaIntro(board.doc, board.win);
+	assert.equal(board.htmlStyles.get('--intro-gutter'), '15px');
+
+	const overlayScrollbars = createIntro({ scrollbar: 0 });
+	initDeepSeaIntro(overlayScrollbars.doc, overlayScrollbars.win);
+	assert.equal(overlayScrollbars.htmlStyles.has('--intro-gutter'), false);
+
+	const returning = createIntro({ seen: true });
+	initDeepSeaIntro(returning.doc, returning.win);
+	assert.equal(returning.htmlStyles.has('--intro-gutter'), false);
+
+	assert.doesNotThrow(() => reserveScrollbarGutter({} as Document, {} as Window));
 });
 
 test('introFrameAt holds the surface during start-up and the ceiling afterwards', () => {

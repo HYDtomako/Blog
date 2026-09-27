@@ -95,6 +95,25 @@ function prefersReducedMotion(win: Window | undefined): boolean {
 	}
 }
 
+/**
+ * The scroll lock hides the scrollbar, so the page would widen for the length of the intro and
+ * snap back — right edge first — the moment it is released. Measure the bar while the lock is
+ * on and hand its width to CSS, so `html[data-intro="play"]` keeps the page the same width.
+ */
+export function reserveScrollbarGutter(doc: Document, win: Window): void {
+	try {
+		const html = doc?.documentElement;
+		if (!html?.style) return;
+		const previous = html.style.overflowY;
+		html.style.overflowY = 'scroll';
+		const gutter = Number(win?.innerWidth ?? 0) - html.clientWidth;
+		html.style.overflowY = previous;
+		if (gutter > 0) html.style.setProperty('--intro-gutter', `${Math.round(gutter)}px`);
+	} catch {
+		// An unmeasurable layout just keeps the browser's own scrollbar behaviour.
+	}
+}
+
 /** Piecewise interpolation through the brief's checkpoints, so the readout lands on each one. */
 export function depthAt(progress: number): number {
 	const p = clamp(progress, 0, 1);
@@ -382,6 +401,7 @@ export function initDeepSeaIntro(
 
 	dom.skip?.addEventListener('click', onSkip);
 	doc.addEventListener('keydown', onKeydown, true);
+	reserveScrollbarGutter(doc, win);
 
 	const raf = win.requestAnimationFrame.bind(win);
 

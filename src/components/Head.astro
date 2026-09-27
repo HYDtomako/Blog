@@ -165,7 +165,12 @@ if (contentType === 'article') {
 			html[data-intro="play"] .deep-intro {
 				display: block;
 			}
-			html[data-intro="play"],
+			html[data-intro="play"] {
+				overflow: hidden;
+				/* `reserveScrollbarGutter()` measures the classic scrollbar and fills this in, so the
+				   page keeps its width when the lock is released instead of snapping 15px narrower. */
+				padding-right: var(--intro-gutter, 0px);
+			}
 			html[data-intro="play"] body {
 				overflow: hidden;
 			}
