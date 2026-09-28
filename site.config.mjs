@@ -83,6 +83,14 @@ const defaults = {
 		enabled: true,
 	},
 	/**
+	 * Anonymous guestbook at /guestbook/. Keep `url` empty for same-origin; point it at
+	 * `wrangler dev` while developing the API.
+	 */
+	guestbook: {
+		enabled: true,
+		url: '',
+	},
+	/**
 	 * Links page: `content/links.json` is always rendered as the sonar; `enabled` only
 	 * controls the "send a signal" box and the public wall under it, which need the site Worker.
 	 * Keep `url` empty for same-origin; point it at `wrangler dev` while developing the API.
@@ -224,6 +232,7 @@ const merged = {
 	stats: { ...defaults.stats, ...(overlayRest.stats ?? {}) },
 	readingProgress: { ...defaults.readingProgress, ...(overlayRest.readingProgress ?? {}) },
 	intro: { ...defaults.intro, ...(overlayRest.intro ?? {}) },
+	guestbook: { ...defaults.guestbook, ...(overlayRest.guestbook ?? {}) },
 	links: { ...defaults.links, ...(overlayRest.links ?? {}) },
 	comments: resolveCommentsConfig({ ...defaults.comments, ...(overlayRest.comments ?? {}) }),
 	brand: mergedBrand,

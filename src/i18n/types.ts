@@ -1,5 +1,6 @@
 /** Locale UI chrome for Refined-X (not brand/content identity). */
 
+import type { GuestbookErrorCode } from '../scripts/guestbook';
 import type { LinksErrorCode } from '../scripts/links-sonar';
 
 export type UiCopy = {
@@ -7,6 +8,7 @@ export type UiCopy = {
 		writing: string;
 		notes: string;
 		projects: string;
+		guestbook: string;
 		links: string;
 		about: string;
 		primaryAria: string;
@@ -194,6 +196,46 @@ export type UiCopy = {
 		likeAction: string;
 		unlikeAction: string;
 		failed: string;
+	};
+	/**
+	 * Anonymous guestbook. Numeric parameters also accept runtime tokens (`__USED__`,
+	 * `__COUNT__`, …) so the board can reuse the same copy for its client-side strings.
+	 */
+	guestbook: {
+		heading: string;
+		lede: string;
+		/** Machine-facing one-liner for the page `llmSummary` and structured data. */
+		summary: string;
+		placeholder: string;
+		send: string;
+		sending: string;
+		justNow: string;
+		hint: string;
+		counter: (used: number | string, max: number | string) => string;
+		empty: string;
+		loading: string;
+		failed: string;
+		loadMore: string;
+		reply: string;
+		replyingTo: (handle: string) => string;
+		cancelReply: string;
+		likeAction: string;
+		unlikeAction: string;
+		guest: (handle: string) => string;
+		mine: string;
+		retract: string;
+		retracted: string;
+		slowDown: string;
+		slowDownIn: (seconds: number | string) => string;
+		replyCount: (n: number | string) => string;
+		showingLatest: (n: number | string) => string;
+		tooLong: string;
+		unavailable: string;
+		sendFailed: string;
+		noScript: string;
+		emojiToggle: string;
+		emojiPanel: string;
+		errors: Record<GuestbookErrorCode, string>;
 	};
 	/**
 	 * Deep-sea sonar links page. Instrument readouts (`SIGNALS DETECTED`, `SIGNAL LOST`)

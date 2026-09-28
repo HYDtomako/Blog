@@ -18,6 +18,7 @@
 | ---------- | ------------------------------------------------------------------------------------------------------------------------ |
 | 阅读       | 博客（`/writing/`）、随笔（`/notes/`）、项目（`/projects/`）、常见问题（`/answers/`）、关于（`/about/`）、标签聚合、明暗主题、默认双语（`zh-CN` 在 `/`，`en` 在 `/en/`） |
 | 友链       | `/links/` 的深海声纳：每个友链是一个信号点，位置由网址哈希稳定决定；悬停/轻触看卡片，点击直达对方站点，页面底部还有一面公开的「收到的信号」墙 |
+| 留言板     | `/guestbook/` 的匿名留言墙：不用注册就能发言，支持 Emoji、点赞与两级回复，自己刚发的留言可以撤回；没有部署 `worker/` 时整块自动隐藏 |
 | 提问       | `⌘K` 浮层与 `/ask` 页面，在常见问题、文章与随笔里检索；可选接入实时 AI 回答                                                |
 | 机器可读   | `/llms.txt`、`/llms-full.txt`、每个页面的 Markdown 镜像、`/api/*.json`、`/openapi.json`、`/.well-known/about.json`、`/rss.xml`、`/robots.txt`、站点地图 |
 | 统计       | 可选：首页显示站点总量，文章/随笔显示浏览量并支持点赞，由同源的 Cloudflare Worker + D1 提供                              |
@@ -90,6 +91,7 @@ overlay 的字段会覆盖默认值。
 | `ask.askUrl` / `mcpUrl` / `healthUrl` | 可选的 Live Ask 接口；留空就是纯静态站点                                                        |
 | `comments.repo` / `repoId` / `category` / `categoryId` | 可选的 giscus 配置；四项都空 = 关闭评论                                       |
 | `stats.enabled` / `stats.url`        | 统计开关，模板默认关闭（`false`）；部署好 `worker/` 后改成 `true`；`url` 留空表示同源接口             |
+| `guestbook.enabled` / `guestbook.url` | 匿名留言板开关，默认打开；`url` 留空表示同源接口                                              |
 | `links.enabled` / `links.url`        | 友链页底部的「发送信号」与公开信号墙开关，默认打开；没有部署 `worker/` 时页面会自己把这一块隐藏        |
 | `redirects`                          | 旧路径到新路径的跳转表，示例条目可以删掉                                                        |
 | `contentRoot`、`publicDir`、`outDir`、`assetSource` | 内容、静态资源、构建产物的位置；也可以把内容仓库放在模板之外                     |
@@ -268,6 +270,11 @@ D1 数据库名也出现在 `package.json` 的 `db:migrate` / `db:migrate:local`
 统计是运行时可选的：接口不可用时组件会自己隐藏，页面其余部分不受影响。点赞只按每周轮换的 HMAC 假名去重，
 不保存 IP。模板默认 `stats.enabled: false`，构建里不会出现统计组件；部署好 Worker 后把它改成 `true` 即可。
 
+留言板（`/guestbook/`）复用同一套身份和同一份 D1（`worker/migrations/0002_guestbook.sql`）：发帖、点赞、撤回都走
+`/api/guestbook/*`，作者哈希只在服务端参与判断，不会返回给浏览器。它需要
+`npx wrangler secret put STATS_ACTOR_SECRET`（与点赞共用），缺少时整个留言板返回 503 并自动隐藏；
+把 `guestbook.enabled` 设为 `false` 即可关闭。
+
 友链信号墙走 `POST /api/links` 与 `GET /api/links`，复用同一份 D1（`worker/migrations/0003_links.sql`）和
 同一套匿名假名机制。它需要 `npx wrangler secret put STATS_ACTOR_SECRET`；缺少时发帖返回 503 并显示为
 不可用，而页面在没有这个接口时会把整块「发送信号」与信号墙安静地隐藏——所以纯静态托管也不会出现坏掉的框。
@@ -308,6 +315,7 @@ PUBLIC_TURNSTILE_SITE_KEY=your_site_key npm run build
 | `npm run test:related`      | 相关文章选取的测试                                                                  |
 | `npm run test:comments`     | giscus 配置测试                                                                    |
 | `npm run test:stats`        | 统计 Worker 与前端组件测试                                                          |
+| `npm run test:guestbook`    | 留言板前端与交互测试                                                                |
 | `npm run test:links`        | 友链：URL/metadata 解析、信号布局与页面交互测试                                       |
 | `npm run sync:github`       | 从 GitHub 刷新 `content/github-activity.json` 和项目 star 数                        |
 | `npm run sync:links`        | 从各友链站点刷新 `content/links.json` 的名称、简介与图标                              |
@@ -337,7 +345,7 @@ src/
   lib/                  # 配置、语言、能力声明与 SEO 工具
   pages/                # 路由与机器可读接口（/llms.txt、/api/* 等）
   content.config.ts     # 内容集合与 frontmatter schema
-worker/                 # 站点 Worker：统计、友链信号墙（D1）及其迁移
+worker/                 # 站点 Worker：统计、留言板、友链信号墙（D1）及其迁移
 wrangler.jsonc          # Worker 名称、D1 绑定、路由
 examples/public-ask-worker/  # 可选的 Live Ask Worker
 scripts/                # 构建期脚本（校验、同步、站点地图、图库收集）

@@ -40,6 +40,9 @@ jobs:
       - name: Test stats
         run: npm run test:stats
 
+      - name: Test guestbook
+        run: npm run test:guestbook
+
       - name: Test links
         run: npm run test:links
 

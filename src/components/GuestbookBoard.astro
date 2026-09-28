@@ -1,0 +1,424 @@
+---
+import { EMOJI_ITEMS } from '../scripts/emoji-catalog';
+import { MAX_MESSAGE_LENGTH } from '../scripts/guestbook';
+import { localeFromPath } from '../lib/locale';
+import { withBase } from '../lib/paths';
+import { getSiteCopy } from '../lib/site-copy';
+
+const locale = localeFromPath(Astro.url.pathname);
+const guestbook = getSiteCopy(locale).ui.guestbook;
+const guestbookBase = import.meta.env.PUBLIC_GUESTBOOK_URL ?? '';
+const endpoint = withBase(`${guestbookBase}/api/guestbook`);
+const panelId = 'guestbook-emoji-panel';
+const labels = {
+	empty: guestbook.empty,
+	failed: guestbook.failed,
+	send: guestbook.send,
+	sending: guestbook.sending,
+	reply: guestbook.reply,
+	cancelReply: guestbook.cancelReply,
+	likeAction: guestbook.likeAction,
+	unlikeAction: guestbook.unlikeAction,
+	mine: guestbook.mine,
+	retract: guestbook.retract,
+	retracted: guestbook.retracted,
+	tooLong: guestbook.tooLong,
+	sendFailed: guestbook.sendFailed,
+	slowDown: guestbook.slowDown,
+	justNow: guestbook.justNow,
+	counterTemplate: guestbook.counter('__USED__', '__MAX__'),
+	guestTemplate: guestbook.guest('__HANDLE__'),
+	replyingToTemplate: guestbook.replyingTo('__HANDLE__'),
+	replyCountTemplate: guestbook.replyCount('__COUNT__'),
+	showingLatestTemplate: guestbook.showingLatest('__COUNT__'),
+	slowDownInTemplate: guestbook.slowDownIn('__SECONDS__'),
+	errors: { ...guestbook.errors },
+};
+---
+
+<section
+	class="gb"
+	data-guestbook
+	data-guestbook-endpoint={endpoint}
+	data-guestbook-locale={locale}
+	data-guestbook-labels={JSON.stringify(labels)}
+	aria-labelledby="guestbook-heading"
+>
+	<div class="gb-composer-wrap">
+		<form class="gb-composer" data-guestbook-composer hidden>
+			<label class="visually-hidden" for="guestbook-input">{guestbook.placeholder}</label>
+			<textarea
+				id="guestbook-input"
+				class="gb-input"
+				data-guestbook-input
+				rows="3"
+				maxlength={MAX_MESSAGE_LENGTH}
+				placeholder={guestbook.placeholder}
+				autocomplete="off"
+				spellcheck="false"></textarea>
+			<div class="gb-reply-pill" data-guestbook-reply-pill hidden>
+				<span class="mono gb-reply-target" data-guestbook-reply-target></span>
+				<button class="gb-action" type="button" data-guestbook-cancel-reply>{guestbook.cancelReply}</button>
+			</div>
+			<div class="gb-composer-foot">
+				<span class="mono gb-counter" data-guestbook-counter data-over="false">
+					{guestbook.counter(0, MAX_MESSAGE_LENGTH)}
+				</span>
+				<span class="mono gb-limit" data-guestbook-limit hidden>{guestbook.tooLong}</span>
+				<div class="gb-composer-actions">
+					<button
+						class="icon-btn gb-emoji-toggle"
+						type="button"
+						data-guestbook-emoji-toggle
+						aria-expanded="false"
+						aria-controls={panelId}
+						aria-label={guestbook.emojiToggle}
+						title={guestbook.emojiToggle}
+					>
+						<svg
+							width="20"
+							height="20"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.6"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							aria-hidden="true"
+						>
+							<circle cx="12" cy="12" r="8.4"></circle>
+							<path d="M8.6 13.8c1 1.5 2.1 2.2 3.4 2.2s2.4-.7 3.4-2.2"></path>
+							<circle cx="9.2" cy="9.6" r="0.9" fill="currentColor" stroke="none"></circle>
+							<circle cx="14.8" cy="9.6" r="0.9" fill="currentColor" stroke="none"></circle>
+						</svg>
+					</button>
+					<button class="btn btn-solid gb-send" type="button" data-guestbook-send aria-disabled="true">
+						{guestbook.send}
+					</button>
+				</div>
+			</div>
+			<p class="mono gb-hint">{guestbook.hint}</p>
+			<p class="mono gb-rate" data-guestbook-rate-note hidden></p>
+		</form>
+		<div
+			class="gb-emoji-panel"
+			id={panelId}
+			data-guestbook-emoji-panel
+			role="group"
+			aria-label={guestbook.emojiPanel}
+			hidden
+		>
+			<div class="gb-emoji-grid" data-guestbook-emoji-grid>
+				{EMOJI_ITEMS.map((emoji) => (
+					<button class="gb-emoji" type="button" data-guestbook-emoji>{emoji}</button>
+				))}
+			</div>
+		</div>
+	</div>
+
+	<p class="mono gb-status" data-guestbook-status aria-live="polite">{guestbook.loading}</p>
+
+	<div class="gb-list" data-guestbook-list hidden></div>
+
+	<div class="gb-more">
+		<button class="btn btn-ghost gb-more-btn" type="button" data-guestbook-more hidden>{guestbook.loadMore}</button>
+	</div>
+
+	<noscript>
+		<p class="mono gb-noscript">{guestbook.noScript}</p>
+	</noscript>
+</section>
+
+<script>
+	import { initGuestbook } from '../scripts/guestbook';
+
+	initGuestbook();
+</script>
+
+<style>
+	.gb {
+		margin: 28px 0 0;
+	}
+	.gb-composer-wrap {
+		position: relative;
+	}
+	.gb-composer {
+		padding: 16px 16px 12px 20px;
+		border: 1px solid var(--line);
+		border-radius: var(--r-lg);
+		background: var(--field);
+		box-shadow: var(--shadow);
+		transition:
+			border-color var(--duration-mid) var(--ease-out-quart),
+			box-shadow var(--duration-mid) var(--ease-out-quart);
+	}
+	.gb-composer:hover {
+		border-color: color-mix(in srgb, var(--ink) 35%, var(--line));
+	}
+	.gb-composer:focus-within {
+		border-color: var(--ink);
+		box-shadow:
+			var(--shadow),
+			0 0 0 3px color-mix(in srgb, var(--ink) 6%, transparent);
+	}
+	.gb-input {
+		display: block;
+		width: 100%;
+		min-height: calc(1.6em * 3);
+		max-height: calc(1.6em * 8);
+		padding: 0;
+		border: 0;
+		outline: none;
+		background: transparent;
+		color: var(--ink);
+		font: inherit;
+		font-size: 15.5px;
+		line-height: 1.6;
+		resize: none;
+		overflow-y: auto;
+		field-sizing: content;
+	}
+	.gb-input::placeholder {
+		color: var(--muted);
+	}
+	.gb-reply-pill {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		margin-top: 10px;
+		padding: 5px 6px 5px 10px;
+		border: 1px solid var(--line-soft);
+		border-radius: var(--r);
+		color: var(--muted);
+		font-size: 12.5px;
+	}
+	.gb-reply-pill[hidden],
+	.gb-emoji-panel[hidden],
+	.gb-list[hidden],
+	.gb-limit[hidden],
+	.gb-rate[hidden],
+	.gb-more-btn[hidden] {
+		display: none;
+	}
+	.gb-reply-target {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.gb-composer-foot {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 10px;
+		margin-top: 12px;
+		padding-top: 12px;
+		border-top: 1px solid var(--line-soft);
+	}
+	.gb-counter {
+		color: var(--faint);
+		font-size: 12px;
+	}
+	.gb-counter[data-over='true'] {
+		color: var(--ink);
+	}
+	.gb-limit,
+	.gb-rate {
+		color: var(--ink);
+		font-size: 11.5px;
+	}
+	.gb-composer-actions {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		margin-left: auto;
+	}
+	.gb-send {
+		min-height: 36px;
+		padding: 0 16px;
+		font-size: 13px;
+	}
+	.gb-composer .gb-send[aria-disabled='true'] {
+		opacity: 0.45;
+		cursor: default;
+	}
+	.gb-hint {
+		margin: 10px 0 0;
+		color: var(--ghost);
+		font-size: 11px;
+	}
+	.gb-rate {
+		margin: 8px 0 0;
+	}
+	.gb-emoji-panel {
+		position: absolute;
+		top: calc(100% + 8px);
+		left: 0;
+		right: 0;
+		z-index: 30;
+		max-height: 320px;
+		overflow-y: auto;
+		padding: 14px 16px 16px;
+		border: 1px solid var(--line);
+		border-radius: var(--r-lg);
+		background: var(--surface);
+		box-shadow: var(--shadow);
+	}
+	.gb-emoji-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(30px, 1fr));
+		gap: 2px;
+	}
+	.gb-emoji {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 30px;
+		padding: 0;
+		border: 0;
+		border-radius: var(--r);
+		background: transparent;
+		font-size: 17px;
+		line-height: 1;
+		cursor: pointer;
+		transition: background var(--duration-fast) var(--ease-out-quart);
+	}
+	.gb-emoji:hover,
+	.gb-emoji:focus-visible {
+		background: color-mix(in srgb, var(--ink) 8%, transparent);
+		outline: none;
+	}
+	.gb-status {
+		margin: 18px 0 0;
+		color: var(--faint);
+		font-size: 12px;
+	}
+	.gb-list {
+		margin-top: 20px;
+	}
+	/* Message rows are built by `guestbook.ts`, so they carry no Astro scope class. */
+	.gb :global(.gb-item),
+	.gb :global(.gb-reply-item) {
+		display: flex;
+		gap: 12px;
+		padding: 18px 0;
+		border-top: 1px solid var(--line-soft);
+	}
+	.gb :global(.gb-item:first-child) {
+		padding-top: 0;
+		border-top: 0;
+	}
+	.gb :global(.gb-avatar) {
+		display: flex;
+		flex: none;
+		align-items: center;
+		justify-content: center;
+		width: 34px;
+		height: 34px;
+		border-radius: var(--r);
+		color: var(--muted);
+		font-size: 15px;
+		line-height: 1;
+		user-select: none;
+	}
+	.gb :global(.gb-body) {
+		flex: 1;
+		min-width: 0;
+	}
+	.gb :global(.gb-meta) {
+		display: flex;
+		align-items: baseline;
+		flex-wrap: wrap;
+		gap: 4px 10px;
+	}
+	.gb :global(.gb-handle) {
+		color: var(--ink);
+		font-size: 13.5px;
+	}
+	.gb :global(.gb-time) {
+		color: var(--faint);
+		font-size: 11px;
+	}
+	.gb :global(.gb-text) {
+		margin: 6px 0 0;
+		color: var(--muted);
+		font-size: 15px;
+		line-height: 1.7;
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+	}
+	.gb :global(.gb-actions) {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 8px;
+		margin-top: 10px;
+	}
+	.gb :global(.gb-action) {
+		display: inline-flex;
+		align-items: center;
+		min-height: 26px;
+		padding: 0 9px;
+		border: 1px solid var(--line);
+		border-radius: 100px;
+		background: transparent;
+		color: var(--faint);
+		font: inherit;
+		font-size: 12.5px;
+		cursor: pointer;
+		transition:
+			color var(--duration-fast) var(--ease-out-quart),
+			border-color var(--duration-fast) var(--ease-out-quart);
+	}
+	.gb :global(.gb-action:hover),
+	.gb :global(.gb-action:focus-visible) {
+		color: var(--ink);
+		border-color: var(--ink);
+	}
+	.gb :global(.gb-reply-hint) {
+		margin: 10px 0 0;
+		color: var(--faint);
+		font-size: 11px;
+	}
+	.gb :global(.gb-replies) {
+		margin-top: 14px;
+		padding-left: 46px;
+	}
+	.gb :global(.gb-reply-item) {
+		padding: 12px 0 0;
+		border-top: 0;
+	}
+	.gb :global(.gb-reply-item:first-child) {
+		padding-top: 0;
+	}
+	.gb :global(.gb-reply-item .gb-avatar) {
+		width: 26px;
+		height: 26px;
+		font-size: 13px;
+	}
+	.gb :global(.gb-reply-hint[hidden]) {
+		display: none;
+	}
+	.gb-more {
+		display: flex;
+		justify-content: center;
+		margin-top: 20px;
+	}
+	.gb-more-btn {
+		min-height: 40px;
+	}
+	.gb-more-btn[aria-disabled='true'] {
+		opacity: 0.5;
+	}
+	.gb-noscript {
+		margin: 16px 0 0;
+		color: var(--faint);
+		font-size: 12px;
+	}
+	@media (max-width: 560px) {
+		.gb :global(.gb-replies) {
+			padding-left: 0;
+		}
+	}
+</style>

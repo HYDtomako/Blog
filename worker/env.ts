@@ -31,6 +31,7 @@ export interface Env {
 	STATS_DB: D1Database
 	STATS_ACTOR_SECRET?: string
 	STATS_RATE_LIMITER?: RateLimiter
+	GUESTBOOK_RATE_LIMITER?: RateLimiter
 	LINKS_RATE_LIMITER?: RateLimiter
 	ASSETS: Fetcher
 }

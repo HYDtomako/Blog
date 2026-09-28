@@ -20,7 +20,7 @@ const distRoot = siteConfig.outDir;
 const defaultLocale = siteConfig.locales.default;
 const prefixedLocales = siteConfig.locales.list.filter((locale) => locale !== defaultLocale);
 const localePrefixOf = (locale) => (locale === defaultLocale ? '' : `/${locale}`);
-const hubPages = ['/', '/about/', '/projects/', '/links/', '/writing/', '/notes/', '/ask/', '/answers/'];
+const hubPages = ['/', '/about/', '/projects/', '/links/', '/guestbook/', '/writing/', '/notes/', '/ask/', '/answers/'];
 const localeFiles = [
 	'/api/profile.json',
 	'/api/articles.json',
@@ -188,6 +188,33 @@ try {
 	}
 } catch (error) {
 	failures.push(`HTML integration verification failed: ${error.message}`);
+}
+
+try {
+	const guestbookEnabled = siteConfig.guestbook?.enabled === true;
+	let guestbookPages = 0;
+	for (const locale of siteConfig.locales.list) {
+		const relativePath = `${localePrefixOf(locale).replace(/^\//, '')}guestbook/index.html`;
+		let html;
+		try {
+			html = await readFile(path.join(distRoot, relativePath), 'utf8');
+		} catch {
+			continue;
+		}
+		guestbookPages += 1;
+		const hasGuestbook = html.includes('data-guestbook');
+		if (guestbookEnabled && !hasGuestbook) {
+			failures.push(`${relativePath} is a guestbook page but is missing the guestbook surface`);
+		}
+		if (!guestbookEnabled && hasGuestbook) {
+			failures.push(`${relativePath} includes the guestbook surface while the guestbook is disabled`);
+		}
+	}
+	if (guestbookPages === 0) {
+		failures.push('Missing the guestbook page in every locale');
+	}
+} catch (error) {
+	failures.push(`Guestbook integration verification failed: ${error.message}`);
 }
 
 try {
