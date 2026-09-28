@@ -43,6 +43,9 @@ jobs:
       - name: Test links
         run: npm run test:links
 
+      - name: Test ui
+        run: npm run test:ui
+
       - name: Test intro
         run: npm run test:intro
 

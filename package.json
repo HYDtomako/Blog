@@ -32,6 +32,7 @@
     "test:comments": "node --test src/lib/comments.test.mjs src/scripts/giscus-comments.test.ts",
     "test:stats": "node --test worker/*.test.ts src/scripts/page-stats.test.ts src/scripts/site-stats.test.ts",
     "test:links": "node --test shared/link-metadata.test.ts src/lib/links.test.ts src/scripts/links-sonar.test.ts",
+    "test:ui": "node --test src/scripts/scroll-water-ball.test.ts",
     "test:intro": "node --test src/scripts/deep-sea-intro.test.ts",
     "sync-content": "astro sync --force",
     "predev": "npm run collect-assets",

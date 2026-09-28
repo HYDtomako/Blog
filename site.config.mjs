@@ -74,6 +74,10 @@ const defaults = {
 		enabled: false,
 		url: '',
 	},
+	/** Corner water ball that fills with the reading progress of articles, /projects/, and /about/. */
+	readingProgress: {
+		enabled: true,
+	},
 	/** Deep-sea diving instrument intro on the home page (see `src/components/DeepSeaIntro.astro`). */
 	intro: {
 		enabled: true,
@@ -218,6 +222,7 @@ const merged = {
 	social: { ...defaults.social, ...(overlayRest.social ?? {}) },
 	ask: { ...defaults.ask, ...(overlayRest.ask ?? {}) },
 	stats: { ...defaults.stats, ...(overlayRest.stats ?? {}) },
+	readingProgress: { ...defaults.readingProgress, ...(overlayRest.readingProgress ?? {}) },
 	intro: { ...defaults.intro, ...(overlayRest.intro ?? {}) },
 	links: { ...defaults.links, ...(overlayRest.links ?? {}) },
 	comments: resolveCommentsConfig({ ...defaults.comments, ...(overlayRest.comments ?? {}) }),

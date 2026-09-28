@@ -4,6 +4,7 @@ import Icon from './Icon.astro';
 import ArticleToc from './ArticleToc.astro';
 import ArticleComments from './ArticleComments.astro';
 import PageStats from './PageStats.astro';
+import ScrollWaterBall from './ScrollWaterBall.astro';
 import { siteConfig } from '../../site.config.mjs';
 import {
 	estimateReadingMinutes,
@@ -149,6 +150,8 @@ const showToc = shouldShowToc(tocItems);
       </div>
       {showToc && <ArticleToc part="rail" items={tocItems} />}
     </div>
+
+    {siteConfig.readingProgress?.enabled && <ScrollWaterBall />}
 
     <footer class="article-foot">
       {siteConfig.stats?.enabled && <PageStats path={withBase(`/${entry.id}/`)} />}

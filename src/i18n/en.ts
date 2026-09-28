@@ -173,6 +173,7 @@ export const en: UiCopy = {
 		notFoundTitle: 'Page not found',
 		notFoundLede: 'Check the URL, or ask this site instead.',
 		backHome: 'Back home',
+		backToTop: 'Back to top',
 		browseWriting: 'Browse the blog',
 		prevPage: '← Previous',
 		nextPage: 'Next →',
