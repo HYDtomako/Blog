@@ -96,6 +96,8 @@ Neutral-only system, plus one blue wash: the page canvas fades from a cool blue 
 
 No chromatic accent in v1. AI "tech" feeling comes from elevation, motion, and scale on ask surfaces, not hue.
 
+**Sanctioned blues.** Three surfaces are allowed to leave the neutral system, all derived from the same two anchors (`#d5e6fb` canvas blue, `#005fcc` focus blue): the reading-progress `.water-ball`; the home-page deep-sea intro — a bounded set of ocean blues (`--ds-shallow #7fb4d8`, `--ds-mid #2d6f9c`, `--ds-deep #0b2942`, `--ds-abyss #061c2e`, lifting to the canvas blue `#d5e6fb` as it hands off to the hero, with `#04121f` / `#17243d` in the dark theme); and the `/links/` sonar — `#005fcc` for the signals, the sweep and the centre node in the light theme, `#7fb4d8` in the dark one, at low opacity, with every ring, tick and hairline mixed from `--ink`. The intro never uses pure black, never neon, and exists only on `/` and `/en/`; the sonar exists only on `/links/` and `/en/links/` and never turns into a neon radar.
+
 ## Typography
 
 - **Display / section titles**: Spectral, medium weight, tight tracking on heroes and page headings.
@@ -131,8 +133,20 @@ Flat elsewhere. No nested cards. Ask stage uses full-width sunken band + lifted 
 | `.btn-solid` / `.btn-ghost` | Ink fill vs outline |
 | `.answer-index-item` | Full-width FAQ rows, no side stripes |
 | `.prose` | Article body, editorial measure |
+| `.water-ball` | Reading progress ball on articles, `/projects/`, `/about/`; one of the three sanctioned blue surfaces |
+| `.gb-*` | Guestbook composer, message rows, emoji popover; chrome stays monochrome so the picked emoji read as the only colour |
+| `.ls-*` | `/links/` sonar: ring and scale hairlines, one slowly sweeping sector, a dot per signal (each lit as the sweep crosses it), a centre `◎ HYD` node and a HUD card clamped inside the stage. Dots carry a 26px hit area; blue lives only in the signal layer |
+| `.deep-intro` / `.ds-*` | Home-page deep-sea intro: one fine-ticked pressure dial, three readouts, four quiet corner labels, marine snow, slow water ripples, a `SKIP INTRO` control. Home only, 7.5 s, removed from the DOM when it ends |
 
 Header wordmark: Spectral, from `site.config.mjs` `brand[locale].wordmark`. User-facing persona comes from `brand[locale].persona` (per-locale brand copy, default locale `zh-CN`).
+
+**Guestbook** (`/guestbook/`): one composer for every message (`Enter` keeps its newline, the button sends), a floating emoji picker, and a quiet message list. Replies indent one level and carry no side stripes; the neutral chrome is deliberate, keep it that way.
+
+**Reading progress ball** (articles, `/projects/`, `/about/`): a fixed bottom-right ball that fills with ink as the page is scrolled, sized down on phones. It is decorative apart from the button, which scrolls back to the top; `readingProgress.enabled` turns the whole thing off.
+
+**Deep-sea intro** (`/` and `/en/`): the visitor descends through one instrument rather than watching a loading bar. One dial, hairline ticks, a floating pointer, three readouts (depth, pressure, temperature), four corner labels, faint light shafts, marine snow and slow ripples. Keep it to that: no photographs, no fish, no extra HUD for its own sake. The run is 7.5 s in six beats — start-up (each layer has its own ramp), descent, the pause at 2000 m, HYD, then the dial opening into the hero through a pale-blue water lens that lands on the exact blue `--bg-canvas` starts on. `HYD` is set in the sans stack on purpose: it is the instrument's own label, not the Spectral brand mark. Motion is transform/opacity only, never layout; `prefers-reduced-motion` skips it, `SKIP INTRO` exits immediately, and the whole overlay leaves the DOM when it ends.
+
+**Links sonar** (`/links/`, `/en/links/`): one square stage, an inscribed set of hairlines (rings, crosshair, faint diagonals, a 10° scale), a sweep that takes 18 s per revolution, one dot per link plus a centre `◎ HYD` node (core, halo and outer ring), a faint grain layer, and a HUD of real readouts (`SIGNALS DETECTED`, `DEPTH RANGE`) above one line of station atmosphere (`LAT`/`LONG`/`TEMP`/`PRESSURE`). The sweep is a rotating conic gradient — one composited layer, not a repainted path — with a 60° tail behind its bright edge; a dot pulses and ripples as that edge crosses it, all in CSS. The page copy is localized; the readouts stay in the Latin instrument register, like the intro. Dots differ by a few percent in size and about one in eight is drawn hollow; that variation is decoration and carries no meaning. The wall of submitted links below is the one public, visitor-written surface on the site: quiet rows, `nofollow ugc`, and a state chip in the same blue as the dots for links already on the sonar. Keep it quiet — no labels next to the dots, no numbering beyond the card, no full-screen starfield: with fifty links it should still read as a sparse field, not as noise.
 
 ## Do's and Don'ts
 
@@ -143,10 +157,12 @@ Header wordmark: Spectral, from `site.config.mjs` `brand[locale].wordmark`. User
 - Use spark icon for ask affordances consistently
 - Respect keyboard: overlay ⌘K, form submit, chip triggers
 - Tint neutrals slightly; use `color-mix` for borders and focus halos
+- Keep the intro's blues inside the documented `--ds-*` set, and keep the intro on the home page only
+- Keep the sonar's blue in the signal layer (`#005fcc`, `#7fb4d8` in dark) and mix every ring from `--ink`
 
 **Don't**
 
-- Add brand gradients beyond the page canvas wash, or SaaS card grids
+- Add brand gradients beyond the page canvas wash and the three sanctioned blue surfaces, or SaaS card grids
 - Use gradient text, glassmorphism, or hero metric templates
 - Put heavy motion on article pages or navigation chrome
 - Use left/right accent stripes on list items

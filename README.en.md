@@ -18,16 +18,18 @@ This repository is meant to be used as a **template**. Clone it, then work throu
 | Area            | Ships with                                                                                                              |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | Reading         | Blog (`/writing/`), notes (`/notes/`), projects (`/projects/`), curated answers (`/answers/`), about (`/about/`), topics, light/dark theme, two locales — `zh-CN` at `/` and `en` at `/en/` |
+| Links           | `/links/`: every friend is a signal on a deep-sea sonar, placed by a hash of its own URL — hover or tap for the card, click to leave. Under it, a public wall of the links visitors send in |
+| Guestbook       | `/guestbook/`: an anonymous board on the site Worker + D1, with an emoji picker, likes, two-level replies and retraction of your own fresh messages |
 | Asking          | `⌘K` overlay and the `/ask` page, searching curated answers, articles and notes; optional live AI answers               |
-| Machine-readable| `/llms.txt`, `/llms-full.txt`, a Markdown mirror for every page, `/api/*.json`, `/openapi.json`, `/.well-known/about.json`, `/rss.xml`, `/robots.txt`, sitemap |
+| Machine-readable | `/llms.txt`, `/llms-full.txt`, a Markdown mirror for every page, `/api/*.json`, `/openapi.json`, `/.well-known/about.json`, `/rss.xml`, `/robots.txt`, sitemap |
 | Counters        | Optional site totals on the home page and per-page views + likes, served same-origin by a Cloudflare Worker with D1     |
 | Comments        | Optional giscus discussion on articles                                                                                  |
 
 ## Stack
 
 Astro 7 + Starlight with overridden theme components, Markdown/YAML content collections, TypeScript
-tooling, optional Cloudflare Workers (site with static assets, counters, Live Ask) and D1, GitHub
-Actions for CI. Node.js 24+ is required.
+tooling, optional Cloudflare Workers (site with static assets, counters, guestbook, links wall,
+Live Ask) and D1, GitHub Actions for CI. Node.js 24+ is required.
 
 ## Quick start
 
@@ -46,6 +48,9 @@ npm run check           # astro check (types and content schema)
 npm run test:public-ask
 npm run test:related
 npm run test:stats
+npm run test:guestbook
+npm run test:links
+npm run test:ui
 npm run build
 npm run verify          # fails when a public surface is missing or off-contract
 ```
@@ -69,9 +74,10 @@ below. Work through the table, then delete what you do not need.
 | 6  | Avatar, hero image, share image, favicons, project covers                   | `public/asset/avatar.jpg`, `public/asset/hero-home.jpg`, `public/asset/og-default.png`, `public/favicon.png`, `public/apple-touch-icon.png`, `public/projects/**` |
 | 7  | Navigation and UI wording                                                   | `src/i18n/zh-CN.ts`, `src/i18n/en.ts`                                                      |
 | 8  | Counters — optional                                                         | `wrangler.jsonc`, `package.json` (`db:migrate*` scripts)                                    |
-| 9  | Live Ask — optional                                                         | `site.config.mjs` (`ask`), `.env`, `examples/public-ask-worker/`                            |
-| 10 | Repository metadata                                                         | `package.json`, `README.md`, `LICENSE`                                                      |
-| 11 | Sample content and upstream-only files                                      | [Delete what you do not need](#8-delete-what-you-do-not-need)                               |
+| 9  | Friend links — optional                                                     | `content/links.json`                                                                        |
+| 10 | Live Ask — optional                                                         | `site.config.mjs` (`ask`), `.env`, `examples/public-ask-worker/`                            |
+| 11 | Repository metadata                                                         | `package.json`, `README.md`, `LICENSE`                                                      |
+| 12 | Sample content and upstream-only files                                      | [Delete what you do not need](#8-delete-what-you-do-not-need)                               |
 
 ### 1. Site identity — `site.config.mjs`
 
@@ -91,6 +97,9 @@ template with an overlay file `instance.config.mjs` (git-ignored) or the
 | `ask.askUrl` / `mcpUrl` / `healthUrl` | Optional Live Ask endpoints; leave empty for the static-only site                      |
 | `comments.repo` / `repoId` / `category` / `categoryId` | Optional giscus identifiers; all four empty = comments off         |
 | `stats.enabled` / `stats.url`      | Counters on/off; `url` empty means same-origin                                            |
+| `guestbook.enabled` / `guestbook.url` | Guestbook on/off; needs the site Worker. Removing `guestbook.enabled` (or setting it to `false`) hides the board and its copy |
+| `links.enabled` / `links.url`      | The "send a signal" box and the public wall under the sonar; without a Worker route the page hides that block itself. The sonar itself is content and always renders |
+| `readingProgress.enabled`          | The corner ball that fills as you read articles, `/projects/` and `/about/`               |
 | `redirects`                        | Old path → new path map; delete the sample entries                                        |
 | `contentRoot`, `publicDir`, `outDir`, `assetSource` | Where content, assets and build output live; keep a vault outside the template if you like |
 | `discovery.awp`                    | Optional AWP experiment, off by default                                                    |
@@ -206,12 +215,39 @@ want to change.
 | `PRODUCT.md`, `DESIGN.md`, `ROADMAP.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`, `.github/ISSUE_TEMPLATE/`, `docs/` | Upstream project docs. Keep the deploy guides you still need, drop the rest             |
 | `examples/public-ask-worker/`                                     | Only needed for live AI answers                                                                   |
 
+### 9. Friend links — `content/links.json`
+
+The links page (`/links/`, `/en/links/`) draws every friend as a signal on a deep-sea sonar. You
+only ever write a URL:
+
+```json
+[
+  { "url": "https://example.com/" },
+  { "url": "https://friend.example.org/", "name": "A friend" }
+]
+```
+
+`npm run sync:links` (wired into `npm run build`) reads each site's `og:title`, `og:description` and
+icon into `name` / `description` / `icon`: an authored field is never overwritten, and a site that
+cannot be reached keeps its previous values with a warning. A signal's spot comes from a hash of its
+URL (a virtual depth of 60–900 m decides the radius), so a site lands in the same place on every
+build; the `DEPTH` on the page is world-building, not a ranking.
+
+The "send a signal" box under the sonar is a public wall: a URL posted there shows up for everyone
+straight away (`GET/POST /api/links`), with the target site's name and icon read for you. Each row
+is tagged `waiting` or `on the sonar` — the latter only means the URL is already drawn above.
+Whether to keep a link is entirely your call: add it to `content/links.json` by hand, since nothing
+is ever published automatically. `links.enabled: false` hides both the composer and the wall.
+
+Wall links always carry `rel="nofollow ugc"` — links other people post should not pass ranking
+authority for you; only what you write into `content/links.json` is an editorial recommendation.
+
 ## Deploy
 
 | Mode                            | Use when                                                       | How                                                                                 |
 | ------------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | Static host                     | You only want the site, the Markdown mirrors and the JSON APIs | `npm run build`, publish `dist/`                                                     |
-| Cloudflare Worker + static assets | You also want counters (or one deploy for everything)          | `npm run deploy` — builds, verifies, migrates D1 and uploads `dist/` as Worker assets |
+| Cloudflare Worker + static assets | You also want counters, the guestbook or the links wall (or one deploy for everything) | `npm run deploy` — builds, verifies, migrates D1 and uploads `dist/` as Worker assets |
 | Static site + Live Ask Worker   | You want live AI answers and the MCP endpoint                  | Static host plus [`examples/public-ask-worker`](examples/public-ask-worker/README.md) |
 
 **Cloudflare Pages**: build command `npm run build`, output directory `dist`, Node.js `24`.
@@ -231,7 +267,7 @@ Step-by-step notes: [`docs/deploy-static.md`](docs/deploy-static.md).
 | `name`                               | Your Worker name                                             |
 | `d1_databases[0].database_name` / `database_id` | The D1 database you create (`npx wrangler d1 create <name>`, then paste the id) |
 | `routes[0].pattern`                  | Your custom domain, or drop the `routes` block to stay on `*.workers.dev` |
-| `ratelimits[0].namespace_id`         | A namespace id of your own for the stats rate limiter         |
+| `ratelimits[].namespace_id`          | Namespace ids of your own — one each for stats, the guestbook and links |
 
 ```sh
 npx wrangler login
@@ -247,6 +283,16 @@ work, and `npm run db:migrate:local` applies the migrations to the local databas
 Counters are optional at runtime: when the API is unreachable the widgets hide themselves and the
 rest of the page is unaffected. Likes are stored against a weekly HMAC pseudonym; no IP addresses
 are kept. The template ships with `stats.enabled: false`; set it to `true` once the Worker is deployed.
+
+The guestbook (`/guestbook/`) reuses the same identity and the same D1: posting, replying, liking and
+retracting all go through `/api/guestbook/*`, and the author hash is only ever compared on the
+server — it never reaches the browser. It needs `npx wrangler secret put STATS_ACTOR_SECRET`; without
+that secret every guestbook route answers 503 and the board hides itself.
+
+The links wall goes through `POST /api/links` and `GET /api/links`, again on the same D1
+(`worker/migrations/0003_links.sql`) and the same pseudonym. It needs the same
+`STATS_ACTOR_SECRET`; without it, posting answers 503 while the wall still reads. On a deployment
+with no Worker route at all, the page hides the composer and the wall instead of leaving a broken box.
 
 ### Optional: Live Ask
 
@@ -284,7 +330,11 @@ Full checklist and troubleshooting: [`docs/deploy-live-ask.md`](docs/deploy-live
 | `npm run test:related`      | Related-articles selection tests                                                         |
 | `npm run test:comments`     | giscus configuration tests                                                               |
 | `npm run test:stats`        | Counter Worker and client tests                                                          |
+| `npm run test:guestbook`    | Guestbook board tests (client and Worker)                                                |
+| `npm run test:links`        | Links: URL/metadata parsing, signal layout and page behaviour                            |
+| `npm run test:ui`           | Reading-progress ball maths and its click                                                |
 | `npm run sync:github`       | Refreshes `content/github-activity.json` and project `stars` from GitHub                 |
+| `npm run sync:links`        | Refreshes each entry's name, description and icon in `content/links.json` from its site  |
 | `npm run collect-assets`    | Copies an external image library into `public/asset` (no-op unless `assetSource` is set)  |
 | `npm run dev:worker`        | `wrangler dev` — built assets plus the counters API                                      |
 | `npm run db:migrate:local` / `db:migrate` | Applies `worker/migrations` to the local / remote D1                    |
@@ -300,6 +350,7 @@ content/                # your corpus, grouped by collection and locale
   profile/<locale>/{person.yaml,cooperation.yaml,resume.md}
   projects/<locale>/*.yaml
   series/<locale>/{series.json,<slug>.yaml}
+  links.json            # friend links (name, description and icon filled in by npm run sync:links)
 public/
   asset/                # avatar, hero, share image, article figures
   projects/             # project covers
@@ -310,7 +361,7 @@ src/
   lib/                  # config, locale, capability and SEO helpers
   pages/                # routes plus machine-readable endpoints (/llms.txt, /api/*, ...)
   content.config.ts     # content collections and frontmatter schemas
-worker/                 # counters Worker (D1) and its migrations
+worker/                 # site Worker: counters, guestbook, links wall (D1) and its migrations
 wrangler.jsonc          # Worker name, D1 binding, routes
 examples/public-ask-worker/  # optional Live Ask Worker
 scripts/                # build-time helpers (verify, sync, sitemaps, asset collection)
@@ -327,6 +378,7 @@ docs/                   # deploy guides and upstream design notes
 | `/api/articles.json`         | Article catalog                                      |
 | `/api/topics.json`           | Topic catalog                                        |
 | `/api/search-index.json`     | Corpus behind `⌘K` and `/ask`                        |
+| `/api/links`                 | The links wall: read it publicly, post one URL to join |
 | `/openapi.json`              | API contract plus any configured Ask/MCP remotes     |
 | `/.well-known/about.json`    | Capability summary                                   |
 | `/rss.xml`, `/robots.txt`, sitemap | Syndication and discovery                      |

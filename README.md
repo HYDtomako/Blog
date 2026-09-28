@@ -27,7 +27,7 @@
 ## 技术栈
 
 Astro 7 + Starlight（覆盖了部分主题组件）、Markdown/YAML 内容集合、TypeScript 工具链；可选 Cloudflare
-Workers（站点静态资源、统计接口、友链墙、Live Ask）与 D1；GitHub Actions 跑 CI。需要 Node.js 24+。
+Workers（站点静态资源、统计接口、留言板、友链墙、Live Ask）与 D1；GitHub Actions 跑 CI。需要 Node.js 24+。
 
 ## 快速开始
 
@@ -46,7 +46,9 @@ npm run check           # astro check：类型与内容 schema
 npm run test:public-ask
 npm run test:related
 npm run test:stats
+npm run test:guestbook
 npm run test:links
+npm run test:ui
 npm run build
 npm run verify          # 缺页面或接口不符合约定时会失败
 ```
@@ -91,6 +93,7 @@ overlay 的字段会覆盖默认值。
 | `ask.askUrl` / `mcpUrl` / `healthUrl` | 可选的 Live Ask 接口；留空就是纯静态站点                                                        |
 | `comments.repo` / `repoId` / `category` / `categoryId` | 可选的 giscus 配置；四项都空 = 关闭评论                                       |
 | `stats.enabled` / `stats.url`        | 统计开关，模板默认关闭（`false`）；部署好 `worker/` 后改成 `true`；`url` 留空表示同源接口             |
+| `readingProgress.enabled`        | 阅读进度水球开关（文章、`/projects/`、`/about/` 右下角随滚动注水），默认打开                          |
 | `guestbook.enabled` / `guestbook.url` | 匿名留言板开关，默认打开；`url` 留空表示同源接口                                              |
 | `links.enabled` / `links.url`        | 友链页底部的「发送信号」与公开信号墙开关，默认打开；没有部署 `worker/` 时页面会自己把这一块隐藏        |
 | `redirects`                          | 旧路径到新路径的跳转表，示例条目可以删掉                                                        |
@@ -234,7 +237,7 @@ proofPoints: [已有 2000 位用户在用]
 | 方式                              | 什么时候用                                              | 怎么做                                                                          |
 | --------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | 纯静态托管                        | 只要站点、Markdown 镜像和 JSON 接口                      | `npm run build`，把 `dist/` 发布出去                                             |
-| Cloudflare Worker + 静态资源      | 还想要浏览量统计、友链信号墙（或者想一次部署全部）        | `npm run deploy`：构建、校验、迁移 D1，并把 `dist/` 作为 Worker 静态资源上传       |
+| Cloudflare Worker + 静态资源      | 还想要浏览量统计、留言板、友链信号墙（或者想一次部署全部）        | `npm run deploy`：构建、校验、迁移 D1，并把 `dist/` 作为 Worker 静态资源上传       |
 | 静态站 + Live Ask Worker          | 要实时 AI 回答和 MCP 入口                                | 静态托管，外加 [`examples/public-ask-worker`](examples/public-ask-worker/README.md) |
 
 **Cloudflare Pages**：构建命令 `npm run build`，输出目录 `dist`，Node.js 版本 `24`。
@@ -254,7 +257,7 @@ proofPoints: [已有 2000 位用户在用]
 | `name`                                         | 你的 Worker 名字                                            |
 | `d1_databases[0].database_name` / `database_id` | 你创建的 D1 数据库（`npx wrangler d1 create <名字>`，把 id 填回来） |
 | `routes[0].pattern`                            | 你的自定义域名；不想绑定域名就删掉整个 `routes` 段，用 `*.workers.dev` |
-| `ratelimits[].namespace_id`                    | 你自己的限流命名空间 id（统计与友链各一个）                   |
+| `ratelimits[].namespace_id`                    | 你自己的限流命名空间 id（统计、留言板、友链各一个）                   |
 
 ```sh
 npx wrangler login
@@ -317,6 +320,7 @@ PUBLIC_TURNSTILE_SITE_KEY=your_site_key npm run build
 | `npm run test:stats`        | 统计 Worker 与前端组件测试                                                          |
 | `npm run test:guestbook`    | 留言板前端与交互测试                                                                |
 | `npm run test:links`        | 友链：URL/metadata 解析、信号布局与页面交互测试                                       |
+| `npm run test:ui`           | 阅读进度水球的进度计算与点击返回顶部                                                  |
 | `npm run sync:github`       | 从 GitHub 刷新 `content/github-activity.json` 和项目 star 数                        |
 | `npm run sync:links`        | 从各友链站点刷新 `content/links.json` 的名称、简介与图标                              |
 | `npm run collect-assets`    | 把外部图库同步进 `public/asset`（没配 `assetSource` 时什么都不做）                   |
