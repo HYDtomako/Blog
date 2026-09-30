@@ -690,15 +690,21 @@ test('an unreachable site answers 502 signal_lost', async () => {
 test('the wall is public and only submission methods are refused', async () => {
 	const restore = stubSiteFetch(SITE_HTML)
 	try {
-		const { env } = createEnv({ secret: SECRET, linksLimiter: 'allow' })
+		const db = createStatsDatabase()
+		const { env } = createEnv({ db, secret: SECRET, linksLimiter: 'allow' })
 
-		// Whatever people send in is visible to everybody, newest first, with no pseudonym in it.
+		// Nothing shows on the wall until an admin approves it, whatever people send in.
 		const empty = await worker.fetch(new Request(LINKS_URL, { headers: { 'cf-connecting-ip': VISITOR } }), env)
 		assert.equal(empty.status, 200)
 		assert.deepEqual(await json(empty), { submissions: [], total: 0 })
 
 		await postLinks(env, { url: 'example.com' })
 		await postLinks(env, { url: 'https://other.example.org/' }, { ip: OTHER_VISITOR })
+
+		const pending = await worker.fetch(new Request(LINKS_URL, { headers: { 'cf-connecting-ip': VISITOR } }), env)
+		assert.deepEqual(await json(pending), { submissions: [], total: 0 })
+
+		await db.prepare('UPDATE link_submissions SET status = \'approved\'').run()
 
 		const wall = await worker.fetch(new Request(LINKS_URL, { headers: { 'cf-connecting-ip': VISITOR } }), env)
 		assert.equal(wall.status, 200)

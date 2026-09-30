@@ -1,3 +1,4 @@
+import { adminPage, handleAdmin } from './admin.ts'
 import { deriveAnonymousActor } from './actor.ts'
 import type { Env } from './env.ts'
 import {
@@ -247,6 +248,8 @@ async function handleLinksSubmit(request: Request, env: Env): Promise<Response> 
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
 		const { pathname } = new URL(request.url)
+		if (pathname === '/admin' || pathname === '/admin/') return adminPage()
+		if (pathname.startsWith('/api/admin/')) return handleAdmin(request, env, pathname)
 		if (pathname === '/api/stats/page') return handlePageStats(request, env)
 		if (pathname === '/api/stats/total') return handleTotalStats(request, env)
 		if (pathname === '/api/stats/health') return handleHealth(request, env)
