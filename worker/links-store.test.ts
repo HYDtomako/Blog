@@ -18,7 +18,11 @@ function submission(db: D1Database, url: string, actor = ACTOR, title = 'Example
 	return createSubmission(db, actor, url, { title, description: 'A site', icon: 'https://example.com/icon.png' })
 }
 
-test('a submission lands on the wall with its parsed card', async () => {
+function approve(db: D1Database, url: string) {
+	return db.prepare(`UPDATE link_submissions SET status = 'approved' WHERE url = ?1`).bind(url).run()
+}
+
+test('a submission is stored as a pending signal with its parsed card', async () => {
 	const db = createStatsDatabase()
 	const body = await submission(db, URL_A)
 
@@ -43,10 +47,12 @@ test('a submission lands on the wall with its parsed card', async () => {
 	})
 })
 
-test('the wall shows the newest submissions to everybody', async () => {
+test('the wall shows the newest approved submissions to everybody', async () => {
 	const db = createStatsDatabase()
 	await submission(db, 'https://one.example.com/', ACTOR, 'One')
 	await submission(db, 'https://two.example.com/', OTHER_ACTOR, 'Two')
+	await approve(db, 'https://one.example.com/')
+	await approve(db, 'https://two.example.com/')
 
 	const wall = await readWall(db)
 	assert.equal(wall.total, 2)
@@ -63,11 +69,27 @@ test('the wall shows the newest submissions to everybody', async () => {
 
 	for (let index = 0; index < WALL_SIZE + 5; index += 1) {
 		// A fresh actor per row keeps the daily cap out of the way of the flood.
-		await submission(db, `https://flood-${index}.example.com/`, `actor-${index}`, `Flood ${index}`)
+		const url = `https://flood-${index}.example.com/`
+		await submission(db, url, `actor-${index}`, `Flood ${index}`)
+		await approve(db, url)
 	}
 	const capped = await readWall(db)
 	assert.equal(capped.submissions.length, WALL_SIZE)
 	assert.equal(capped.total, WALL_SIZE + 7)
+})
+
+test('submissions stay off the wall until they are approved', async () => {
+	const db = createStatsDatabase()
+	await submission(db, 'https://pending.example.com/', ACTOR, 'Pending')
+
+	const before = await readWall(db)
+	assert.equal(before.total, 0)
+	assert.deepEqual(before.submissions, [])
+
+	await approve(db, 'https://pending.example.com/')
+	const after = await readWall(db)
+	assert.equal(after.total, 1)
+	assert.deepEqual(after.submissions.map((item) => item.name), ['Pending'])
 })
 
 test('resubmitting the same address refreshes it instead of duplicating', async () => {
@@ -115,6 +137,7 @@ test('a row stored without metadata still answers with a domain name', async () 
 	assert.equal(body.description, undefined)
 	assert.equal(body.icon, undefined)
 
+	await db.prepare(`UPDATE link_submissions SET status = 'approved'`).run()
 	const wall = await readWall(db)
 	assert.equal(wall.submissions[0].url, 'https://bare.example.org/page')
 })

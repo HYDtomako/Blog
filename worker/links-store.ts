@@ -31,8 +31,9 @@ ON CONFLICT (actor_id, url) DO UPDATE SET
 const SUBMISSION_SELECT = `SELECT url, domain, name, description, icon, created_at FROM link_submissions
 WHERE actor_id = ?1 AND url = ?2`
 const WALL_SELECT = `SELECT url, domain, name, description, icon, created_at FROM link_submissions
+WHERE status = 'approved'
 ORDER BY created_at DESC, id DESC LIMIT ?1`
-const WALL_TOTAL_SELECT = 'SELECT COUNT(*) AS total FROM link_submissions'
+const WALL_TOTAL_SELECT = "SELECT COUNT(*) AS total FROM link_submissions WHERE status = 'approved'"
 const RECENT_COUNT_SELECT = `SELECT COUNT(*) AS total FROM link_submissions
 WHERE actor_id = ?1 AND created_at > datetime('now', ?2)`
 const DAY_WINDOW = '-1 day'
@@ -64,7 +65,7 @@ export async function createSubmission(
 	return row === null ? { ...body, createdAt: new Date().toISOString().slice(0, 19).replace('T', ' ') } : rowBody(row)
 }
 
-/** The public wall: the newest submissions, exactly as everybody sees them. */
+/** The public wall: the newest approved submissions, exactly as everybody sees them. */
 export async function readWall(db: D1Database): Promise<LinksWallBody> {
 	const [rows, total] = await Promise.all([
 		db.prepare(WALL_SELECT).bind(WALL_SIZE).all<SubmissionRow>(),
