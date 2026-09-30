@@ -105,6 +105,13 @@ const askSearchLabelsJson = JSON.stringify(UI.askSearch);
         </div>
         <div id="ask-agent-answer" aria-hidden="true"></div>
         <div id="ask-agent-live" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+        {liveAsk && (
+          <div id="ask-live-fallback" hidden>
+            <button type="button" id="ask-live-fallback-button" class="chip">
+              <Icon name="spark" size={13} /> {UI.askSearch.aiFallback}
+            </button>
+          </div>
+        )}
       </div>
       <div class="ask-agent-foot">
         <span id="ask-answer-foot-primary">{UI.askRuntime.curatedFootPrimary}</span>
@@ -127,7 +134,7 @@ const askSearchLabelsJson = JSON.stringify(UI.askSearch);
   )}
 
   <script>
-	import { askPublicAgent, PublicAskError } from '../../scripts/ask-agent';
+	import { askPublicAgent, createLiveAskFallback, PublicAskError } from '../../scripts/ask-agent';
 	import { createAskPendingController } from '../../scripts/ask-pending';
 	import { createAskSearch } from '../../scripts/ask-search';
 	import type { AnswerResult } from '../../scripts/ask-search';
@@ -187,6 +194,8 @@ const askSearchLabelsJson = JSON.stringify(UI.askSearch);
 	const answerSource = document.getElementById('ask-answer-source');
 	const answerFootPrimary = document.getElementById('ask-answer-foot-primary');
 	const answerFootSecondary = document.getElementById('ask-answer-foot-secondary');
+	const liveFallbackContainer = document.getElementById('ask-live-fallback');
+	const liveFallbackButton = document.getElementById('ask-live-fallback-button');
 	const submitButton = form?.querySelector<HTMLButtonElement>('.ask-send');
 	const turnstileContainer = document.getElementById('ask-turnstile');
 	let turnstileChallenge: ReturnType<typeof createTurnstileChallenge> | null = null;
@@ -203,6 +212,14 @@ const askSearchLabelsJson = JSON.stringify(UI.askSearch);
 					liveRegion: agentLive instanceof HTMLElement ? agentLive : undefined,
 					messages: rt.thinkingMessages ?? [],
 					verifyingLive: rt.verifyingLive,
+				})
+			: null;
+	const liveFallback =
+		liveFallbackContainer instanceof HTMLElement && liveFallbackButton instanceof HTMLElement
+			? createLiveAskFallback({
+					container: liveFallbackContainer,
+					button: liveFallbackButton,
+					onAsk: (query) => void runAgent(query),
 				})
 			: null;
 
@@ -335,6 +352,7 @@ const askSearchLabelsJson = JSON.stringify(UI.askSearch);
 		if (run !== answerRun) return;
 		renderAnswerLinks(text);
 		if (agentStatus) agentStatus.textContent = rt.curatedDone;
+		liveFallback?.show(answer.q);
 	};
 
 	const runAgent = async (query: string) => {
@@ -344,6 +362,7 @@ const askSearchLabelsJson = JSON.stringify(UI.askSearch);
 		activeRequest = controller;
 		const run = ++answerRun;
 		setAnswerMode('live');
+		liveFallback?.hide();
 		agentPanel.hidden = false;
 		panel?.classList.remove('hide-curated-answers');
 		typewriter.reset();
@@ -457,6 +476,12 @@ const askSearchLabelsJson = JSON.stringify(UI.askSearch);
 			return true;
 		};
 
+		/** Entry points share one path: curated answer when one matches, live agent otherwise. */
+		const runCuratedOrAgent = async (query: string) => {
+			if (await renderCuratedFor(query)) return;
+			if (liveAskConfigured) void runAgent(query);
+		};
+
 		const params = new URLSearchParams(window.location.search);
 		const initial = Array.from(params.get('q') ?? '').slice(0, input.maxLength).join('');
 		if (initial) {
@@ -467,7 +492,7 @@ const askSearchLabelsJson = JSON.stringify(UI.askSearch);
 		}
 
 		void search.loadSearchData(true).then(() => {
-			if (initial) void renderCuratedFor(initial);
+			if (initial) void runCuratedOrAgent(initial);
 		});
 		requestAnimationFrame(() => input.focus({ preventScroll: true }));
 
@@ -484,6 +509,7 @@ const askSearchLabelsJson = JSON.stringify(UI.askSearch);
 			const exactAnswer = search.getExactAnswer(query);
 			if (!exactAnswer) {
 				if (agentPanel) agentPanel.hidden = true;
+				liveFallback?.hide();
 				panel?.classList.remove('hide-curated-answers');
 				if (activeRequest) {
 					activeRequest.abort();
@@ -508,7 +534,7 @@ const askSearchLabelsJson = JSON.stringify(UI.askSearch);
 			search.renderResults(query);
 			setActiveChip(query);
 			syncQueryToUrl(query);
-			if (!(await renderCuratedFor(query)) && liveAskConfigured) void runAgent(query);
+			await runCuratedOrAgent(query);
 		});
 
 		document.querySelectorAll<HTMLElement>('[data-ask-chip]').forEach((chip) => {
@@ -521,7 +547,7 @@ const askSearchLabelsJson = JSON.stringify(UI.askSearch);
 				search.renderResults(query);
 				input.focus();
 				syncQueryToUrl(query);
-				void renderCuratedFor(query);
+				void runCuratedOrAgent(query);
 			});
 		});
 	}

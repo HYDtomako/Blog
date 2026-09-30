@@ -174,3 +174,37 @@ export async function askPublicAgent(question: string, options: AskOptions) {
 		return { requestId: response.headers.get('x-request-id') };
 	}
 }
+
+export type LiveAskFallback = {
+	/** Offer the live agent for the curated answer on screen. */
+	show: (query: string) => void;
+	hide: () => void;
+};
+
+type LiveAskFallbackOptions = {
+	/** Wrapper toggled between visible and hidden; the button inside carries the styling. */
+	container: HTMLElement;
+	button: HTMLElement;
+	/** Runs the same query through the live agent. */
+	onAsk: (query: string) => void;
+};
+
+/** Keeps a curated answer in place while letting the visitor re-run its query through the live agent. */
+export function createLiveAskFallback({ container, button, onAsk }: LiveAskFallbackOptions): LiveAskFallback {
+	let query = '';
+	const hide = () => {
+		query = '';
+		container.hidden = true;
+	};
+	hide();
+	button.addEventListener('click', () => {
+		if (query) onAsk(query);
+	});
+	return {
+		show(next: string) {
+			query = next.trim();
+			container.hidden = query.length === 0;
+		},
+		hide,
+	};
+}
