@@ -17,10 +17,23 @@ const label = getSiteCopy(locale).ui.common.backToTop;
 				</defs>
 				<g clip-path="url(#water-ball-clip)">
 					<g class="water-ball-water">
+						<g class="water-ball-wave water-ball-wave--back">
+							<path
+								class="water-ball-surface water-ball-surface--back"
+								d="M-100 0 q 25 -5 50 0 t 50 0 t 50 0 t 50 0 t 50 0 t 50 0 t 50 0 V 130 H -100 Z"></path>
+						</g>
 						<g class="water-ball-wave">
 							<path
 								class="water-ball-surface"
-								d="M-100 0 q 25 -7 50 0 t 50 0 t 50 0 t 50 0 t 50 0 t 50 0 t 50 0 V 130 H -100 Z"></path>
+								d="M-100 0 q 25 -10 50 0 t 50 0 t 50 0 t 50 0 t 50 0 t 50 0 t 50 0 V 130 H -100 Z"></path>
+						</g>
+						<g class="water-ball-bubbles">
+							<circle class="water-ball-bubble" cx="34" cy="94" r="3"></circle>
+							<circle class="water-ball-bubble" cx="58" cy="97" r="2.2"></circle>
+							<circle class="water-ball-bubble" cx="46" cy="92" r="1.6"></circle>
+							<circle class="water-ball-bubble" cx="68" cy="90" r="2.6"></circle>
+							<circle class="water-ball-bubble" cx="28" cy="96" r="2"></circle>
+							<circle class="water-ball-bubble" cx="52" cy="88" r="1.4"></circle>
 						</g>
 					</g>
 					<ellipse class="water-ball-shine" cx="33" cy="26" rx="19" ry="12"></ellipse>
@@ -62,8 +75,8 @@ const label = getSiteCopy(locale).ui.common.backToTop;
 	}
 	.water-ball-glass {
 		display: block;
-		width: 56px;
-		height: 56px;
+		width: 72px;
+		height: 72px;
 		overflow: hidden;
 		border: 1px solid var(--line);
 		border-radius: 50%;
@@ -79,10 +92,41 @@ const label = getSiteCopy(locale).ui.common.backToTop;
 		transform: translateY(calc((1 - var(--ball-progress)) * 100px));
 	}
 	.water-ball-wave {
-		animation: water-ball-slide 7s linear infinite;
+		animation: water-ball-slide 4s linear infinite;
+	}
+	.water-ball-wave--back {
+		animation: water-ball-slide-back 9s linear infinite;
 	}
 	.water-ball-surface {
 		fill: var(--ball-water);
+	}
+	.water-ball-surface--back {
+		opacity: 0.55;
+	}
+	.water-ball-bubble {
+		fill: color-mix(in srgb, var(--surface) 80%, transparent);
+		opacity: 0;
+		animation: water-ball-bubble 3.6s ease-in infinite;
+	}
+	.water-ball-bubble:nth-child(2) {
+		animation-duration: 4.6s;
+		animation-delay: 0.7s;
+	}
+	.water-ball-bubble:nth-child(3) {
+		animation-duration: 3s;
+		animation-delay: 1.4s;
+	}
+	.water-ball-bubble:nth-child(4) {
+		animation-duration: 5.2s;
+		animation-delay: 0.3s;
+	}
+	.water-ball-bubble:nth-child(5) {
+		animation-duration: 4s;
+		animation-delay: 2s;
+	}
+	.water-ball-bubble:nth-child(6) {
+		animation-duration: 3.2s;
+		animation-delay: 1s;
 	}
 	.water-ball-shine {
 		fill: color-mix(in srgb, var(--surface) 62%, transparent);
@@ -97,14 +141,35 @@ const label = getSiteCopy(locale).ui.common.backToTop;
 			transform: translateX(-100px);
 		}
 	}
+	@keyframes water-ball-slide-back {
+		to {
+			transform: translateX(100px);
+		}
+	}
+	@keyframes water-ball-bubble {
+		0% {
+			transform: translate(0, 0);
+			opacity: 0;
+		}
+		20% {
+			opacity: 0.85;
+		}
+		70% {
+			opacity: 0.6;
+		}
+		100% {
+			transform: translate(3px, -64px);
+			opacity: 0;
+		}
+	}
 	@media (max-width: 560px) {
 		.water-ball {
 			right: 14px;
 			bottom: 14px;
 		}
 		.water-ball-glass {
-			width: 36px;
-			height: 36px;
+			width: 48px;
+			height: 48px;
 		}
 	}
 	@media print {

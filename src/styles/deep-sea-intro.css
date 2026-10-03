@@ -1,57 +1,56 @@
-/* Deep-sea diving instrument intro (home page only, both locales).
-   Loaded through `Head.astro` when the intro renders, so no other page ships these rules.
-   Positioning, the hidden default and the scroll lock live in the critical inline style
-   in `Head.astro`; everything here is the instrument itself.
+/*
+ * Deep-sea intro overlay.
+ *
+ * One timeline drives everything: the driver in `scripts/deep-sea-intro.ts` writes
+ * `--ds-boot`, `--ds-depth`, `--ds-climax` and `--ds-progress` on the root, and the whole
+ * scene is expressed as `calc()` on those four numbers. Only transform and opacity animate.
+ */
 
-   `deep-sea-intro.ts` writes three custom properties once per frame: `--ds-boot` (0 → 1
-   through the 1.2 s start-up), `--ds-depth` (0 → 1 from the surface to 2000 m) and
-   `--ds-needle` (the pointer, in degrees). Each layer multiplies its own start-up ramp into
-   its depth-driven opacity, so the dial wakes up part by part and then deepens with the
-   descent; the phase beats below carry the story from there. */
 .deep-intro {
-	--ds-boot: 0;
-	--ds-depth: 0;
-	--ds-needle: -150;
+	--ds-ink: #dceef7;
+	--ds-ink-dim: rgba(210, 234, 245, 0.52);
+	--ds-line: rgba(150, 205, 225, 0.32);
+	--ds-line-soft: rgba(150, 205, 225, 0.16);
+	--ds-accent: #74d6e8;
+	--ds-mono: ui-monospace, "SFMono-Regular", "Menlo", "Consolas", monospace;
 
-	--ds-shallow: #7fb4d8;
-	--ds-mid: #2d6f9c;
-	--ds-mid-deep: #14405f;
-	--ds-deep: #0b2942;
-	--ds-abyss: #061c2e;
-	--ds-hero: #d5e6fb;
-	--ds-light: #dceeff;
-	--ds-ink: rgba(236, 247, 255, 0.92);
-	--ds-line: rgba(226, 242, 255, 0.5);
-	--ds-line-soft: rgba(226, 242, 255, 0.22);
-	--ds-glow: #96cdff;
-
-	/* Instrument start-up: one ramp per layer, in the order the brief names them —
-	   case outline, scale, inner rings, pointer, guides, then the centre glow. */
-	--ds-in-atmos: clamp(0, (var(--ds-boot) - 0.2) / 0.6, 1);
-	--ds-in-ring: clamp(0, (var(--ds-boot) - 0.02) / 0.2, 1);
-	--ds-in-ticks: clamp(0, (var(--ds-boot) - 0.14) / 0.26, 1);
-	--ds-in-dial: clamp(0, (var(--ds-boot) - 0.28) / 0.24, 1);
-	--ds-in-scan: clamp(0, (var(--ds-boot) - 0.34) / 0.26, 1);
-	--ds-in-needle: clamp(0, (var(--ds-boot) - 0.4) / 0.24, 1);
-	--ds-in-guides: clamp(0, (var(--ds-boot) - 0.46) / 0.28, 1);
-	--ds-in-halo: clamp(0, (var(--ds-boot) - 0.5) / 0.4, 1);
-	--ds-in-readout: clamp(0, (var(--ds-boot) - 0.56) / 0.28, 1);
-	--ds-in-hud: clamp(0, (var(--ds-boot) - 0.66) / 0.34, 1);
-
-	--ds-dial: min(74vmin, 460px);
-
+	position: fixed;
+	inset: 0;
+	z-index: 120;
+	overflow: hidden;
+	background: #051826;
 	color: var(--ds-ink);
-	font-family: var(--mono);
-	opacity: 1;
-	transition: opacity 520ms var(--ease-out-quart);
+	font-family: var(--ds-mono);
+	/* The driver overwrites this during the reveal; keep a sensible fallback. */
+	clip-path: circle(150% at 50% 50%);
 }
-[data-theme="dark"] .deep-intro {
-	--ds-shallow: #4a83ab;
-	--ds-mid: #1d4e73;
-	--ds-mid-deep: #0d3049;
-	--ds-deep: #071c2e;
-	--ds-abyss: #04121f;
-	--ds-hero: #17243d;
+
+/* The critical CSS in Head.astro hides the overlay unless `play`; keep it during the reveal. */
+html[data-intro="revealing"] .deep-intro {
+	display: block;
+}
+
+html[data-intro="play"],
+html[data-intro="revealing"] {
+	overflow: hidden;
+	padding-right: var(--intro-gutter, 0px);
+}
+
+html[data-intro="play"] body,
+html[data-intro="revealing"] body {
+	overflow: hidden;
+}
+
+/* The page itself lifts a little as the aperture opens. */
+html[data-intro="play"] .main-frame {
+	opacity: 0;
+	transform: translateY(14px);
+}
+
+html[data-intro="revealing"] .main-frame {
+	opacity: 1;
+	transform: none;
+	transition: opacity 0.5s ease 0.1s, transform 0.5s ease 0.1s;
 }
 
 .ds-stage {
@@ -60,711 +59,794 @@
 	overflow: hidden;
 }
 
-/* ---- water ---- */
+/* ------------------------------------------------------------------ water */
+
 .ds-bg {
 	position: absolute;
 	inset: 0;
-}
-.ds-bg--shallow {
-	background:
-		radial-gradient(120% 76% at 50% 4%, var(--ds-shallow) 0%, var(--ds-mid) 58%, var(--ds-mid-deep) 100%);
-}
-.ds-bg--deep {
-	background:
-		radial-gradient(130% 90% at 50% 0%, var(--ds-mid-deep) 0%, var(--ds-deep) 58%, var(--ds-abyss) 100%);
-	opacity: var(--ds-depth);
+	pointer-events: none;
 }
 
-/* ---- underwater light ---- */
+/*
+ * Three water layers cross-fade across overlapping stretches of `--ds-depth`, so the
+ * colour keeps drifting the whole way down instead of swapping at a single point.
+ * Blue rather than teal, and never bright enough to read as a flat studio backdrop.
+ */
+.ds-bg--shallow {
+	background: linear-gradient(180deg, #2f8fae 0%, #1c6f92 40%, #0f4a68 100%);
+	opacity: max(0, 1 - var(--ds-depth, 0) * 1.25);
+}
+
+.ds-bg--mid {
+	background: linear-gradient(180deg, #0d5478 0%, #083b52 52%, #041e2c 100%);
+	opacity: min(var(--ds-depth, 0) * 1.25, (1 - var(--ds-depth, 0)) * 1.5);
+}
+
+.ds-bg--deep {
+	background: radial-gradient(130% 100% at 50% -10%, #061a28 0%, #02080f 55%, #000 100%);
+	opacity: max(0, var(--ds-depth, 0) * 1.6 - 0.55);
+}
+
+html[data-theme="light"] .ds-bg--shallow {
+	background: linear-gradient(180deg, #48a6c2 0%, #2b7f9e 40%, #145870 100%);
+}
+
 .ds-rays {
 	position: absolute;
-	inset: 0;
-	opacity: calc((0.5 - 0.36 * var(--ds-depth)) * var(--ds-in-atmos));
+	inset: -10% -10% 0;
+	opacity: calc((1 - var(--ds-depth, 0)) * 0.55 * var(--ds-boot, 0));
+	transform: translateY(calc(var(--ds-depth, 0) * 40px));
+	pointer-events: none;
 }
+
 .ds-ray {
 	position: absolute;
-	top: -30%;
-	width: 30%;
-	height: 160%;
-	background:
-		radial-gradient(
-			46% 62% at 50% 6%,
-			color-mix(in srgb, var(--ds-light) 15%, transparent) 0%,
-			color-mix(in srgb, var(--ds-light) 6%, transparent) 42%,
-			transparent 76%
-		);
+	top: -10%;
+	width: clamp(80px, 16vw, 220px);
+	height: 120%;
+	background: linear-gradient(180deg, rgba(180, 240, 245, 0.22), transparent 72%);
+	filter: blur(14px);
+	transform: rotate(12deg);
 	transform-origin: top center;
-	animation: ds-ray-drift 19s ease-in-out infinite alternate;
-}
-.ds-ray--a {
-	left: 6%;
-	transform: rotate(9deg);
-}
-.ds-ray--b {
-	left: 42%;
-	width: 15%;
-	opacity: 0.7;
-	transform: rotate(-4deg);
-	animation-duration: 26s;
-	animation-delay: -8s;
-}
-.ds-ray--c {
-	right: 4%;
-	width: 32%;
-	opacity: 0.55;
-	transform: rotate(4deg);
-	animation-duration: 22s;
-	animation-delay: -14s;
-}
-@keyframes ds-ray-drift {
-	to {
-		transform: translate3d(1.5%, 2%, 0) rotate(-2deg);
-	}
 }
 
-/* ---- slow rings of displaced water, barely there ---- */
-.ds-ripples {
+.ds-ray--a { left: 18%; }
+.ds-ray--b { left: 46%; transform: rotate(-9deg); opacity: 0.8; }
+.ds-ray--c { left: 72%; transform: rotate(6deg); opacity: 0.65; }
+
+/* ------------------------------------------------------------ frame noise */
+
+.ds-grain,
+.ds-scanlines {
 	position: absolute;
 	inset: 0;
-	opacity: calc((0.05 + 0.28 * var(--ds-depth)) * var(--ds-in-atmos));
-}
-.ds-ripple {
-	position: absolute;
-	left: 50%;
-	top: 50%;
-	width: 62vmin;
-	height: 62vmin;
-	margin: -31vmin 0 0 -31vmin;
-	border: 1px solid color-mix(in srgb, var(--ds-light) 34%, transparent);
-	border-radius: 50%;
-	opacity: 0;
-	animation: ds-ripple 11s var(--ease-out-quart) infinite;
-}
-.ds-ripple:nth-child(2) {
-	animation-delay: -3.7s;
-}
-.ds-ripple:nth-child(3) {
-	animation-delay: -7.4s;
-}
-@keyframes ds-ripple {
-	0% {
-		transform: scale(0.42);
-		opacity: 0;
-	}
-	18% {
-		opacity: 0.34;
-	}
-	100% {
-		transform: scale(1.5);
-		opacity: 0;
-	}
+	pointer-events: none;
 }
 
-/* ---- marine snow ---- */
-.ds-snow {
-	position: absolute;
-	inset: 0;
-	opacity: calc((0.45 + 0.55 * var(--ds-depth)) * var(--ds-in-atmos));
-}
-.ds-flake {
-	position: absolute;
-	top: 0;
-	left: var(--ds-x);
-	width: var(--ds-size);
-	height: var(--ds-size);
-	border-radius: 50%;
-	background: var(--ds-light);
-	opacity: var(--ds-alpha);
-	animation: ds-flake-fall var(--ds-duration) linear infinite;
-	animation-delay: var(--ds-delay);
-}
-@keyframes ds-flake-fall {
-	from {
-		transform: translate3d(0, -8vh, 0);
-	}
-	to {
-		transform: translate3d(var(--ds-drift), 108vh, 0);
-	}
-}
-
-/* ---- grain: the fine suspended matter that only shows up in deep water ---- */
 .ds-grain {
-	position: absolute;
-	inset: -12%;
-	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23g)'/%3E%3C/svg%3E");
-	opacity: calc((0.014 + 0.04 * var(--ds-depth)) * var(--ds-in-atmos));
-	animation: ds-grain-drift 23s ease-in-out infinite alternate;
-}
-@keyframes ds-grain-drift {
-	to {
-		transform: translate3d(-1.6%, 1.1%, 0);
-	}
+	opacity: calc(0.05 + var(--ds-climax, 0) * 0.04);
+	background-image: radial-gradient(rgba(255, 255, 255, 0.5) 0.5px, transparent 0.5px);
+	background-size: 3px 3px;
+	animation: ds-flicker 5.5s steps(3, end) infinite;
 }
 
-/* ---- corner HUD ---- */
+.ds-scanlines {
+	background: repeating-linear-gradient(
+		180deg,
+		rgba(255, 255, 255, 0.028) 0 1px,
+		transparent 1px 3px
+	);
+	opacity: 0.6;
+}
+
+@keyframes ds-flicker {
+	0%, 96%, 100% { opacity: 0.05; }
+	97% { opacity: 0.09; }
+	98% { opacity: 0.03; }
+}
+
+/* ------------------------------------------------------------------- HUD */
+
 .ds-hud {
 	position: absolute;
-	display: flex;
-	flex-direction: column;
-	gap: 6px;
-	margin: 0;
-	font-size: 10px;
-	line-height: 1.45;
-	letter-spacing: 0.2em;
-	text-transform: uppercase;
-	opacity: calc((0.3 + 0.34 * var(--ds-depth)) * var(--ds-in-hud));
-	transition: opacity 320ms var(--ease-out-quart);
-}
-.ds-hud-row {
-	display: flex;
-	gap: 9px;
-	margin: 0;
-}
-.ds-hud-label {
-	color: color-mix(in srgb, var(--ds-light) 52%, transparent);
-}
-.ds-hud-value {
-	color: color-mix(in srgb, var(--ds-light) 78%, transparent);
-}
-.ds-hud--top-left {
-	top: clamp(74px, 9vh, 94px);
-	left: clamp(18px, 3.4vw, 46px);
-}
-.ds-hud--top-right {
-	top: clamp(74px, 9vh, 94px);
-	right: clamp(18px, 3.4vw, 46px);
-	align-items: flex-end;
-}
-.ds-hud--bottom-left {
-	bottom: clamp(20px, 4vh, 40px);
-	left: clamp(18px, 3.4vw, 46px);
-}
-.ds-hud--bottom-right {
-	bottom: clamp(20px, 4vh, 40px);
-	right: clamp(18px, 3.4vw, 46px);
-	align-items: flex-end;
+	font-size: clamp(9px, 1.1vw, 11px);
+	letter-spacing: 0.16em;
+	line-height: 1.7;
+	color: var(--ds-ink-dim);
+	opacity: var(--ds-boot, 0);
+	pointer-events: none;
 }
 
-/* ---- the instrument ---- */
-.ds-expand {
+.ds-hud-row { margin: 0; display: flex; gap: 0.7em; }
+.ds-hud-label { opacity: 0.7; }
+.ds-hud-value { color: var(--ds-ink); opacity: 0.85; }
+
+.ds-hud--tl { top: clamp(16px, 3vw, 34px); left: clamp(16px, 3vw, 40px); }
+.ds-hud--tr { top: clamp(16px, 3vw, 34px); right: clamp(16px, 3vw, 40px); text-align: right; }
+.ds-hud--bl { bottom: clamp(16px, 3vw, 34px); left: clamp(16px, 3vw, 40px); }
+.ds-hud--br { bottom: clamp(16px, 3vw, 34px); right: clamp(16px, 3vw, 40px); text-align: right; }
+
+/* Corner brackets over the corner readouts, drawn with borders. */
+.ds-hud::before {
+	content: "";
+	position: absolute;
+	width: 18px;
+	height: 18px;
+	border: 1px solid var(--ds-line);
+	opacity: 0.7;
+}
+.ds-hud--tl::before { top: -10px; left: -12px; border-right: 0; border-bottom: 0; }
+.ds-hud--tr::before { top: -10px; right: -12px; border-left: 0; border-bottom: 0; }
+.ds-hud--bl::before { bottom: -10px; left: -12px; border-right: 0; border-top: 0; }
+.ds-hud--br::before { bottom: -10px; right: -12px; border-left: 0; border-top: 0; }
+
+/* ---------------------------------------------------------- depth ruler */
+
+.ds-ruler {
+	position: absolute;
+	right: clamp(10px, 2.5vw, 28px);
+	top: 50%;
+	height: min(64vh, 560px);
+	width: 72px;
+	transform: translateY(-50%);
+	overflow: hidden;
+	opacity: calc(var(--ds-boot, 0) * 0.75);
+	-webkit-mask-image: linear-gradient(180deg, transparent, #000 22%, #000 78%, transparent);
+	mask-image: linear-gradient(180deg, transparent, #000 22%, #000 78%, transparent);
+	pointer-events: none;
+}
+
+.ds-ruler-track {
 	position: absolute;
 	inset: 0;
-	transform-origin: 50% 50%;
-	transition:
-		transform 1250ms var(--ease-out-expo),
-		opacity 620ms linear;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-around;
+	transform: translateY(calc(var(--ds-depth, 0) * -260px));
+	transition: none;
 }
+
+.ds-ruler-tick {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 8px;
+	height: 12px;
+}
+
+.ds-ruler-tick::after {
+	content: "";
+	width: 12px;
+	height: 1px;
+	background: var(--ds-line-soft);
+}
+
+.ds-ruler-tick--major::after {
+	width: 22px;
+	background: var(--ds-line);
+}
+
+.ds-ruler-label {
+	font-size: 9px;
+	letter-spacing: 0.08em;
+	color: var(--ds-ink-dim);
+	opacity: 0;
+}
+
+.ds-ruler-tick--major .ds-ruler-label { opacity: 0.8; }
+
+/* ------------------------------------------------------------------ core */
+
 .ds-core {
 	position: absolute;
 	inset: 0;
 	display: grid;
-	place-items: center;
-}
-.ds-gauge {
-	grid-area: 1 / 1;
-	display: block;
-	width: var(--ds-dial);
-	height: auto;
-}
-.ds-halo {
-	fill: url("#ds-halo");
-	opacity: calc((0.4 + 0.5 * var(--ds-depth)) * var(--ds-in-halo));
-}
-.ds-stop--core {
-	stop-color: var(--ds-glow);
-	stop-opacity: 0.16;
-}
-.ds-stop--halo {
-	stop-color: var(--ds-glow);
-	stop-opacity: 0.04;
-}
-.ds-stop--void {
-	stop-color: var(--ds-glow);
-	stop-opacity: 0;
-}
-.ds-guides {
-	transform-box: view-box;
-	transform-origin: 50% 50%;
-	transform: scale(var(--ds-in-guides));
-	opacity: calc((0.32 + 0.3 * var(--ds-depth)) * var(--ds-in-guides));
-}
-.ds-guide {
-	stroke: color-mix(in srgb, var(--ds-light) 58%, transparent);
-	stroke-width: 1;
-}
-.ds-ring {
-	fill: none;
-	stroke: var(--ds-line-soft);
-	stroke-width: 1;
-	vector-effect: non-scaling-stroke;
-}
-.ds-ring--outer {
-	opacity: calc((0.5 + 0.4 * var(--ds-depth)) * var(--ds-in-ring));
-}
-.ds-ring--dial {
-	stroke: color-mix(in srgb, var(--ds-line) 62%, transparent);
-	opacity: calc(var(--ds-in-dial));
-}
-.ds-ring--inner {
-	opacity: calc((0.5 + 0.5 * var(--ds-depth)) * var(--ds-in-dial));
-}
-.ds-ticks {
-	opacity: calc((0.3 + 0.7 * var(--ds-depth)) * var(--ds-in-ticks));
-}
-.ds-coarse {
-	opacity: calc((0.34 + 0.66 * var(--ds-depth)) * var(--ds-in-ticks));
-}
-.ds-tick {
-	stroke: var(--ds-line-soft);
-	stroke-width: 1;
-}
-.ds-tick--medium {
-	stroke: color-mix(in srgb, var(--ds-line) 70%, transparent);
-	stroke-width: 1.2;
-}
-.ds-tick--major {
-	stroke: var(--ds-line);
-	stroke-width: 1.8;
-}
-.ds-tick--coarse {
-	stroke: color-mix(in srgb, var(--ds-line) 78%, transparent);
-	stroke-width: 1.6;
-}
-.ds-arc {
-	fill: none;
-	stroke: color-mix(in srgb, var(--ds-glow) 72%, transparent);
-	stroke-width: 1.6;
-	vector-effect: non-scaling-stroke;
-	stroke-dasharray: calc(var(--ds-arc-length) * var(--ds-depth)) var(--ds-arc-circumference);
-	stroke-dashoffset: 0;
-	transform: rotate(-150deg);
-	transform-origin: 50% 50%;
-	transform-box: view-box;
-	opacity: var(--ds-in-ring);
-}
-.ds-scan {
-	transform-origin: 50% 50%;
-	transform-box: view-box;
-	animation: ds-spin 32s linear infinite;
-	opacity: calc((0.28 + 0.4 * var(--ds-depth)) * var(--ds-in-scan));
-}
-.ds-scan-dots {
-	fill: none;
-	stroke: color-mix(in srgb, var(--ds-light) 40%, transparent);
-	stroke-width: 1;
-	vector-effect: non-scaling-stroke;
-	stroke-dasharray: 1.5 15;
-}
-@keyframes ds-spin {
-	to {
-		transform: rotate(360deg);
-	}
-}
-.ds-pulse {
-	fill: none;
-	stroke: color-mix(in srgb, var(--ds-light) 60%, transparent);
-	stroke-width: 1;
-	vector-effect: non-scaling-stroke;
-	opacity: 0;
-	transform-origin: 50% 50%;
-	transform-box: view-box;
-}
-.ds-needle {
-	transform: rotate(calc(var(--ds-needle) * 1deg));
-	transform-origin: 50% 50%;
-	transform-box: view-box;
-	opacity: calc((0.55 + 0.45 * var(--ds-depth)) * var(--ds-in-needle));
-	/* A short lag behind the number, so the pointer reads as a weighted mechanical needle. */
-	transition:
-		opacity 320ms var(--ease-out-quart),
-		transform 180ms linear;
-}
-/* A floating pointer in the band between the readout and the dial ring, so it never
-   crosses the numbers. */
-.ds-needle-body {
-	stroke: color-mix(in srgb, var(--ds-light) 88%, transparent);
-	stroke-width: 2;
-	stroke-linecap: round;
-	vector-effect: non-scaling-stroke;
-}
-.ds-needle-tip {
-	fill: color-mix(in srgb, var(--ds-light) 92%, transparent);
-}
-
-/* ---- readout ---- */
-.ds-readout-wrap {
-	grid-area: 1 / 1;
-	display: grid;
-	place-items: center;
-	width: min(40vmin, 236px);
+	place-content: center;
+	justify-items: center;
 	text-align: center;
 }
-.ds-readout,
-.ds-wordmark {
-	grid-area: 1 / 1;
-	width: 100%;
-	margin: 0;
-}
-.ds-readout {
-	opacity: calc((0.62 + 0.38 * var(--ds-depth)) * var(--ds-in-readout));
-	transition: opacity 320ms var(--ease-out-quart);
-}
-.ds-value {
-	margin: 9px 0 0;
-	font-size: clamp(24px, 5vmin, 38px);
-	font-weight: 400;
-	line-height: 1;
-	letter-spacing: 0.05em;
-	font-variant-numeric: tabular-nums;
-	color: color-mix(in srgb, var(--ds-light) 94%, transparent);
-	text-shadow: 0 0 22px color-mix(in srgb, var(--ds-glow) 26%, transparent);
-}
-.ds-label {
-	margin: 0;
-	font-size: 10px;
-	line-height: 1.4;
-	letter-spacing: 0.34em;
-	/* Half the trailing letter-space, so the tracked text sits optically centred. */
-	text-indent: 0.17em;
-	text-transform: uppercase;
-	color: color-mix(in srgb, var(--ds-light) 62%, transparent);
-}
-.ds-panel {
-	display: grid;
-	grid-template-columns: 1fr 1fr;
-	margin-top: 16px;
-	padding-top: 13px;
-	border-top: 1px solid color-mix(in srgb, var(--ds-line) 42%, transparent);
-}
-.ds-cell {
-	display: grid;
-	gap: 6px;
-	margin: 0;
-}
-.ds-cell + .ds-cell {
-	border-left: 1px solid color-mix(in srgb, var(--ds-line) 30%, transparent);
-}
-.ds-cell-value {
-	font-size: 12px;
-	letter-spacing: 0.08em;
-	font-variant-numeric: tabular-nums;
-	color: color-mix(in srgb, var(--ds-light) 78%, transparent);
-}
-.ds-label--cell {
-	font-size: 9px;
-	letter-spacing: 0.26em;
-	text-indent: 0.13em;
-	color: color-mix(in srgb, var(--ds-light) 46%, transparent);
+
+.ds-sonar {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 0;
+	height: 0;
+	pointer-events: none;
 }
 
-/* ---- the wordmark, found rather than announced ---- */
-.ds-wordmark {
+.ds-sonar-ring {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: min(46vw, 420px);
+	aspect-ratio: 1;
+	margin: -0.5px;
+	border-radius: 50%;
+	border: 1px solid var(--ds-accent);
+	transform: translate(-50%, -50%) scale(0.12);
 	opacity: 0;
-	transition: opacity 420ms var(--ease-out-quart);
+	animation: ds-sonar 1.15s cubic-bezier(0.22, 0.7, 0.3, 1) forwards;
+	/* `--ds-arrived` is written by the driver from INTRO_ARRIVED_MS; the fallback keeps the
+	   scene whole if the script never runs. */
+	animation-delay: var(--ds-arrived, 4800ms);
 }
-.ds-letters {
+
+.ds-sonar-ring--b {
+	animation-delay: calc(var(--ds-arrived, 4800ms) + 180ms);
+	animation-duration: 1.35s;
+}
+
+@keyframes ds-sonar {
+	0% { transform: translate(-50%, -50%) scale(0.12); opacity: 0; }
+	12% { opacity: 0.7; }
+	100% { transform: translate(-50%, -50%) scale(1.05); opacity: 0; }
+}
+
+.ds-spotlight {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: min(78vw, 620px);
+	aspect-ratio: 1;
+	transform: translate(-50%, -50%);
+	border-radius: 50%;
+	background: radial-gradient(
+		circle,
+		rgba(116, 214, 232, 0.24) 0%,
+		rgba(116, 214, 232, 0.08) 42%,
+		transparent 68%
+	);
+	opacity: calc(var(--ds-boot, 0) * 0.14 + var(--ds-climax, 0) * 0.86);
+	pointer-events: none;
+}
+
+/* --------------------------------------------------------------- readout */
+
+.ds-readout {
+	position: relative;
+	opacity: calc(1 - var(--ds-climax, 0));
+	transform: translateY(calc(var(--ds-climax, 0) * -18px));
+}
+
+.ds-label {
+	margin: 0 0 0.5em;
+	font-size: clamp(9px, 1.2vw, 12px);
+	letter-spacing: 0.42em;
+	color: var(--ds-ink-dim);
+	text-transform: uppercase;
+}
+
+.ds-value {
+	margin: 0;
+	font-size: clamp(40px, 7.5vw, 86px);
+	font-weight: 300;
+	letter-spacing: 0.06em;
+	line-height: 1;
+	color: var(--ds-ink);
+	font-variant-numeric: tabular-nums;
+	font-feature-settings: "tnum" 1;
+	text-shadow: 0 0 26px rgba(116, 214, 232, 0.28);
+}
+
+.ds-panel {
 	display: flex;
 	justify-content: center;
-	/* A flex row drops the trailing letter-space, so padding keeps the ink centred. */
-	padding-left: 0.2em;
-	margin: 0;
-	font-family: var(--sans);
-	font-size: clamp(40px, 11vmin, 74px);
-	font-weight: 300;
-	line-height: 1;
-	letter-spacing: 0.2em;
-	color: color-mix(in srgb, #f4fbff 96%, transparent);
-	text-shadow: 0 0 40px color-mix(in srgb, var(--ds-glow) 34%, transparent);
-}
-.ds-letters span {
-	display: inline-block;
-	opacity: 0;
-	transform: translateY(10px);
-	transition:
-		opacity 640ms var(--ease-out-quart),
-		transform 640ms var(--ease-out-expo);
-}
-.ds-letters span:nth-child(1) {
-	transition-delay: 40ms;
-}
-.ds-letters span:nth-child(2) {
-	transition-delay: 260ms;
-}
-.ds-letters span:nth-child(3) {
-	transition-delay: 480ms;
-}
-.ds-tagline {
-	margin: 18px 0 0;
-	font-size: 10px;
-	letter-spacing: 0.34em;
-	text-indent: 0.17em;
-	text-transform: uppercase;
-	color: color-mix(in srgb, var(--ds-light) 58%, transparent);
-	opacity: 0;
-	transition: opacity 820ms var(--ease-out-quart) 700ms;
+	gap: clamp(20px, 5vw, 54px);
+	margin-top: clamp(14px, 2.5vw, 24px);
+	padding-top: 14px;
+	border-top: 1px solid var(--ds-line-soft);
 }
 
-/* ---- status line under the dial ---- */
+.ds-cell {
+	margin: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.45em;
+}
+
+.ds-label--cell { margin: 0; letter-spacing: 0.28em; }
+
+.ds-cell-value {
+	font-size: clamp(12px, 1.6vw, 16px);
+	letter-spacing: 0.08em;
+	color: var(--ds-ink);
+	font-variant-numeric: tabular-nums;
+}
+
+/* -------------------------------------------------------------- wordmark */
+
+.ds-wordmark {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	opacity: var(--ds-climax, 0);
+	pointer-events: none;
+}
+
+.ds-letters {
+	margin: 0;
+	display: flex;
+	justify-content: center;
+	gap: 0.06em;
+	font-size: clamp(56px, 13vw, 150px);
+	font-weight: 300;
+	letter-spacing: 0.14em;
+	line-height: 1;
+	color: #eef9fd;
+	text-shadow: 0 0 40px rgba(116, 214, 232, 0.5), 0 0 90px rgba(116, 214, 232, 0.25);
+}
+
+.ds-tagline {
+	margin: clamp(10px, 2vw, 18px) 0 0;
+	font-size: clamp(10px, 1.4vw, 14px);
+	text-transform: uppercase;
+	color: var(--ds-ink-dim);
+	white-space: nowrap;
+	animation: ds-tagline 0.8s ease both;
+	animation-delay: calc(var(--ds-arrived, 4800ms) + 550ms);
+}
+
+@keyframes ds-tagline {
+	0% { opacity: 0; letter-spacing: 0.62em; clip-path: inset(0 100% 0 0); }
+	100% { opacity: 0.85; letter-spacing: 0.28em; clip-path: inset(0 0 0 0); }
+}
+
+/* ---------------------------------------------------------------- status */
+
 .ds-status {
 	position: absolute;
 	left: 50%;
-	bottom: clamp(56px, 8vh, 88px);
-	display: grid;
-	margin: 0;
+	bottom: clamp(64px, 12vh, 120px);
 	transform: translateX(-50%);
-	font-size: 10px;
-	letter-spacing: 0.36em;
-	text-indent: 0.18em;
-	text-transform: uppercase;
+	margin: 0;
+	font-size: clamp(10px, 1.3vw, 13px);
+	letter-spacing: 0.34em;
+	color: var(--ds-ink-dim);
 	white-space: nowrap;
-	color: color-mix(in srgb, var(--ds-light) 66%, transparent);
-	opacity: calc((0.68 + 0.32 * var(--ds-depth)) * var(--ds-in-hud));
-	transition: opacity 320ms var(--ease-out-quart);
-}
-.ds-status span {
-	grid-area: 1 / 1;
-	opacity: 0;
-	transition: opacity 460ms var(--ease-out-quart);
-}
-[data-ds-label="initialized"] .ds-status span[data-ds-for="initialized"],
-[data-ds-label="descending"] .ds-status span[data-ds-for="descending"],
-[data-ds-label="pressure"] .ds-status span[data-ds-for="pressure"],
-[data-ds-label="deep-sea"] .ds-status span[data-ds-for="deep-sea"],
-[data-ds-label="reached"] .ds-status span[data-ds-for="reached"] {
-	opacity: 1;
+	display: flex;
+	justify-content: center;
 }
 
-/* ---- the breath at 2000 m ---- */
-[data-ds-phase="reached"] .ds-pulse {
-	animation: ds-pulse 900ms var(--ease-out-expo) 1;
-}
-@keyframes ds-pulse {
-	0% {
-		opacity: 0.5;
-		transform: scale(0.9);
-	}
-	100% {
-		opacity: 0;
-		transform: scale(1.34);
-	}
-}
-[data-ds-phase="reached"] .ds-status {
-	opacity: 1;
+.ds-status span { display: none; }
+
+.ds-status [data-ds-for="initialized"] { display: inline-block; }
+
+[data-ds-label="initialized"] .ds-status [data-ds-for="initialized"],
+[data-ds-label="descending"] .ds-status [data-ds-for="descending"],
+[data-ds-label="pressure"] .ds-status [data-ds-for="pressure"],
+[data-ds-label="deep-sea"] .ds-status [data-ds-for="deep-sea"],
+[data-ds-label="reached"] .ds-status [data-ds-for="reached"] {
+	display: inline-block;
+	animation: ds-glitch 0.42s steps(2, end) both;
 }
 
-/* ---- HYD ---- */
-[data-ds-phase="hyd"] .ds-readout,
-[data-ds-phase="reveal"] .ds-readout {
-	opacity: 0;
-}
-[data-ds-phase="hyd"] .ds-wordmark,
-[data-ds-phase="reveal"] .ds-wordmark {
-	opacity: 1;
-}
-[data-ds-phase="hyd"] .ds-letters span,
-[data-ds-phase="reveal"] .ds-letters span {
-	opacity: 1;
-	transform: none;
-}
-[data-ds-phase="hyd"] .ds-tagline,
-[data-ds-phase="reveal"] .ds-tagline {
-	opacity: 1;
-}
-[data-ds-phase="hyd"] .ds-needle,
-[data-ds-phase="reveal"] .ds-needle {
-	opacity: 0.5;
-}
-[data-ds-phase="hyd"] .ds-hud,
-[data-ds-phase="reveal"] .ds-hud,
-[data-ds-phase="hyd"] .ds-status,
-[data-ds-phase="reveal"] .ds-status {
-	opacity: 0.24;
+@keyframes ds-glitch {
+	0% { opacity: 0; transform: translateX(-3px); clip-path: inset(0 60% 0 0); }
+	30% { opacity: 1; transform: translateX(2px); clip-path: inset(0 20% 0 0); }
+	60% { transform: translateX(-1px); clip-path: inset(0 0 0 0); }
+	100% { opacity: 0.85; transform: none; }
 }
 
-/* ---- hand-off: the dial opens into the hero ---- */
-[data-ds-phase="reveal"] .ds-expand {
-	transform: scale(6);
-	opacity: 0;
-	transition:
-		transform 1250ms var(--ease-out-expo),
-		opacity 620ms linear 520ms;
-}
-[data-ds-phase="reveal"] .ds-guides {
-	transform: scale(1.6);
-	opacity: 0;
-	transition:
-		transform 1100ms var(--ease-out-expo),
-		opacity 620ms linear 420ms;
-}
-[data-ds-phase="reveal"] .ds-rays,
-[data-ds-phase="reveal"] .ds-snow,
-[data-ds-phase="reveal"] .ds-ripples,
-[data-ds-phase="reveal"] .ds-grain {
-	opacity: 0;
-	transition: opacity 620ms linear;
-}
+/* ------------------------------------------------------------------ skip */
 
-/* The water lens the dial opens into: the exact blue the hero canvas starts on. */
-.ds-lens {
-	position: absolute;
-	left: 50%;
-	top: 50%;
-	width: 260vmax;
-	height: 260vmax;
-	margin: -130vmax 0 0 -130vmax;
-	border-radius: 50%;
-	background: radial-gradient(
-		circle closest-side at 50% 50%,
-		var(--ds-hero) 0%,
-		var(--ds-hero) 52%,
-		color-mix(in srgb, var(--ds-hero) 74%, var(--ds-mid)) 76%,
-		color-mix(in srgb, var(--ds-hero) 30%, var(--ds-mid)) 90%,
-		color-mix(in srgb, var(--ds-mid) 55%, transparent) 100%
-	);
-	opacity: 0;
-	transform: scale(0.04);
-	pointer-events: none;
-}
-[data-ds-phase="reveal"] .ds-lens {
-	opacity: 1;
-	transform: scale(1);
-	transition:
-		transform 1300ms var(--ease-out-expo) 420ms,
-		opacity 260ms linear 420ms;
-}
-[data-ds-phase="reveal"] {
-	opacity: 0;
-	transition: opacity 700ms linear 780ms;
-}
-
-/* ---- skip (the only interactive surface) ---- */
 .ds-skip {
 	position: absolute;
-	right: clamp(18px, 3.4vw, 46px);
-	bottom: clamp(20px, 4vh, 40px);
+	right: clamp(16px, 3vw, 40px);
+	bottom: clamp(56px, 7vh, 86px);
 	z-index: 2;
-	display: inline-flex;
-	align-items: center;
-	gap: 9px;
-	min-height: 44px;
-	padding: 0 14px;
-	border: 0;
-	background: none;
-	color: color-mix(in srgb, var(--ds-light) 62%, transparent);
-	font-family: var(--mono);
-	font-size: 10px;
-	letter-spacing: 0.22em;
-	text-indent: 0.11em;
+	padding: 8px 16px;
+	font-family: var(--ds-mono);
+	font-size: 11px;
+	letter-spacing: 0.18em;
 	text-transform: uppercase;
+	color: var(--ds-ink-dim);
+	background: rgba(8, 30, 44, 0.4);
+	border: 1px solid var(--ds-line);
+	border-radius: 999px;
 	cursor: pointer;
-	opacity: calc(0.42 + 0.58 * var(--ds-in-hud));
-	transition:
-		color var(--duration-mid) var(--ease-out-quart),
-		letter-spacing var(--duration-mid) var(--ease-out-quart);
+	backdrop-filter: blur(6px);
+	transition: color 0.2s ease, border-color 0.2s ease;
 }
-.ds-skip::before {
-	content: "";
-	position: absolute;
-	inset: 6px 0;
-	border: 1px solid color-mix(in srgb, var(--ds-light) 26%, transparent);
-	transition: border-color var(--duration-mid) var(--ease-out-quart);
-}
-.ds-skip::after {
-	content: "→";
-	font-size: 12px;
-	letter-spacing: 0;
-}
+
 .ds-skip:hover,
 .ds-skip:focus-visible {
-	color: var(--ds-light);
-	letter-spacing: 0.28em;
-}
-.ds-skip:hover::before,
-.ds-skip:focus-visible::before {
-	border-color: color-mix(in srgb, var(--ds-light) 58%, transparent);
-}
-.ds-skip:focus-visible {
-	outline: 2px solid color-mix(in srgb, var(--ds-light) 70%, transparent);
-	outline-offset: 4px;
+	color: var(--ds-ink);
+	border-color: var(--ds-accent);
+	outline: none;
 }
 
-[data-ds-fast="true"] {
-	transition-duration: 240ms;
-	transition-delay: 0ms;
-}
-[data-ds-fast="true"] .ds-expand,
-[data-ds-fast="true"] .ds-lens,
-[data-ds-fast="true"] .ds-guides,
-[data-ds-fast="true"] .ds-readout,
-[data-ds-fast="true"] .ds-wordmark,
-[data-ds-fast="true"] .ds-letters span,
-[data-ds-fast="true"] .ds-tagline,
-[data-ds-fast="true"] .ds-status,
-[data-ds-fast="true"] .ds-rays,
-[data-ds-fast="true"] .ds-snow,
-[data-ds-fast="true"] .ds-ripples,
-[data-ds-fast="true"] .ds-grain {
-	transition-duration: 240ms;
-	transition-delay: 0ms;
+/* ------------------------------------------------------------ decoration */
+
+/* Shared: silhouettes are flat fills, tinted per element via `color`. */
+.ds-silhouette {
+	position: absolute;
+	pointer-events: none;
+	fill: currentColor;
 }
 
-@media (max-width: 560px) {
-	.deep-intro {
-		--ds-dial: min(86vmin, 340px);
-	}
-	.ds-readout-wrap {
-		width: min(48vmin, 200px);
-	}
-	.ds-hud--top-right,
-	.ds-hud--bottom-right {
-		display: none;
-	}
-	.ds-hud {
-		font-size: 9px;
-		letter-spacing: 0.16em;
-	}
-	.ds-cell-value {
-		font-size: 11px;
-	}
-	.ds-panel {
-		margin-top: 13px;
-		padding-top: 11px;
-	}
-	.ds-skip {
-		padding: 0 18px;
-	}
-	.ds-skip:hover,
-	.ds-skip:focus-visible {
-		letter-spacing: 0.26em;
-	}
-}
-@media (max-height: 560px) {
-	.deep-intro {
-		--ds-dial: min(58vmin, 300px);
-	}
-	.ds-readout-wrap {
-		width: min(34vmin, 176px);
-	}
-	.ds-value {
-		font-size: clamp(20px, 4.4vmin, 28px);
-	}
-	.ds-panel {
-		margin-top: 11px;
-		padding-top: 9px;
-	}
-	.ds-status {
-		bottom: 46px;
-	}
+/* Caustics — shallow light ripples, gone by the first kilometre. */
+.ds-caustics {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	overflow: hidden;
+	mix-blend-mode: screen;
+	opacity: calc((1 - var(--ds-depth, 0)) * var(--ds-boot, 0) * 0.5);
 }
 
-/* Defence in depth: the boot script never arms the overlay for these visitors. */
+.ds-caustic {
+	position: absolute;
+	top: -30%;
+	height: 160%;
+	width: 30%;
+	background: linear-gradient(180deg, rgba(190, 240, 245, 0.16), transparent 72%);
+	filter: blur(26px);
+	transform: rotate(10deg);
+	animation: ds-caustic-drift 16s ease-in-out infinite;
+}
+
+.ds-caustic--a { left: 6%; }
+.ds-caustic--b { left: 42%; animation-duration: 20s; }
+.ds-caustic--c { left: 74%; width: 24%; animation-duration: 13s; }
+
+@keyframes ds-caustic-drift {
+	0%, 100% { opacity: 0.45; transform: translateY(0) rotate(9deg); }
+	50% { opacity: 0.85; transform: translateY(-20px) rotate(12deg); }
+}
+
+/* A distant school, drifting across the shallows. */
+.ds-school {
+	top: 16%;
+	left: -30%;
+	width: min(52vw, 420px);
+	color: rgba(6, 26, 38, 0.6);
+	filter: blur(1.2px);
+	opacity: calc((1 - var(--ds-depth, 0)) * var(--ds-boot, 0) * 0.55);
+	animation: ds-school-swim 38s linear infinite;
+}
+
+@keyframes ds-school-swim {
+	from { transform: translateX(0); }
+	to { transform: translateX(150vw); }
+}
+
+/* A sunlit shoal right under the surface, gone by the first few hundred metres. */
+.ds-school--sunlit {
+	top: 8%;
+	left: -8%;
+	width: min(60vw, 500px);
+	color: rgba(3, 18, 28, 0.5);
+	filter: blur(0.8px);
+	opacity: calc((1 - min(1, var(--ds-depth, 0) * 2.8)) * var(--ds-boot, 0) * 0.75);
+	animation: ds-school-swim 22s linear infinite;
+}
+
+/* A slow jellyfish, bell-shaped opacity, present through the middle water. */
+.ds-jelly {
+	position: absolute;
+	left: 76%;
+	top: 38%;
+	width: 74px;
+	height: 116px;
+	overflow: visible;
+	pointer-events: none;
+	opacity: calc(var(--ds-depth, 0) * (1 - var(--ds-depth, 0)) * 4 * 0.7);
+	animation: ds-jelly-float 12s ease-in-out infinite;
+}
+
+.ds-jelly-bell {
+	transform-box: fill-box;
+	transform-origin: 50% 62%;
+	animation: ds-jelly-pulse 3.8s ease-in-out infinite;
+}
+
+.ds-jelly-arms {
+	transform-box: fill-box;
+	transform-origin: 50% 0;
+	animation: ds-jelly-tentacles 3.2s ease-in-out infinite;
+}
+
+.ds-jelly-arms--inner {
+	animation-duration: 2.6s;
+}
+
+@keyframes ds-jelly-pulse {
+	0%, 100% { transform: scale(1, 1); }
+	42% { transform: scale(0.86, 1.16); }
+}
+
+@keyframes ds-jelly-float {
+	0%, 100% { transform: translate(0, 0) rotate(-2deg); }
+	30% { transform: translate(12px, -16px) rotate(1.5deg); }
+	60% { transform: translate(-8px, 6px) rotate(2deg); }
+	80% { transform: translate(-14px, -10px) rotate(-1deg); }
+}
+
+@keyframes ds-jelly-tentacles {
+	0%, 100% { transform: skewX(-5deg); }
+	50% { transform: skewX(6deg); }
+}
+
+/* A very faint leviathan, passing far off in the deep. */
+.ds-leviathan {
+	bottom: 12%;
+	right: -46%;
+	width: min(86vw, 780px);
+	color: #04121b;
+	filter: blur(2px);
+	opacity: calc(max(0, var(--ds-depth, 0) * 1.8 - 0.95) * 0.5);
+	animation: ds-leviathan-pass 60s linear infinite;
+}
+
+@keyframes ds-leviathan-pass {
+	from { transform: translateX(0); }
+	to { transform: translateX(-130vw); }
+}
+
+/* Spotlight cone sweeping in and settling on the wordmark at arrival. */
+.ds-beam {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: min(120vw, 1100px);
+	height: min(72vh, 560px);
+	background: linear-gradient(90deg, transparent, rgba(150, 232, 244, 0.2), transparent);
+	clip-path: polygon(0 50%, 100% 0, 100% 100%);
+	mix-blend-mode: screen;
+	opacity: 0;
+	pointer-events: none;
+	animation: ds-beam-sweep 1.25s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+	animation-delay: var(--ds-arrived, 4800ms);
+}
+
+@keyframes ds-beam-sweep {
+	0% { transform: translate(-50%, -50%) rotate(-40deg) scaleX(0.4); opacity: 0; }
+	55% { opacity: 0.85; }
+	100% { transform: translate(-50%, -50%) rotate(-18deg) scaleX(1); opacity: 0.8; }
+}
+
+/* Porthole frame and glass, framed around the middle water. */
+.ds-porthole {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	/* The frame fades in early, then holds through descent and the seabed pause, and only
+	   retracts with the clip-path reveal. */
+	opacity: calc(min(var(--ds-boot, 0), min(1, var(--ds-depth, 0) * 2.5)) * (1 - var(--ds-reveal, 0)) * 0.6);
+}
+
+.ds-porthole::before {
+	content: "";
+	position: absolute;
+	inset: clamp(14px, 3.5vw, 46px);
+	border-radius: 46% / 38%;
+	border: 2px solid rgba(150, 205, 225, 0.16);
+	box-shadow: inset 0 0 130px rgba(0, 0, 0, 0.5), inset 0 0 40px rgba(116, 214, 232, 0.05);
+}
+
+.ds-rivet {
+	position: absolute;
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: rgba(150, 205, 225, 0.32);
+	box-shadow: 0 0 5px rgba(116, 214, 232, 0.4);
+}
+
+.ds-rivet--tl { top: 12%; left: 8%; }
+.ds-rivet--tr { top: 12%; right: 8%; }
+.ds-rivet--bl { bottom: 12%; left: 8%; }
+.ds-rivet--br { bottom: 12%; right: 8%; }
+
+.ds-glass {
+	position: absolute;
+	inset: 0;
+	overflow: hidden;
+	background: linear-gradient(
+		115deg,
+		rgba(255, 255, 255, 0.09) 0 8%,
+		transparent 26%,
+		transparent 70%,
+		rgba(190, 240, 255, 0.06) 80% 100%
+	);
+}
+
+/* Squashed droplets that now and then streak across the outside of the glass. */
+.ds-droplet {
+	position: absolute;
+	width: 7px;
+	height: 9px;
+	border-radius: 60% 60% 55% 55% / 70% 70% 45% 45%;
+	background: radial-gradient(
+		circle at 35% 30%,
+		rgba(235, 250, 255, 0.55),
+		rgba(150, 215, 235, 0.12) 60%,
+		transparent 75%
+	);
+	box-shadow: inset 0 0 3px rgba(255, 255, 255, 0.5);
+	opacity: 0;
+	pointer-events: none;
+}
+
+.ds-droplet--a {
+	left: 22%;
+	top: 18%;
+	animation: ds-droplet-streak 13s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.ds-droplet--b {
+	left: 68%;
+	top: 26%;
+	width: 5px;
+	height: 7px;
+	animation: ds-droplet-streak 17s cubic-bezier(0.4, 0, 0.6, 1) 6s infinite;
+}
+
+@keyframes ds-droplet-streak {
+	0%,
+	78% { opacity: 0; transform: translate(0, 0) scale(0.9); }
+	82% { opacity: 0.85; }
+	94% { opacity: 0.55; transform: translate(26px, 30vh) scale(1.05); }
+	100% { opacity: 0; transform: translate(34px, 42vh) scale(0.9); }
+}
+
+/* Corner instruments: a sweeping sonar dial with a depth needle. */
+.ds-dial {
+	position: absolute;
+	left: clamp(16px, 3vw, 44px);
+	top: 50%;
+	width: 76px;
+	height: 76px;
+	transform: translateY(-50%);
+	opacity: calc(0.3 + var(--ds-boot, 0) * 0.35);
+	pointer-events: none;
+}
+
+.ds-dial-ring {
+	position: absolute;
+	inset: 0;
+	border-radius: 50%;
+	border: 1px solid var(--ds-line);
+}
+
+.ds-dial-ring::before {
+	content: "";
+	position: absolute;
+	inset: 9px;
+	border-radius: 50%;
+	border: 1px dashed rgba(150, 205, 225, 0.18);
+}
+
+.ds-dial-sweep {
+	position: absolute;
+	inset: 8px;
+	border-radius: 50%;
+	background: conic-gradient(from 0deg, rgba(116, 214, 232, 0.4), transparent 28%);
+	animation: ds-dial-spin 3.8s linear infinite;
+}
+
+.ds-dial-needle {
+	position: absolute;
+	left: 50%;
+	bottom: 50%;
+	width: 2px;
+	height: 30px;
+	background: linear-gradient(180deg, var(--ds-accent), transparent);
+	transform-origin: 50% 100%;
+	transform: translateX(-50%) rotate(calc(-120deg + var(--ds-depth, 0) * 240deg));
+}
+
+@keyframes ds-dial-spin {
+	to { transform: rotate(360deg); }
+}
+
+/* Status lamps: one steady, one blinking link. */
+.ds-leds {
+	position: absolute;
+	top: clamp(16px, 3vw, 36px);
+	left: 50%;
+	display: flex;
+	gap: 16px;
+	transform: translateX(-50%);
+	font-size: clamp(9px, 1.1vw, 11px);
+	letter-spacing: 0.16em;
+	color: var(--ds-ink-dim);
+	opacity: var(--ds-boot, 0);
+	pointer-events: none;
+}
+
+.ds-led::before {
+	content: "";
+	display: inline-block;
+	width: 6px;
+	height: 6px;
+	margin-right: 6px;
+	border-radius: 50%;
+	background: var(--ds-accent);
+	box-shadow: 0 0 6px rgba(116, 214, 232, 0.7);
+}
+
+.ds-led--rec::before { background: #e0a24a; box-shadow: 0 0 6px rgba(224, 162, 74, 0.7); }
+.ds-led--link::before { animation: ds-led-blink 1.6s steps(2, end) infinite; }
+
+@keyframes ds-led-blink {
+	0%, 60% { opacity: 1; }
+	61%, 100% { opacity: 0.2; }
+}
+
+/* Vignette — always on, but deepest at the floor. */
+.ds-vignette {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	background: radial-gradient(
+		125% 105% at 50% 50%,
+		transparent calc(52% - var(--ds-depth, 0) * 8%),
+		rgba(0, 0, 0, calc(0.32 + var(--ds-depth, 0) * 0.22)) 100%
+	);
+}
+
+/* PRESSURE RISING: amber warning flicker plus a few pixels of shake. */
+[data-ds-label="pressure"] .ds-stage {
+	animation: ds-pressure-shake 0.42s steps(4, end) 3;
+}
+
+[data-ds-label="pressure"] .ds-hud,
+[data-ds-label="pressure"] .ds-leds {
+	color: #e0a24a;
+	animation: ds-amber-flicker 0.5s steps(3, end) infinite;
+}
+
+[data-ds-label="pressure"] .ds-readout .ds-label { color: #e8b062; }
+
+@keyframes ds-pressure-shake {
+	0% { transform: translate(0, 0); }
+	25% { transform: translate(-2px, 1px); }
+	50% { transform: translate(2px, -1px); }
+	75% { transform: translate(-1px, -2px); }
+	100% { transform: translate(0, 0); }
+}
+
+@keyframes ds-amber-flicker {
+	0% { opacity: 0.85; }
+	50% { opacity: 0.55; }
+	100% { opacity: 0.95; }
+}
+
+/* Deep water: a touch of chromatic separation on the wordmark. */
+[data-ds-label="deep-sea"] .ds-letters {
+	filter: drop-shadow(1px 0 rgba(255, 90, 90, 0.12)) drop-shadow(-1px 0 rgba(90, 240, 255, 0.12));
+}
+
+/* ---------------------------------------------------------------- reveal */
+
+.deep-intro[data-ds-fast="true"] {
+	clip-path: circle(0% at 50% 50%) !important;
+	transition: clip-path 0.3s ease;
+}
+
+.deep-intro[data-ds-fast="true"] .ds-stage {
+	opacity: 0;
+	transition: opacity 0.24s ease;
+}
+
 @media (prefers-reduced-motion: reduce) {
-	.deep-intro {
-		display: none !important;
-	}
-}
-@media print {
-	.deep-intro {
-		display: none !important;
+	.deep-intro { clip-path: none; }
+	.ds-grain { animation: none; }
+	.ds-sonar-ring { animation: none; }
+	.ds-tagline { animation: none; }
+	/* Every embellishment is switched off for reduced motion. */
+	.ds-caustics,
+	.ds-school,
+	.ds-jelly,
+	.ds-leviathan,
+	.ds-beam,
+	.ds-dial,
+	.ds-leds,
+	.ds-porthole,
+	.ds-vignette {
+		display: none;
 	}
 }
