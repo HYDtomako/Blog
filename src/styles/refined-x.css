@@ -82,7 +82,8 @@ body {
 body {
   background-image: var(--bg-canvas);
   background-repeat: no-repeat;
-  background-size: 100% 100vh;
+  /* Span the whole document, not just one viewport, so long pages stay graded. */
+  background-size: 100% 100%;
 }
 ::selection {
   background: var(--ink);
@@ -737,10 +738,6 @@ h4 {
   color: var(--ink);
   border-color: var(--ink);
   background: var(--bg-sunken);
-}
-.tag::before {
-  content: "#";
-  color: var(--ghost);
 }
 
 /* feature cards */
