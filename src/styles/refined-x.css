@@ -1343,11 +1343,12 @@ h4 {
 }
 .article-toc-link.is-active {
   color: var(--ink);
-  font-weight: 600;
+  font-weight: 700;
 }
 .article-toc-item.is-level-3 .article-toc-link.is-active,
 .article-toc-item.is-level-4 .article-toc-link.is-active {
-  font-weight: 500;
+  color: var(--ink);
+  font-weight: 700;
 }
 @media (min-width: 1024px) {
   .article-layout[data-toc] {
