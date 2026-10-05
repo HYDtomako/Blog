@@ -48,7 +48,10 @@ const showUpdated =
 const pubDateIso = pubDate?.toISOString().slice(0, 10);
 const updatedIso = effectiveUpdated?.toISOString().slice(0, 10);
 
-const tocItems = contentType === 'article' ? extractTocFromMarkdown(entry.body ?? '') : [];
+const tocItems =
+	contentType === 'article' || contentType === 'note'
+		? extractTocFromMarkdown(entry.body ?? '')
+		: [];
 const showToc = shouldShowToc(tocItems);
 ---
 {contentType === 'note' ? (
@@ -75,13 +78,17 @@ const showToc = shouldShowToc(tocItems);
 
     <hr class="rule-soft article-divider" />
 
-    <div class="article-layout">
+    <div class="article-layout" data-toc={showToc ? '' : undefined}>
       <div class="article-layout-main">
+        {showToc && <ArticleToc part="mobile" items={tocItems} />}
         <div class="prose article-body">
           <slot />
         </div>
       </div>
+      {showToc && <ArticleToc part="rail" items={tocItems} />}
     </div>
+
+    {siteConfig.readingProgress?.enabled && <ScrollWaterBall />}
 
     {siteConfig.stats?.enabled && (
       <footer class="article-foot">
