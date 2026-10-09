@@ -1,5 +1,6 @@
 import type { Env } from './env.ts'
 import { failure, json, readJsonBody } from './http.ts'
+import { ADMIN_HTML } from './admin-page.ts'
 
 /**
  * The one-person control room for the site: totals, per-page stats, the guestbook
@@ -25,6 +26,18 @@ const LINKS_COUNT_SELECT = 'SELECT COUNT(*) AS total FROM link_submissions'
 const LINKS_PENDING_SELECT = `SELECT COUNT(*) AS total FROM link_submissions WHERE status = 'pending'`
 const LINKS_SELECT = `SELECT id, url, domain, name, description, icon, status, created_at FROM link_submissions
 ORDER BY id DESC LIMIT ?1`
+
+// The daily chart merges four sources: views come from daily_views (recorded per view),
+// likes/messages/links from the created_at column of their own tables, so those three
+// reach back before daily_views existed.
+const DAILY_DAYS = 30
+const DAILY_VIEWS_SELECT = 'SELECT day, views FROM daily_views WHERE day >= ?1 ORDER BY day ASC'
+const DAILY_LIKES_SELECT = `SELECT date(created_at) AS day, COUNT(*) AS likes
+FROM page_likes WHERE date(created_at) >= ?1 GROUP BY day`
+const DAILY_MESSAGES_SELECT = `SELECT date(created_at) AS day, COUNT(*) AS messages
+FROM guestbook_messages WHERE date(created_at) >= ?1 GROUP BY day`
+const DAILY_LINKS_SELECT = `SELECT date(created_at) AS day, COUNT(*) AS links
+FROM link_submissions WHERE date(created_at) >= ?1 GROUP BY day`
 
 // A message is removed together with its replies and every like attached to either.
 const REPLY_LIKE_DELETE = `DELETE FROM guestbook_likes
@@ -65,6 +78,10 @@ export async function handleAdmin(
 	if (pathname === '/api/admin/pages') {
 		if (request.method !== 'GET') return methodNotAllowed('GET')
 		return json(await readPages(env))
+	}
+	if (pathname === '/api/admin/daily') {
+		if (request.method !== 'GET') return methodNotAllowed('GET')
+		return json(await readDaily(env))
 	}
 	if (pathname === '/api/admin/guestbook') {
 		if (request.method !== 'GET') return methodNotAllowed('GET')
@@ -118,6 +135,46 @@ async function readPages(env: Env): Promise<unknown> {
 		updated_at: string
 	}>()
 	return { pages: rows.results }
+}
+
+type DailyDay = { day: string, views: number, likes: number, messages: number, links: number }
+
+async function readDaily(env: Env): Promise<{ days: DailyDay[] }> {
+	const days = recentUtcDays(DAILY_DAYS)
+	const from = days[0]
+	const [views, likes, messages, links] = await Promise.all([
+		env.STATS_DB.prepare(DAILY_VIEWS_SELECT).bind(from).all<{ day: string, views: number }>(),
+		env.STATS_DB.prepare(DAILY_LIKES_SELECT).bind(from).all<{ day: string, likes: number }>(),
+		env.STATS_DB.prepare(DAILY_MESSAGES_SELECT).bind(from).all<{ day: string, messages: number }>(),
+		env.STATS_DB.prepare(DAILY_LINKS_SELECT).bind(from).all<{ day: string, links: number }>(),
+	])
+	const byDay = <T extends { day: string }>(rows: T[]): Map<string, T> =>
+		new Map(rows.map((row) => [row.day, row]))
+	const viewsByDay = byDay(views.results)
+	const likesByDay = byDay(likes.results)
+	const messagesByDay = byDay(messages.results)
+	const linksByDay = byDay(links.results)
+	return {
+		days: days.map((day) => ({
+			day,
+			views: viewsByDay.get(day)?.views ?? 0,
+			likes: likesByDay.get(day)?.likes ?? 0,
+			messages: messagesByDay.get(day)?.messages ?? 0,
+			links: linksByDay.get(day)?.links ?? 0,
+		})),
+	}
+}
+
+/** The last `count` UTC days (YYYY-MM-DD) ending today, oldest first. */
+function recentUtcDays(count: number): string[] {
+	const days: string[] = []
+	const now = new Date()
+	for (let offset = count - 1; offset >= 0; offset -= 1) {
+		days.push(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - offset))
+			.toISOString()
+			.slice(0, 10))
+	}
+	return days
 }
 
 async function readGuestbook(env: Env): Promise<unknown> {
@@ -208,144 +265,3 @@ async function sameSecret(a: string, b: string): Promise<boolean> {
 	for (let i = 0; i < bytesA.length; i += 1) diff |= bytesA[i] ^ bytesB[i]
 	return diff === 0
 }
-
-const ADMIN_HTML = [
-	'<!doctype html>',
-	'<html lang="zh-CN"><head><meta charset="utf-8">',
-	'<meta name="viewport" content="width=device-width, initial-scale=1">',
-	'<meta name="robots" content="noindex">',
-	'<title>hydblog 后台</title>',
-	'<style>',
-	':root{color-scheme:dark}',
-	'*{box-sizing:border-box}',
-	'body{margin:0;background:#06131f;color:#d7e6f2;font:14px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace}',
-	'header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:14px 18px;border-bottom:1px solid #12324a}',
-	'h1{font-size:15px;margin:0 12px 0 0;color:#6fe3d2}',
-	'input,button,select{font:inherit;background:#0b2136;color:#d7e6f2;border:1px solid #1c4666;border-radius:6px;padding:6px 10px}',
-	'button{cursor:pointer}button:hover{border-color:#3ba9d6}',
-	'#token{width:220px}',
-	'nav{display:flex;gap:6px;padding:12px 18px 0}',
-	'nav button{background:transparent;border-color:#16374f}',
-	'nav button[aria-selected="true"]{background:#0e2c44;border-color:#3ba9d6;color:#6fe3d2}',
-	'main{padding:16px 18px 60px}',
-	'#status{color:#7f9bb3;font-size:12px;margin-left:auto}',
-	'.cards{display:flex;flex-wrap:wrap;gap:12px}',
-	'.card{min-width:130px;background:#0a2033;border:1px solid #12324a;border-radius:10px;padding:12px 16px}',
-	'.card b{display:block;font-size:24px;color:#6fe3d2}',
-	'.card span{font-size:12px;color:#7f9bb3}',
-	'table{border-collapse:collapse;width:100%;margin-top:14px}',
-	'th,td{text-align:left;padding:8px 10px;border-bottom:1px solid #0f2c42;vertical-align:top}',
-	'th{color:#7f9bb3;font-weight:normal;position:sticky;top:0;background:#06131f}',
-	'td.num{text-align:right;font-variant-numeric:tabular-nums}',
-	'td.actions{white-space:nowrap}',
-	'td.actions button{padding:3px 8px;font-size:12px;margin-right:4px}',
-	'.tag{font-size:11px;padding:1px 7px;border-radius:99px;border:1px solid #2a5a7d;color:#8fd0e8}',
-	'.tag.approved{color:#7ee0a8;border-color:#2f7a52}',
-	'.tag.rejected{color:#e88f8f;border-color:#7a3a3a}',
-	'.muted{color:#6b8399;font-size:12px}',
-	'.empty{color:#6b8399;padding:20px 0}',
-	'</style></head><body>',
-	'<header>',
-	'<h1>hydblog 后台</h1>',
-	'<input id="token" type="password" placeholder="后台口令" autocomplete="current-password">',
-	'<button id="save">保存口令</button>',
-	'<button id="reload">刷新</button>',
-	'<span id="status"></span>',
-	'</header>',
-	'<nav id="tabs"></nav>',
-	'<main><div id="panel"><p class="empty">输入口令后点“保存口令”。</p></div></main>',
-	'<script>',
-	'var TABS=[["overview","总览"],["pages","页面"],["guestbook","留言"],["links","友链"]];',
-	'var TOKEN_KEY="hydblog_admin_token";',
-	'var token=localStorage.getItem(TOKEN_KEY)||"";',
-	'var current="overview";',
-	'var tabsEl=document.getElementById("tabs");',
-	'var panel=document.getElementById("panel");',
-	'var statusEl=document.getElementById("status");',
-	'var tokenInput=document.getElementById("token");',
-	'tokenInput.value=token;',
-	'function setStatus(t){statusEl.textContent=t||""}',
-	'function api(path,options){',
-	'  return fetch(path,Object.assign({},options,{headers:Object.assign({"authorization":"Bearer "+token},(options&&options.headers)||{})}))',
-	'    .then(function(r){if(!r.ok){return r.json().catch(function(){return{}}).then(function(b){throw new Error((b.error&&b.error.message)||("HTTP "+r.status))})}return r.json()});',
-	'}',
-	'function el(tag,cls,text){var n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n}',
-	'function clear(node){while(node.firstChild)node.removeChild(node.firstChild)}',
-	'function buildTabs(){',
-	'  clear(tabsEl);',
-	'  TABS.forEach(function(t){',
-	'    var b=el("button",null,t[1]);',
-	'    b.setAttribute("aria-selected",String(t[0]===current));',
-	'    b.onclick=function(){current=t[0];render()};',
-	'    tabsEl.appendChild(b);',
-	'  });',
-	'}',
-	'function render(){',
-	'  buildTabs();',
-	'  clear(panel);',
-	'  if(!token){panel.appendChild(el("p","empty","输入口令后点“保存口令”。"));return}',
-	'  setStatus("加载中…");',
-	'  var task=current==="overview"?loadOverview:current==="pages"?loadPages:current==="guestbook"?loadGuestbook:loadLinks;',
-	'  task().then(function(){setStatus("")}).catch(function(e){setStatus("出错："+e.message)});',
-	'}',
-	'function loadOverview(){',
-	'  return api("/api/admin/overview").then(function(d){',
-	'    var cards=el("div","cards");',
-	'    [["总浏览",d.views],["总点赞",d.likes],["页面数",d.pages],["留言数",d.guestbook],["友链提交",d.links],["待处理友链",d.pendingLinks]].forEach(function(c){',
-	'      var box=el("div","card");box.appendChild(el("b",null,String(c[1])));box.appendChild(el("span",null,c[0]));cards.appendChild(box);',
-	'    });',
-	'    panel.appendChild(cards);',
-	'  });',
-	'}',
-	'function table(headers,rows){',
-	'  var t=el("table");var thead=el("thead");var tr=el("tr");',
-	'  headers.forEach(function(h){tr.appendChild(el("th",null,h))});thead.appendChild(tr);t.appendChild(thead);',
-	'  var tb=el("tbody");rows.forEach(function(cells){var r=el("tr");cells.forEach(function(c){r.appendChild(c)});tb.appendChild(r)});',
-	'  t.appendChild(tb);return t;',
-	'}',
-	'function loadPages(){',
-	'  return api("/api/admin/pages").then(function(d){',
-	'    if(!d.pages.length){panel.appendChild(el("p","empty","还没有页面数据。"));return}',
-	'    var rows=d.pages.map(function(p){',
-	'      var path=el("td");path.appendChild(el("span",null,p.path));',
-	'      return [path,el("td","num",String(p.views)),el("td","num",String(p.likes)),el("td","muted",p.updated_at)];',
-	'    });',
-	'    panel.appendChild(table(["路径","浏览","点赞","最后更新"],rows));',
-	'  });',
-	'}',
-	'function loadGuestbook(){',
-	'  return api("/api/admin/guestbook").then(function(d){',
-	'    if(!d.messages.length){panel.appendChild(el("p","empty","还没有留言。"));return}',
-	'    var rows=d.messages.map(function(m){',
-	'      var body=el("td",null,m.body+(m.parent_id?" ↳回复#"+m.parent_id:""));',
-	'      var act=el("td","actions");',
-	'      var del=el("button",null,"删除");',
-	'      del.onclick=function(){if(confirm("删除留言 #"+m.id+"（含回复）？")){del.disabled=true;api("/api/admin/guestbook/delete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({id:m.id})}).then(render).catch(function(e){del.disabled=false;setStatus("出错："+e.message)})}};',
-	'      act.appendChild(del);',
-	'      return [el("td","num",String(m.id)),body,el("td","num",String(m.likes)),el("td","muted",m.created_at),act];',
-	'    });',
-	'    panel.appendChild(table(["ID","内容","赞","时间","操作"],rows));',
-	'  });',
-	'}',
-	'function loadLinks(){',
-	'  return api("/api/admin/links").then(function(d){',
-	'    if(!d.links.length){panel.appendChild(el("p","empty","还没有友链提交。"));return}',
-	'    var rows=d.links.map(function(l){',
-	'      var name=el("td");var a=el("a",null,l.name);a.href=l.url;a.target="_blank";a.rel="noreferrer";a.style.color="#8fd0e8";name.appendChild(a);name.appendChild(el("div","muted",l.domain));',
-	'      var tag=el("span","tag "+l.status,l.status);var st=el("td");st.appendChild(tag);',
-	'      var act=el("td","actions");',
-	'      var sel=el("select");["pending","approved","rejected"].forEach(function(s){var o=el("option",null,s);o.value=s;if(s===l.status)o.selected=true;sel.appendChild(o)});',
-	'      sel.onchange=function(){api("/api/admin/links/status",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({id:l.id,status:sel.value})}).then(function(){setStatus("已更新 #"+l.id)}).catch(function(e){setStatus("出错："+e.message)})};',
-	'      var del=el("button",null,"删除");',
-	'      del.onclick=function(){if(confirm("删除友链 "+l.name+"？")){api("/api/admin/links/delete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({id:l.id})}).then(render).catch(function(e){setStatus("出错："+e.message)})}};',
-	'      act.appendChild(sel);act.appendChild(del);',
-	'      return [el("td","num",String(l.id)),name,st,el("td","muted",l.created_at),act];',
-	'    });',
-	'    panel.appendChild(table(["ID","站点","状态","时间","操作"],rows));',
-	'  });',
-	'}',
-	'document.getElementById("save").onclick=function(){token=tokenInput.value.trim();localStorage.setItem(TOKEN_KEY,token);render()};',
-	'document.getElementById("reload").onclick=render;',
-	'render();',
-	'</script></body></html>',
-].join('\n')

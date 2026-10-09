@@ -59,6 +59,17 @@ test('views keep working when the runtime does not surface RETURNING rows', asyn
 	assert.deepEqual(await view(db, '/notes'), { path: '/notes', views: 2, likes: 0, liked: false })
 })
 
+test('views accrue into the daily views table under today’s UTC day', async () => {
+	const db = createStatsDatabase()
+	const today = new Date().toISOString().slice(0, 10)
+	await view(db, '/notes')
+	await view(db, '/notes')
+	await view(db, '/other')
+	const row = await db.prepare('SELECT views FROM daily_views WHERE day = ?1').bind(today).first<{ views: number }>()
+	assert.equal(row?.views, 3)
+	assert.equal((await countRows(db, 'daily_views'))?.total, 1)
+})
+
 test('view reports whether the current actor has already liked the page', async () => {
 	const db = createStatsDatabase()
 	await view(db, '/notes', 'actor-a')
