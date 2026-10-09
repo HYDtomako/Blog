@@ -14,6 +14,11 @@ const VIEW_UPSERT = `INSERT INTO page_stats (path, views) VALUES (?1, 1)
 ON CONFLICT(path) DO UPDATE SET views = views + 1, updated_at = datetime('now')
 RETURNING views, likes`
 
+// Every view also steps the site-wide counter for today (UTC day), which is what
+// the admin console's daily chart reads.
+const DAILY_VIEW_UPSERT = `INSERT INTO daily_views (day, views) VALUES (date('now'), 1)
+ON CONFLICT(day) DO UPDATE SET views = views + 1`
+
 const STATS_SELECT = 'SELECT views, likes FROM page_stats WHERE path = ?1'
 const STATS_ENSURE = 'INSERT INTO page_stats (path) VALUES (?1) ON CONFLICT(path) DO NOTHING'
 const LIKES_INCREMENT = `UPDATE page_stats SET likes = likes + 1, updated_at = datetime('now') WHERE path = ?1`
@@ -51,6 +56,7 @@ async function recordView(
 	actorId: string | null,
 ): Promise<PageStatsView> {
 	const upserted = await db.prepare(VIEW_UPSERT).bind(path).first<PageStatsRow>()
+	await db.prepare(DAILY_VIEW_UPSERT).run()
 	// Not every D1 runtime surfaces RETURNING rows, so a missing row falls back to a read
 	// instead of reporting a counter that never moved.
 	const stats = upserted ?? (await readPageStats(db, path))

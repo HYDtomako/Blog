@@ -35,6 +35,23 @@ npm run db:migrate         # apply migrations to the remote D1
 npm run deploy             # build + verify + migrate + wrangler deploy
 ```
 
+## Admin console
+
+`/admin` (`worker/admin.ts`, presentation in `worker/admin-page.ts`) is a dependency-free,
+light HTML console served straight from the Worker; every `/api/admin/*` route needs
+`Authorization: Bearer <ADMIN_TOKEN>` (a `wrangler secret`). Its Chinese navigation covers
+site overview, traffic statistics, link submissions, and guestbook moderation. A separate login
+form reuses the saved token, tolerates unavailable storage, and clears it on logout or HTTP 401.
+Overview shows lifetime/today/30-day page views (PV, not unique visitors), pending links and
+recent activity. Traffic combines a 30-day chart, UTC daily table and searchable page ranking.
+Daily views come from `daily_views` (`worker/migrations/0004_daily_views.sql`); likes,
+messages and submissions use their creation dates. Views only reach back to that table's
+deployment. Lists are limited to 200 rows; page ranking is the top 200 by views, and moderation
+filters/counts cover loaded records only. Link approval does not publish a front-page link:
+`content/links.json` still needs manual maintenance. Guestbook deletion confirms removal of
+a main message, its replies and related likes. Requests have loading/retry states, mutation
+buttons are disabled while processing, and stale responses cannot replace a newer view.
+
 ## Guestbook
 
 `/guestbook/` and `/en/guestbook/` render `src/components/pages/GuestbookPage.astro`, which mounts
