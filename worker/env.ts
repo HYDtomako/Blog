@@ -29,6 +29,7 @@ export type RateLimiter = {
 
 export interface Env {
 	STATS_DB: D1Database
+	ADMIN_TOKEN?: string
 	STATS_ACTOR_SECRET?: string
 	STATS_RATE_LIMITER?: RateLimiter
 	GUESTBOOK_RATE_LIMITER?: RateLimiter

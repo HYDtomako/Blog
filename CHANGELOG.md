@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Admin console (`/admin`) with separate login and four navigation sections: 站点概况, 访问统计, 友链申请, and 留言管理. Overview shows lifetime/today/30-day PV, pending links and recent activity; traffic combines a 30-day chart, searchable page ranking and UTC daily views, likes, messages and submissions from `/api/admin/daily`. Daily views start with `worker/migrations/0004_daily_views.sql`; other daily metrics aggregate existing creation dates. Moderation includes filters, deletion confirmation, loading/retry states and protection against stale responses; link approval still requires manual publication in `content/links.json`. Configure `ADMIN_TOKEN` as a Cloudflare Worker secret; API access stays locked without it.
+
 - Favicons generated from the avatar: `favicon.png` and `apple-touch-icon.png` are derived from `public/asset/avatar.jpg`, the same image the home hero and About page use
 - `src/lib/public-surfaces.ts`: the single source of truth for the machine-readable endpoints the footer links (locale-scoped vs site-wide)
 - Root `wrangler.jsonc`: the site deploys as a Cloudflare Worker with static assets (`npm run build`, then `npx wrangler deploy` uploading `./dist`)

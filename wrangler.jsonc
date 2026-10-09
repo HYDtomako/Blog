@@ -7,7 +7,7 @@
 		"directory": "./dist",
 		"binding": "ASSETS",
 		"not_found_handling": "404-page",
-		"run_worker_first": ["/api/stats/*", "/api/guestbook", "/api/guestbook/*", "/api/links"]
+		"run_worker_first": ["/admin", "/admin/*", "/api/admin/*", "/api/stats/*", "/api/guestbook", "/api/guestbook/*", "/api/links"]
 	},
 	"d1_databases": [
 		{
