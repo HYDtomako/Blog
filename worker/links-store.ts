@@ -10,7 +10,7 @@ import {
 	type LinksWallBody,
 } from './links-service.ts'
 import type { LinkMetadata } from '../shared/link-metadata.ts'
-import { signalDepth } from '../shared/link-metadata.ts'
+import { normalizeSubmittedUrl, signalDepth } from '../shared/link-metadata.ts'
 
 export type SubmissionRow = {
 	url: string
@@ -72,6 +72,20 @@ export async function readWall(db: D1Database): Promise<LinksWallBody> {
 		db.prepare(WALL_TOTAL_SELECT).first<CountRow>(),
 	])
 	return wallBody(rows.results.map(rowBody), total?.total ?? rows.results.length)
+}
+
+export async function readSignals(db: D1Database): Promise<{ signals: LinksSubmission[] }> {
+	const rows = await db.prepare(`SELECT url, domain, name, description, icon, created_at
+		FROM link_submissions WHERE status = 'approved' ORDER BY created_at DESC, id DESC`).all<SubmissionRow>()
+	const seen = new Set<string>()
+	const signals: LinksSubmission[] = []
+	for (const row of rows.results) {
+		const url = normalizeSubmittedUrl(row.url)
+		if (!url || seen.has(url.href)) continue
+		seen.add(url.href)
+		signals.push({ ...rowBody(row), url: url.href })
+	}
+	return { signals }
 }
 
 export async function countSubmissionsSince(

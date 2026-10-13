@@ -314,6 +314,12 @@ class ConsoleElement {
 	onclick?: () => unknown
 	oninput?: () => unknown
 	onchange?: () => unknown
+	onfocus?: () => unknown
+	onblur?: () => unknown
+	onpointerenter?: () => unknown
+	onpointerleave?: () => unknown
+	onkeydown?: (event: { key: string, preventDefault(): void }) => unknown
+	getBoundingClientRect() { return { width: 720, height: 260 } }
 	onsubmit?: (event: { preventDefault(): void }) => unknown
 	constructor(tag = 'div') { this.tagName = tag }
 	appendChild(child: ConsoleElement) {
@@ -323,7 +329,8 @@ class ConsoleElement {
 	}
 	replaceChildren() { this.children = [] }
 	setAttribute(key: string, value: string) { this.attributes[key] = value }
-	focus() {}
+	getAttribute(key: string) { return this.attributes[key] ?? null }
+	focus() { this.onfocus?.() }
 	querySelectorAll(tag: string): ConsoleElement[] {
 		return this.children.flatMap((child) => [...(child.tagName === tag ? [child] : []), ...child.querySelectorAll(tag)])
 	}
@@ -339,7 +346,7 @@ function consoleHarness(fetcher: typeof fetch, storageBlocked = false) {
 	const confirmations: string[] = []
 	let confirmed = true
 	const context = {
-		document: { getElementById: node, createElement: (tag: string) => new ConsoleElement(tag) },
+		document: { getElementById: node, createElement: (tag: string) => new ConsoleElement(tag), createElementNS: (_ns: string, tag: string) => new ConsoleElement(tag) },
 		localStorage: {
 			getItem() { if (storageBlocked) throw new Error('blocked'); return null },
 			setItem() { if (storageBlocked) throw new Error('blocked') },
@@ -461,4 +468,49 @@ test('submitted links only allow http(s), and cancelled deletion makes no reques
 	ui.node('panel').querySelectorAll('button').find((b) => b.textContent === '删除')!.onclick!()
 	await settle()
 	assert.equal(await countRows(db, 'link_submissions'), 1)
+})
+
+test('chart defaults to rounded bars, switches area/metrics and floats accessible zero/spike tooltips', async () => {
+	const db = createStatsDatabase()
+	await db.prepare('INSERT INTO daily_views (day, views) VALUES (?1, 9999)').bind(utcDay(0)).run()
+	const ui = consoleHarness(workerFetcher(createEnv({ db })))
+	await ui.login()
+	const panel = ui.node('panel')
+	const svg = panel.querySelectorAll('svg')[0]
+	assert.equal(svg.attributes.viewBox, '0 0 720 260')
+	assert.equal(svg.querySelectorAll('path').length, 30)
+	assert.match(svg.querySelectorAll('path')[29].attributes.d, / Q /)
+	const targets = svg.querySelectorAll('rect').filter((n) => n.attributes.role === 'img')
+	assert.equal(targets.length, 30)
+	assert.equal(targets.filter((n) => n.attributes.tabindex === '0').length, 1)
+	assert.match(targets[0].attributes['aria-label'], /浏览（PV） 0/)
+	assert.match(targets[29].attributes['aria-label'], /9,999/)
+	const tip = panel.querySelectorAll('div').find((n) => n.className === 'chart-tip')!
+	assert.equal(tip.hidden, true)
+	targets[29].onfocus!()
+	assert.equal(tip.hidden, false)
+	assert.match(tip.text, /UTC.*浏览（PV）.*9,999/)
+	assert.match(tip.style.left, /px$/)
+	assert.ok(Number.parseFloat(tip.style.left) <= 522)
+	targets[29].onkeydown!({ key: 'Home', preventDefault() {} })
+	assert.match(tip.text, new RegExp(utcDay(29)))
+	assert.match(tip.text, /浏览（PV）.*0/)
+	targets[0].onkeydown!({ key: 'Escape', preventDefault() {} })
+	assert.equal(tip.hidden, true)
+	targets[0].onclick!()
+	assert.equal(tip.hidden, false)
+	targets[0].onblur!()
+	assert.equal(tip.hidden, true)
+	panel.querySelectorAll('button').find((b) => b.textContent === '趋势图')!.onclick!()
+	assert.equal(panel.querySelectorAll('svg')[0].querySelectorAll('path').length, 2)
+	const select = panel.querySelectorAll('select')[0]
+	for (const metric of ['likes', 'messages', 'links']) {
+		select.value = metric; select.onchange!()
+		assert.match(panel.text, /合计 0 · 暂无记录/)
+		panel.querySelectorAll('path').forEach((path) => assert.doesNotMatch(path.attributes.d, /NaN|Infinity/))
+	}
+	panel.querySelectorAll('button').find((b) => b.textContent === '柱状图')!.onclick!()
+	assert.equal(panel.querySelectorAll('svg')[0].querySelectorAll('path').length, 30)
+	await ui.tab('访问统计')
+	assert.equal(panel.querySelectorAll('svg')[0].querySelectorAll('path').length, 30)
 })

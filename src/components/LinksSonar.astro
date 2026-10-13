@@ -1,5 +1,6 @@
 ---
 import Icon from './Icon.astro';
+import LinkSignal from './LinkSignal.astro';
 import { formatDepth } from '../../shared/link-metadata.ts';
 import { layoutSignals, summarizeSignals } from '../lib/links';
 import { readLinks } from '../lib/links-file';
@@ -14,10 +15,7 @@ const UI = copy.ui;
 const links = UI.links;
 const hub = copy.brand.persona;
 
-/**
- * The sonar is a pure function of `content/links.json`: every dot keeps the same spot
- * on every build, and the page ships with its dots in the markup, so it works without JS.
- */
+/** Authored signals ship in HTML; approved signals are merged by the client. */
 const signals = layoutSignals(await readLinks());
 const summary = summarizeSignals(signals);
 const submitEnabled = siteConfig.links?.enabled === true;
@@ -80,7 +78,8 @@ const particles: [number, number, number][] = [
 	class="ls"
 	data-links-sonar
 	data-links-endpoint={submitEnabled ? endpoint : ''}
-	data-links-joined={JSON.stringify(submitEnabled ? joined : [])}
+	data-links-joined={JSON.stringify(joined)}
+	data-links-static={JSON.stringify(signals)}
 	data-links-locale={locale}
 	data-links-labels={JSON.stringify(labels)}
 	aria-labelledby="links-heading"
@@ -130,58 +129,16 @@ const particles: [number, number, number][] = [
 			<span class="ls-hub-label mono">{hub}</span>
 		</div>
 
-		{signals.map((signal) => (
-			<a
-				class="ls-signal"
-				href={signal.url}
-				target="_blank"
-				rel="noopener noreferrer"
-				data-links-signal
-				data-x={signal.x.toFixed(4)}
-				data-y={signal.y.toFixed(4)}
-				data-variant={signal.variant}
-				data-card-side={signal.x <= 0.5 ? 'right' : 'left'}
-				style={`--ls-x:${(signal.x * 100).toFixed(2)}%;--ls-y:${(signal.y * 100).toFixed(2)}%;--ls-turn:${signal.turn.toFixed(4)};--ls-i:${signal.index};--ls-scale:${signal.scale.toFixed(3)}`}
-				aria-label={links.signalAria(signal.name, signal.depthLabel)}
-			>
-				<span class="ls-dot" aria-hidden="true" />
-				<span class="ls-card" aria-hidden="true">
-					<span class="ls-card-head mono">{signal.signalLabel}</span>
-					<span class="ls-card-main">
-						<span class="ls-card-icon">
-							<span class="ls-card-initial">{signal.name.slice(0, 1).toUpperCase()}</span>
-							{signal.icon && (
-								<img
-									src={signal.icon}
-									alt=""
-									width="30"
-									height="30"
-									loading="lazy"
-									decoding="async"
-									referrerpolicy="no-referrer"
-								/>
-							)}
-						</span>
-						<span class="ls-card-text">
-							<span class="ls-card-name">{signal.name}</span>
-							{signal.description && <span class="ls-card-desc">{signal.description}</span>}
-						</span>
-					</span>
-					<span class="ls-card-foot mono">
-						<span class="ls-card-domain">{signal.domain}</span>
-						<span class="ls-card-depth">DEPTH {signal.depthLabel}</span>
-						<Icon name="external" size={12} />
-					</span>
-				</span>
-			</a>
-		))}
+		<LinkSignal host signal={{ ...layoutSignals([{ url: siteConfig.site, name: hub, description: copy.brand.description, icon: withBase('/asset/avatar.jpg') }])[0], x: 0.5, y: 0.5, url: withBase(locale === 'en' ? '/en/about/' : '/about/'), signalLabel: 'HOST' }} openLabel={links.openSite(hub)} />
+		<div data-links-signals>
+			{signals.map((signal) => <LinkSignal signal={signal} openLabel={links.openSite(signal.name)} />)}
+		</div>
+		<template data-links-signal-template><LinkSignal signal={layoutSignals([{ url: 'https://example.com/', icon: '/favicon.png' }])[0]} openLabel="" /></template>
 	</div>
 
 	<div class="ls-hud mono">
-		<span>{links.signalsDetected} <b>{String(summary.count).padStart(2, '0')}</b></span>
-		{summary.count > 0 && (
-			<span>{links.depthRange} <b>{formatDepth(summary.minDepth)} – {formatDepth(summary.maxDepth)}</b></span>
-		)}
+		<span>{links.signalsDetected} <b data-links-count>{String(summary.count).padStart(2, '0')}</b></span>
+		<span data-links-range hidden={summary.count === 0}>{links.depthRange} <b data-links-depth>{formatDepth(summary.minDepth)} – {formatDepth(summary.maxDepth)}</b></span>
 	</div>
 	<p class="ls-hud ls-hud-env mono" aria-hidden="true">{station}</p>
 	<p class="ls-note mono">{links.depthNote}</p>
@@ -189,10 +146,12 @@ const particles: [number, number, number][] = [
 	<div class="ls-cta" data-links-cta>
 		<p class="ls-cta-line mono">{links.cta}</p>
 		{submitEnabled ? (
-			<details class="ls-add" data-links-add>
-				<summary class="ls-add-toggle">{links.ctaButton}<Icon name="external" size={14} /></summary>
+			<div class="ls-add">
+				<button class="ls-add-toggle" type="button" data-links-dialog-open>{links.ctaButton}<Icon name="external" size={14} /></button>
+				<dialog class="ls-dialog" data-links-dialog aria-labelledby="links-dialog-title" aria-describedby="links-dialog-note">
+				<button type="button" class="ls-dialog-close" data-links-dialog-close aria-label={links.close}>×</button>
 				<form class="ls-form" data-links-form novalidate>
-					<p class="ls-form-title mono">{links.formTitle}</p>
+					<h2 id="links-dialog-title" class="ls-form-title mono">{links.ctaButton}</h2>
 					<label class="ls-field">
 						<span class="ls-field-label">{links.urlLabel}</span>
 						<input
@@ -209,10 +168,11 @@ const particles: [number, number, number][] = [
 					</label>
 					<button class="btn btn-solid ls-submit" type="submit" data-links-submit>{links.connect}</button>
 					<p class="ls-status mono" data-links-status data-state="idle" role="status" aria-live="polite"></p>
-					<p class="ls-form-note">{links.formNote}</p>
+					<p id="links-dialog-note" class="ls-form-note">{links.formNote}</p>
 					<noscript><p class="ls-form-note mono">{links.noScript}</p></noscript>
 				</form>
-			</details>
+			</dialog>
+			</div>
 		) : (
 			<p class="ls-offline mono">{links.unavailable}</p>
 		)}
@@ -246,7 +206,21 @@ const particles: [number, number, number][] = [
 	</template>
 </section>
 
-<style>
+<style is:global>
+	.ls-dialog { position: fixed; inset: 0; margin: auto; width: min(440px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); padding: 28px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+	.ls-dialog::backdrop { background: #0008; backdrop-filter: blur(4px); }
+	.ls-dialog-close { position: absolute; right: 12px; top: 8px; background: transparent; color: var(--muted); border: 0; font-size: 24px; cursor: pointer; }
+	.ls-dialog .ls-form { margin: 0; padding: 0; border: 0; background: transparent; }
+	.ls-signal[data-open] { z-index: 10; }
+	.ls-signal[data-open] .ls-card { pointer-events: auto; }
+	.ls-trigger { display: grid; place-items: center; width: 44px; min-height: 44px; color: var(--muted); text-decoration: none; }
+	.ls-signal-name { position: absolute; top: 27px; font: 10px var(--mono); white-space: nowrap; max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
+	.ls-host .ls-dot { visibility: hidden; }
+	.ls-host .ls-signal-name { font-size: 11px; }
+	.ls-hub-label { visibility: hidden; }
+	.ls-card-visit { font-size: 12px; color: var(--ls-accent); }
+	.ls-add { text-align: center; }
+	.ls-dialog { text-align: left; }
 	.ls {
 		--ls-accent: #005fcc;
 		--ls-glow: color-mix(in srgb, var(--ls-accent) 42%, transparent);
@@ -258,7 +232,7 @@ const particles: [number, number, number][] = [
 		margin-top: 40px;
 	}
 
-	:global([data-theme='dark']) .ls {
+	[data-theme='dark'] .ls {
 		--ls-accent: #7fb4d8;
 	}
 
@@ -537,7 +511,7 @@ const particles: [number, number, number][] = [
 		outline-offset: 2px;
 	}
 
-	/* ---- the wall: links other people sent in, public the moment they arrive ---- */
+	/* ---- recently approved links ---- */
 	.ls-wall {
 		display: grid;
 		gap: 10px;

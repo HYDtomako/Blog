@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import type { D1Database } from './env.ts'
 import { LinksProblem, MAX_SUBMISSIONS_PER_DAY, WALL_SIZE } from './links-service.ts'
-import { countSubmissionsSince, createSubmission, readWall } from './links-store.ts'
+import { countSubmissionsSince, createSubmission, readSignals, readWall } from './links-store.ts'
 import { createStatsDatabase } from './test/d1-sqlite.ts'
 
 const ACTOR = 'actor-a'
@@ -140,4 +140,24 @@ test('a row stored without metadata still answers with a domain name', async () 
 	await db.prepare(`UPDATE link_submissions SET status = 'approved'`).run()
 	const wall = await readWall(db)
 	assert.equal(wall.submissions[0].url, 'https://bare.example.org/page')
+})
+
+test('signals are approved-only, uncapped, normalized and deduplicated without private fields', async () => {
+	const db = createStatsDatabase()
+	await submission(db, URL_A)
+	assert.deepEqual(await readSignals(db), { signals: [] })
+	await approve(db, URL_A)
+	await submission(db, URL_A, OTHER_ACTOR, 'Newest')
+	await approve(db, URL_A)
+	for (let i = 0; i < 55; i++) {
+		const url = `https://approved-${i}.example.com/`
+		await submission(db, url, `actor-${i}`)
+		await approve(db, url)
+	}
+	const { signals } = await readSignals(db)
+	assert.equal(signals.length, 56)
+	assert.equal(signals.find((s) => s.url === URL_A)?.name, 'Newest')
+	assert.ok(signals.every((s) => !('actor_id' in s) && !('status' in s) && !('id' in s)))
+	await db.prepare("UPDATE link_submissions SET status = 'rejected' WHERE url = ?1").bind(URL_A).run()
+	assert.equal((await readSignals(db)).signals.length, 55)
 })

@@ -9,7 +9,7 @@ export type LinksProblemCode = 'invalid_body' | 'invalid_url' | 'signal_lost' | 
 
 export type LinksSubmitRequest = { url: string }
 
-/** One row of the public wall: a link somebody sent in, waiting to be picked up. */
+/** Public site metadata; only approved records are exposed in the catalogue and wall. */
 export type LinksSubmission = {
 	url: string
 	name: string
