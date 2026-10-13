@@ -244,6 +244,10 @@ export function summarizeSignals(placed: PlacedSignal[]): SignalSummary {
  * Validates the authored list: rows without a public http(s) url are skipped and a
  * repeated url keeps its first appearance, so a typo never takes the page down.
  */
+export function mergeLinkEntries(authored: LinkEntry[], approved: LinkEntry[]): LinkEntry[] {
+	return readLinkEntries([...authored, ...approved]);
+}
+
 export function readLinkEntries(value: unknown): LinkEntry[] {
 	if (!Array.isArray(value)) return [];
 	const seen = new Set<string>();
