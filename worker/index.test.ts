@@ -790,3 +790,25 @@ test('the links wall is rate limited on reads and writes alike', async () => {
 	assert.equal(await errorCode(read), 'rate_limited')
 })
 
+test('approved signals route publishes only after moderation and supports revocation', async () => {
+	const { env } = createEnv({ secret: SECRET })
+	env.ADMIN_TOKEN = 'local-test-token'
+	const restore = stubSiteFetch('<title>Friend</title>')
+	try {
+		assert.equal((await postLinks(env, { url: 'https://example.com/' })).status, 201)
+		const read = () => worker.fetch(new Request(LINKS_URL + '/signals'), env)
+		assert.deepEqual(await json(await read()), { signals: [] })
+		const moderate = (status: string) => worker.fetch(new Request('https://hydblog.xyz/api/admin/links/status', {
+			method: 'POST', headers: { authorization: 'Bearer local-test-token', 'content-type': 'application/json' }, body: JSON.stringify({ id: 1, status }),
+		}), env)
+		assert.equal((await moderate('approved')).status, 200)
+		const published = await json(await read())
+		assert.equal((published.signals as unknown[]).length, 1)
+		assert.equal((await moderate('rejected')).status, 200)
+		assert.deepEqual(await json(await read()), { signals: [] })
+		assert.equal((await worker.fetch(new Request(LINKS_URL + '/signals', { method: 'POST' }), env)).status, 405)
+		const limited = createEnv({ secret: SECRET, linksLimiter: 'deny' })
+		assert.equal((await worker.fetch(new Request(LINKS_URL + '/signals', { headers: { 'cf-connecting-ip': VISITOR } }), limited.env)).status, 429)
+	} finally { restore() }
+})
+

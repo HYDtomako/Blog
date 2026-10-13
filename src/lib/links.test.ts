@@ -8,6 +8,7 @@ import {
 	SIGNAL_RADIUS_FLOOR,
 	SONAR_RADIUS_STAGE,
 	layoutSignals,
+	mergeLinkEntries,
 	placePendingSignal,
 	readLinkEntries,
 	signalPlacement,
@@ -141,4 +142,12 @@ test('dots vary by a few percent and some are drawn hollow', () => {
 	const pending = placePendingSignal(placed, 'https://pending.example.com/');
 	assert.equal(pending.scale, signalPlacement('https://pending.example.com/').scale);
 	assert.equal(pending.variant, signalPlacement('https://pending.example.com/').variant);
+});
+
+test('approved entries merge by normalized URL with authored metadata taking priority', () => {
+	const merged = mergeLinkEntries([{ url: 'https://example.com', name: 'Authored' }], [
+		{ url: 'https://example.com/', name: 'Dynamic' }, { url: 'https://friend.example/' }, { url: 'javascript:alert(1)' },
+	]);
+	assert.deepEqual(merged, [{ url: 'https://example.com/', name: 'Authored' }, { url: 'https://friend.example/' }]);
+	assert.equal(layoutSignals(merged).length, 2);
 });

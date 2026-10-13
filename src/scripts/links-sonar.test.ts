@@ -57,6 +57,11 @@ class StubNode {
 		getPropertyValue: (name: string) => this.properties.get(name) ?? '',
 	};
 	private text = '';
+	focused = false;
+	open = false;
+	focus() { this.focused = true; }
+	showModal() { this.open = true; }
+	close() { this.open = false; this.dispatch('close'); }
 
 	constructor(tagName: string) {
 		this.tagName = tagName;
@@ -444,11 +449,11 @@ test('labels, joined urls and fallbacks survive a broken payload', () => {
 	assert.equal(readLinksConfig(plain as unknown as HTMLElement), null);
 });
 
-test('hovering a signal on a fine pointer opens its card in place', () => {
+test('hovering a signal on a fine pointer opens its card in place', async () => {
 	const stub = buildSonar();
 	initLinksSonar(stub.doc as unknown as Document, stub.win);
 
-	stub.signal.dispatch('pointerenter');
+	stub.signal.dispatch('focusin');
 	assert.equal(stub.signal.getAttribute('data-open'), 'true');
 	assert.equal(stub.signal.getAttribute('data-card-side'), 'right');
 	assert.equal(stub.stage.getAttribute('data-active'), 'true');
@@ -457,6 +462,7 @@ test('hovering a signal on a fine pointer opens its card in place', () => {
 	assert.equal(stub.signal.style.getPropertyValue('--ls-link-y'), '55px');
 
 	stub.signal.dispatch('pointerleave');
+	await new Promise((resolve) => setTimeout(resolve, 200));
 	assert.equal(stub.signal.getAttribute('data-open'), null);
 	assert.equal(stub.stage.getAttribute('data-active'), null);
 
@@ -487,6 +493,7 @@ test('the wall lists what other people sent in and marks the ones already on the
 		}),
 	);
 	initLinksSonar(stub.doc as unknown as Document, stub.win, impl);
+	await Promise.resolve();
 	assert.equal(stub.wallStatus.textContent, TEST_LABELS.wallLoading);
 	await settling();
 
@@ -556,7 +563,7 @@ test('a build with no api hides the invitation instead of complaining', async ()
 	assert.equal(stub.wallStatus.textContent, '');
 });
 
-test('a submitted url is posted and shows up at the top of the wall', async () => {
+test('a submitted url waits for approval without entering the public wall', async () => {
 	const stub = buildSonar({ joined: ['https://astro.build/'] });
 	const { impl, calls } = fakeFetch((_url, init) =>
 		init?.method === 'POST'
@@ -576,10 +583,8 @@ test('a submitted url is posted and shows up at the top of the wall', async () =
 	assert.deepEqual(JSON.parse(String(post?.init?.body)), { url: 'astro.build' });
 
 	const rows = stub.wallList.querySelectorAll('.ls-row');
-	assert.equal(rows.length, 1);
-	assert.equal(stub.wallList.hidden, false);
-	assert.equal(rows[0].querySelector('[data-links-field="name"]')?.textContent, 'Fresh');
-	assert.equal(rows[0].getAttribute('data-joined'), 'true');
+	assert.equal(rows.length, 0);
+	assert.equal(stub.wallList.hidden, true);
 	assert.equal(stub.input.value, '');
 	assert.equal(stub.status.textContent, `${TEST_LABELS.received} — ${TEST_LABELS.receivedNote}`);
 	assert.equal(stub.status.getAttribute('data-state'), 'ok');
@@ -609,10 +614,39 @@ test('an unreachable site reports SIGNAL LOST and keeps the wall untouched', asy
 test('the sonar still opens cards when submissions are switched off', () => {
 	const stub = buildSonar({ endpoint: '' });
 	initLinksSonar(stub.doc as unknown as Document, stub.win);
-	stub.signal.dispatch('pointerenter');
+	stub.signal.dispatch('focusin');
 	assert.equal(stub.signal.getAttribute('data-open'), 'true');
 
 	stub.input.value = 'https://example.com/';
 	stub.form.dispatch('submit');
 	assert.equal(stub.status.textContent, '');
+});
+
+test('native dialog focuses input and restores the opener after close', () => {
+	const stub = buildSonar();
+	const dialog = new StubNode('dialog'); dialog.setAttribute('data-links-dialog', '');
+	const opener = new StubNode('button'); opener.setAttribute('data-links-dialog-open', '');
+	const closer = new StubNode('button'); closer.setAttribute('data-links-dialog-close', '');
+	stub.root.append(dialog, opener, closer);
+	initLinksSonar(stub.doc as unknown as Document, stub.win, fakeFetch(() => jsonResponse({ submissions: [] })).impl);
+	opener.dispatch('click');
+	assert.equal(dialog.open, true); assert.equal(stub.input.focused, true);
+	closer.dispatch('click');
+	assert.equal(dialog.open, false); assert.equal(opener.focused, true);
+});
+
+test('dynamic signals merge, refresh on focus, revoke and retain static fallback on failure', async () => {
+	const stub = buildSonar();
+	stub.root.setAttribute('data-links-static', JSON.stringify([{ url: 'https://example.com/', name: 'Authored' }]));
+	const list = new StubNode('div'); list.setAttribute('data-links-signals', '');
+	const template = new StubNode('template'); template.setAttribute('data-links-signal-template', ''); template.append(stub.signal.cloneNode(true));
+	stub.root.append(list, template);
+	let focus = () => {}; (stub.win as unknown as { addEventListener: (type: string, fn: () => void) => void }).addEventListener = (_type, fn) => { focus = fn; };
+	let approved = [submission('Dynamic', 'https://example.com/'), submission('Friend', 'https://friend.example/')];
+	let failed = false;
+	const { impl } = fakeFetch((url) => url.endsWith('/signals') ? jsonResponse(failed ? {} : { signals: approved }, failed ? 503 : 200) : jsonResponse({ submissions: [] }));
+	initLinksSonar(stub.doc as unknown as Document, stub.win, impl);
+	await settling(); assert.equal(list.children.length, 2);
+	approved = []; focus(); await settling(); assert.equal(list.children.length, 1);
+	failed = true; focus(); await settling(); assert.equal(list.children.length, 1);
 });

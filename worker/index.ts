@@ -22,7 +22,7 @@ import {
 	parseSubmitRequest,
 	type LinksSubmitRequest,
 } from './links-service.ts'
-import { createSubmission, readWall } from './links-store.ts'
+import { createSubmission, readSignals, readWall } from './links-store.ts'
 import {
 	MAX_BODY_BYTES,
 	isJsonContentType,
@@ -199,7 +199,7 @@ async function handleGuestbookRemove(request: Request, env: Env): Promise<Respon
 	}
 }
 
-/** `GET` shows the public wall of submitted links; `POST` adds one to it. */
+/** `GET` shows approved links; `POST` stores a pending application. */
 async function handleLinks(request: Request, env: Env): Promise<Response> {
 	if (request.method === 'GET') return handleLinksWall(request, env)
 	if (request.method === 'POST') return handleLinksSubmit(request, env)
@@ -256,6 +256,11 @@ export default {
 		if (pathname === '/api/guestbook') return handleGuestbook(request, env)
 		if (pathname === '/api/guestbook/like') return handleGuestbookLike(request, env)
 		if (pathname === '/api/guestbook/remove') return handleGuestbookRemove(request, env)
+		if (pathname === '/api/links/signals') {
+			if (request.method !== 'GET') return failure(405, 'method_not_allowed', 'use GET /api/links/signals', { allow: 'GET' })
+			if (await isRateLimited(env.LINKS_RATE_LIMITER, await guestbookActor(request, env))) return failure(429, 'rate_limited', 'too many requests', { 'retry-after': '60' })
+			try { return json(await readSignals(env.STATS_DB)) } catch (error) { return toErrorResponse(error) }
+		}
 		if (pathname === '/api/links') return handleLinks(request, env)
 		return env.ASSETS.fetch(request)
 	},

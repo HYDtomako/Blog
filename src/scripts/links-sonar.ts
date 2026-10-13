@@ -1,3 +1,6 @@
+import { layoutSignals, mergeLinkEntries, readLinkEntries, summarizeSignals } from '../lib/links.ts';
+import { formatDepth, normalizeSubmittedUrl } from '../../shared/link-metadata.ts';
+
 export type LinksErrorCode =
 	| 'invalid_url'
 	| 'signal_lost'
@@ -62,7 +65,7 @@ export const FALLBACK_LABELS: LinksLabels = {
 	connect: 'CONNECT',
 	connecting: 'CONNECTING…',
 	received: 'SIGNAL RECEIVED',
-	receivedNote: 'It is on the wall below now.',
+	receivedNote: 'Received, awaiting approval.',
 	wallLoading: 'Loading signals…',
 	wallEmpty: 'No signals yet. Be the first.',
 	wallFailed: 'The signal wall is unavailable right now.',
@@ -166,6 +169,7 @@ export function parseSubmission(value: unknown): LinksSubmission | null {
 	if (!value || typeof value !== 'object') return null;
 	const data = value as Record<string, unknown>;
 	if (typeof data.url !== 'string' || typeof data.name !== 'string' || typeof data.domain !== 'string') return null;
+	if (!normalizeSubmittedUrl(data.url)) return null;
 	return {
 		url: data.url,
 		name: data.name,
@@ -222,6 +226,7 @@ export function fillSubmissionRow(
 			} else {
 				image.src = submission.icon;
 				image.hidden = false;
+				image.addEventListener('error', () => { image.hidden = true; });
 			}
 		}
 	});
@@ -278,27 +283,31 @@ export function initLinksSonar(
 		open = signal;
 	};
 
-	for (const signal of Array.from(stage.querySelectorAll<HTMLElement>('[data-links-signal]'))) {
+	let hoverTimer: ReturnType<typeof setTimeout> | undefined;
+	const bindSignal = (signal: HTMLElement) => {
+		const cancel = () => { clearTimeout(hoverTimer); };
 		if (finePointer) {
-			signal.addEventListener('pointerenter', () => openCard(signal));
-			signal.addEventListener('pointerleave', close);
+			signal.addEventListener('pointerenter', () => { cancel(); hoverTimer = setTimeout(() => openCard(signal), 100); });
+			signal.addEventListener('pointerleave', () => { cancel(); hoverTimer = setTimeout(close, 180); });
 		}
-		signal.addEventListener('focusin', () => openCard(signal));
-		signal.addEventListener('focusout', close);
-		signal.addEventListener('click', (event) => {
+		signal.addEventListener('focusin', () => { cancel(); openCard(signal); });
+		signal.addEventListener('focusout', (event) => { if (!signal.contains(event.relatedTarget as Node)) close(); });
+		const trigger = signal.querySelector<HTMLElement>('.ls-trigger') ?? signal;
+		trigger.addEventListener('click', (event) => {
 			if (nextSignalAction(pointerKind, signal.dataset.open === 'true') === 'open') {
 				event.preventDefault();
 				openCard(signal);
 			}
 		});
-	}
+	};
+	for (const signal of Array.from(stage.querySelectorAll<HTMLElement>('[data-links-signal]'))) bindSignal(signal);
 
 	doc.addEventListener('keydown', (event) => {
 		if ((event as KeyboardEvent).key === 'Escape') close();
 	});
 	doc.addEventListener('pointerdown', (event) => {
 		const target = event.target as Node | null;
-		if (open && target && !open.contains(target) && !stage.contains(target)) close();
+		if (open && target && !open.contains(target)) close();
 	});
 
 	const form = root.querySelector<HTMLFormElement>('[data-links-form]');
@@ -380,18 +389,21 @@ export function initLinksSonar(
 		renderWall(wall.submissions);
 	};
 
-	const addWallRow = (submission: LinksSubmission) => {
-		const row = createRow(submission);
-		if (!row) return;
-		wallEmpty?.setAttribute('hidden', '');
-		wallList.hidden = false;
-		wallList.prepend(row);
-		setWallStatus('');
-	};
+	const dialog = root.querySelector<HTMLDialogElement>('[data-links-dialog]');
+	const dialogOpen = root.querySelector<HTMLButtonElement>('[data-links-dialog-open]');
+	dialogOpen?.addEventListener('click', () => { close(); dialog?.showModal(); input?.focus(); });
+	root.querySelector('[data-links-dialog-close]')?.addEventListener('click', () => dialog?.close());
+	dialog?.addEventListener('close', () => dialogOpen?.focus());
+	dialog?.addEventListener('click', (event) => {
+		if (event.target !== dialog) return;
+		const bounds = dialog.getBoundingClientRect();
+		if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) dialog.close();
+	});
 
 	if (form && input && submitButton) {
 		form.addEventListener('submit', (event) => {
 			event.preventDefault();
+			if (submitButton.disabled) return;
 			const raw = input.value.trim();
 			const submitTo = async () => {
 				setStatus('pending', labels.connecting);
@@ -411,7 +423,7 @@ export function initLinksSonar(
 					}
 					input.removeAttribute('aria-invalid');
 					input.value = '';
-					addWallRow(parsed.submission);
+
 					setStatus('ok', `${labels.received} — ${labels.receivedNote}`);
 				} catch {
 					setStatus('error', errorText('unavailable'));
@@ -423,5 +435,48 @@ export function initLinksSonar(
 		});
 	}
 
-	void requestWall();
+	const signalList = root.querySelector<HTMLElement>('[data-links-signals]');
+	const signalTemplate = root.querySelector<HTMLTemplateElement>('[data-links-signal-template]');
+	let authored = readLinkEntries([]);
+	try { authored = readLinkEntries(JSON.parse(root.dataset.linksStatic ?? '[]')); } catch {}
+	let refreshing = false;
+	const requestSignals = async () => {
+		if (!signalList || !signalTemplate || refreshing) return;
+		refreshing = true;
+		try {
+			const response = await fetchImpl(`${endpoint}/signals`, { headers: { accept: 'application/json' }, cache: 'no-store' });
+			const payload = await response.json();
+			if (!response.ok || !Array.isArray(payload?.signals)) return;
+			const placed = layoutSignals(mergeLinkEntries(authored, readLinkEntries(payload.signals)));
+			close();
+			signalList.textContent = '';
+			joined.clear();
+			for (const signal of placed) {
+				const source = signalTemplate.content.firstElementChild;
+				if (!source) continue;
+				const node = source.cloneNode(true) as HTMLElement;
+				node.dataset.x = String(signal.x); node.dataset.y = String(signal.y); node.dataset.url = signal.url;
+				node.dataset.variant = signal.variant;
+				for (const [key, value] of Object.entries({ x: `${signal.x * 100}%`, y: `${signal.y * 100}%`, turn: signal.turn, i: signal.index, scale: signal.scale })) node.style.setProperty(`--ls-${key}`, String(value));
+				for (const [selector, value] of Object.entries({ '.ls-signal-name': signal.name, '.ls-card-name': signal.name, '.ls-card-desc': signal.description ?? '', '.ls-card-domain': signal.domain, '.ls-card-depth': `DEPTH ${signal.depthLabel}`, '.ls-card-head': signal.signalLabel, '.ls-card-initial': signal.name.slice(0, 1) })) {
+					const field = node.querySelector(selector); if (field) field.textContent = value;
+				}
+				const image = node.querySelector<HTMLImageElement>('img');
+				if (image) { image.hidden = !signal.icon; if (signal.icon) image.src = signal.icon; image.addEventListener('error', () => { image.hidden = true; }); }
+				const visit = applyTemplate(labels.openSiteTemplate, '__NAME__', signal.name);
+				node.querySelectorAll('a').forEach((a) => { a.href = signal.url; a.setAttribute('aria-label', visit); });
+				const cardLink = node.querySelector('.ls-card-visit'); if (cardLink) cardLink.textContent = `${visit} ↗`;
+				node.querySelector('.ls-card')?.setAttribute('aria-label', signal.name);
+				joined.add(signal.url); signalList.append(node); bindSignal(node);
+			}
+			const summary = summarizeSignals(placed);
+			const count = root.querySelector('[data-links-count]'); if (count) count.textContent = String(summary.count).padStart(2, '0');
+			const range = root.querySelector<HTMLElement>('[data-links-range]'); if (range) range.hidden = !summary.count;
+			const depth = root.querySelector('[data-links-depth]'); if (depth) depth.textContent = `${formatDepth(summary.minDepth)} – ${formatDepth(summary.maxDepth)}`;
+		} catch {} finally { refreshing = false; }
+	};
+	const refresh = async () => { await requestSignals(); void requestWall(); };
+	win.addEventListener?.('focus', refresh);
+	doc.addEventListener('visibilitychange', () => { if (root.ownerDocument?.visibilityState === 'visible') refresh(); });
+	refresh();
 }

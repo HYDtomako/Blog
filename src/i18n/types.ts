@@ -260,6 +260,7 @@ export type UiCopy = {
 		connect: string;
 		connecting: string;
 		formNote: string;
+		close: string;
 		received: string;
 		receivedNote: string;
 		/** The public wall of submitted links. */

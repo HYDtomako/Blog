@@ -47,8 +47,14 @@ recent activity. Traffic combines a 30-day chart, UTC daily table and searchable
 Daily views come from `daily_views` (`worker/migrations/0004_daily_views.sql`); likes,
 messages and submissions use their creation dates. Views only reach back to that table's
 deployment. Lists are limited to 200 rows; page ranking is the top 200 by views, and moderation
-filters/counts cover loaded records only. Link approval does not publish a front-page link:
-`content/links.json` still needs manual maintenance. Guestbook deletion confirms removal of
+filters/counts cover loaded records only. The dependency-free chart card defaults to rounded SVG
+bars and switches to an area trend, with a compact PV/likes/messages/link-applications selector.
+UTC axes adapt to the available width; a floating date/value tooltip stays inside the plot on
+pointer hover, touch tap or keyboard focus (one Tab stop, arrows/Home/End for dates, Escape to
+hide). The footer shows the selected metric total and actual date range, including explicit zero
+and empty states; no example data or chart-library dependencies are shipped. Link approval
+publishes a dynamic sonar signal automatically; `content/links.json` remains an independent
+static authored source, taking priority over approved entries with the same normalized URL. Guestbook deletion confirms removal of
 a main message, its replies and related likes. Requests have loading/retry states, mutation
 buttons are disabled while processing, and stale responses cannot replace a newer view.
 
@@ -87,24 +93,26 @@ the sweep itself is a rotating conic gradient with a 60° tail, so the browser c
 instead of repainting a beam. Dots differ by a few percent in size and about one in eight is hollow;
 that variation is drawn from the same URL hash and means nothing.
 
-`content/links.json` is the only source of truth: `{ url, name?, description?, icon? }`. `npm run
+`content/links.json` is the authored static source: `{ url, name?, description?, icon? }`. `npm run
 sync:links` (`scripts/sync-links.mjs`, wired into `prebuild`) fills the three optional fields from
 the site's own head tags, never overwrites an authored field, keeps the previous values when a site
 is unreachable, and never fails the build; the parser lives in `shared/link-metadata.ts`, so the
 Worker reads a submitted site exactly the way the build reads an authored one.
 
-`src/scripts/links-sonar.ts` is the only client code on the page. It places the HUD card inside the
-stage (hover/focus on fine pointers, first tap on coarse ones), dims the rest of the field, and drives
-the public wave below: `GET /api/links` renders the newest submissions (a row per link, `waiting` or
-`on the sonar` when its URL is already in `content/links.json`), and `POST /api/links` adds one. The
-route (`worker/links-service.ts`, `worker/links-store.ts`, D1 table from
-`worker/migrations/0003_links.sql`) reuses the guestbook's weekly actor pseudonym and
-`LINKS_RATE_LIMITER`, fetches the target site (6 s timeout, HTML only, ≤256 KB, public http(s) hosts
-only) and stores the link. The wall is public the moment it is sent — nobody has to approve a row —
-but a row is never a sonar signal: publishing stays a hand edit of `content/links.json`. Wall links
-carry `rel="nofollow ugc"`, and the API never returns the actor pseudonym. `links.enabled` in
-`site.config.mjs` hides the composer and the wall together. `npm run test:links` covers the metadata
-parser, the layout maths, the wall and the page behaviour.
+`src/scripts/links-sonar.ts` merges the static list with `GET /api/links/signals`, an uncapped,
+normalized-URL-deduplicated approved-only public catalogue. It refreshes on load, focus and visible
+page return without polling; failed requests preserve the existing static sonar. Approval needs no
+rebuild; rejection/deletion removes dynamic entries on refresh, not independent static entries.
+`LinkSignal.astro` supplies reusable friend/host cards with delayed hover, keyboard focus, first-tap
+preview and an explicit visit link; the host uses public brand copy and the localized About page.
+The native modal dialog handles focus trapping, Escape and focus restoration. `POST /api/links`
+stores a pending application and never immediately inserts it into the public wall. `GET /api/links`
+shows only the newest 50 approved submissions. The routes reuse `LINKS_RATE_LIMITER` and weekly
+actor identity for submissions, read site metadata (6 s timeout, HTML only, ≤256 KB, public http(s)
+hosts only), and never expose actor identifiers. `links.enabled` disables dynamic data, composer
+and wall, keeping authored static signals. Dynamic entries require JavaScript and the Worker API;
+static entries remain accessible without JavaScript. No React or chart library is installed.
+`npm run test:links` covers parsing/layout/client behaviour; Worker coverage runs in `test:stats`.
 
 ## Reading progress ball
 
