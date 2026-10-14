@@ -333,3 +333,5 @@ assemble_system_prompt → LLM → tool_use?
 这份材料的开头有一句话我一直记着：Agency 来自模型训练本身，agent 产品等于「模型 + Harness」——模型是司机，Harness 是车。这组笔记摊开的就是造车的零件：每一个都不难理解，难的是让它们同时成立。
 
 这比记住十几个模块名，更值得留下来。
+
+（原始材料：[shareAI-lab/learn-claude-code](https://github.com/shareAI-lab/learn-claude-code)，一个从 0 到 1 实现 nano claude-code 风格 agent harness 的教学项目；文中代码片段来自该项目与我的模块笔记。）
