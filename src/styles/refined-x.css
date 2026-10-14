@@ -1128,6 +1128,42 @@ h4 {
 .prose li::marker {
   color: var(--ghost);
 }
+.prose table {
+  display: block;
+  width: 100%;
+  margin: 28px 0;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  border-spacing: 0;
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.7;
+}
+.prose th,
+.prose td {
+  padding: 16px 20px;
+  text-align: left;
+  vertical-align: top;
+}
+.prose th {
+  background: var(--line-soft);
+  color: var(--ink);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.prose tr + tr td,
+.prose tbody tr:first-child td {
+  border-top: 1px solid var(--line);
+}
+.prose th + th,
+.prose td + td {
+  border-left: 1px solid var(--line-soft);
+}
+.prose td:first-child {
+  white-space: nowrap;
+  font-weight: 500;
+}
 .prose a {
   color: var(--ink);
   text-decoration: underline;
