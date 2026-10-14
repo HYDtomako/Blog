@@ -313,7 +313,7 @@ Agent Runtime
 assemble_system_prompt → LLM → tool_use?
 ```
 
-这也正好接上了上一篇关于 [verifier、harness 与 oracle](/notes/verifier-harness-oracle/) 的笔记：运行环境不仅要让 Agent 知道「发生了什么」，还要给它一个可检查的「什么算完成」。
+运行环境不仅要让 Agent 知道「发生了什么」，还要给它一个可检查的「什么算完成」。
 
 ## 记下来的主线
 
