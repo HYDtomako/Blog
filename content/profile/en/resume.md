@@ -1,28 +1,23 @@
 ---
-title: About Your Name
-description: Who you are — what you work on, what interests you, and how to reach you.
+title: About HYD
+description: Sample about page for the Refined-X personal publish starter.
 contentType: profile
 slug: about
-tags: [profile]
-llmSummary: The site author's self-introduction — focus areas, things built, interests, and contact links — published for readers, search engines, and AI agents alike.
+tags: [profile, resume]
+llmSummary: HYD sample resume for Refined-X. Replace with your biography, capabilities, and contact policy.
 ---
 
-## About me
+This is placeholder resume content. Edit this file and `person.yaml` to publish a real about page.
 
-Write your self-introduction here: who you are, what you work on, and why you keep this site. This text also feeds machine-readable surfaces such as `/api/profile.json` and `llms.txt`, so keep it concrete.
+## Capabilities
 
-## What I have done
+- **Publishing** — Markdown/YAML public corpus with a clear schema
+- **Agents** — Machine-readable surfaces generated at build time
+- **Design** — Editorial monochrome UI with an Ask entry point
 
-- **Something one** — one line about what you did and how it turned out.
-- **Something two** — one line about what you did and how it turned out.
+## Social Networks
 
-## Interests
-
-- **Interest one** — one line. To add a photo, put the file in `public/asset/` and link it as `[have a look](/asset/your-image.jpg)`.
-- **Interest two** — one line.
-
-## Contact
-
-- [GitHub](https://github.com/yourname)
-- [Email](mailto:you@example.com)
-- [Website](https://example.com)
+- [GitHub](https://github.com/HYDtomako)
+- [小红书 (RED)](https://www.xiaohongshu.com/user/profile/66d475eb000000001d020233)
+- [Bilibili](https://space.bilibili.com/1092398699)
+- [X (Twitter)](https://x.com/HuYiDeuu)

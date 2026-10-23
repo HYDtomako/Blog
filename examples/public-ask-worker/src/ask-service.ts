@@ -125,9 +125,7 @@ async function generateSummary(
       usage: { promptTokens: null, completionTokens: null, totalTokens: null },
     };
   }
-  // DeepSeek directly: this instance's AI Gateway rejects unauthenticated requests
-  // (Authenticated Gateway), and the Worker already carries its own quotas and privacy controls.
-  const endpoint = "https://api.deepseek.com/chat/completions";
+  const endpoint = `https://gateway.ai.cloudflare.com/v1/${encodeURIComponent(env.AI_GATEWAY_ACCOUNT_ID)}/${encodeURIComponent(env.AI_GATEWAY_ID)}/deepseek/chat/completions`;
   const headers: Record<string, string> = {
     authorization: `Bearer ${env.DEEPSEEK_API_KEY}`,
     "content-type": "application/json",

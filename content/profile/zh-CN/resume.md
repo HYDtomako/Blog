@@ -1,28 +1,34 @@
 ---
-title: 关于你的名字
-description: 你的自我介绍：关注方向、日常兴趣与联系方式。
+title: 关于 HYD
+description: Refined-X 个人发布模板的示例「关于」页面。
 contentType: profile
 slug: about
-tags: [个人资料]
-llmSummary: 站点作者的自我介绍：关注方向、做过的事情、日常兴趣与联系方式；这一页同时提供给读者、搜索引擎和 AI Agent。
+tags: [个人资料, 简历]
+llmSummary: HYD 在 Refined-X 中的示例简历。请替换成你自己的简介、能力与联系策略。
 ---
 
-## 关于我
+## About Me
 
-这里写你的自我介绍：你是谁、在做什么、为什么开这个站点。这段文字会出现在关于页，也会写进 `/api/profile.json`、`llms.txt` 这类机器可读接口，所以尽量写得具体一点。
+我是一名正在青岛工学院读书的学生。平时喜欢动漫，音乐，游戏和拍风景。目前专注于AI Agent方向，希望成为一名全栈开发者，及开源贡献者（接触虽晚，但继续向前吧）。一直都是学习者，但接触开源之后，也想尝试做一些自己的贡献，相互帮助，相互学习。
 
-## 做过什么
+“尝试做，而不是想；山一直在那里，向山进发！”
 
-- **经历一** —— 用一句话说明你做了什么、结果如何。
-- **经历二** —— 用一句话说明你做了什么、结果如何。
 
-## 兴趣
+## Hobbies
 
-- **兴趣一** —— 用一句话说明。想配图就把图片放进 `public/asset/`，然后写 `[看看图片](/asset/your-image.jpg)`。
-- **兴趣二** —— 用一句话说明。
+- **动漫** —— 追番和剧情向作品，喜欢日常，纯爱的故事 [看看图片](/asset/4.jpg)
+- **音乐** —— 听的挺杂的，流行乐，游戏音乐...
+- **拍风景** —— 出门随手拍，记录美好 [看看照片](/asset/3.jpg)
 
-## 联系
+## Social Networks
 
-- [GitHub](https://github.com/yourname)
-- [邮箱](mailto:you@example.com)
-- [网站](https://example.com)
+- [GitHub](https://github.com/HYDtomako)
+- [小红书](https://www.xiaohongshu.com/user/profile/66d475eb000000001d020233)
+- [B站](https://space.bilibili.com/1092398699)
+- [X (Twitter)](https://x.com/HuYiDeuu)
+
+## About Blog
+
+平时用于记录自己的学习过程，保持持续输出，主要记录AI全栈，LLM等相关内容。之前blog都写在CSDN上，但总觉得要整一个属于自己的内容，也参考了很多优秀blog设计，感觉很酷，所以就有了这个。
+
+希望内容能帮到你，欢迎学习，欢迎交流!

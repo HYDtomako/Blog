@@ -3,7 +3,6 @@
 .DS_Store
 .env
 .env.production
-.dev.vars
 # build output
 # dependencies
 # environment variables
@@ -11,7 +10,6 @@
 # local instance overlay (parent monorepo owns the real file)
 # logs
 # macOS-specific files
-.wrangler/
 dist/
 examples/**/.wrangler/
 examples/**/node_modules/
@@ -20,7 +18,6 @@ examples/public-ask-worker/spike/**/.dry-run/
 examples/public-ask-worker/test/product-clients/.acceptance-base-url
 examples/public-ask-worker/test/product-clients/fixtures/
 examples/public-ask-worker/wrangler.demo.jsonc
-examples/public-ask-worker/wrangler.local.jsonc
 instance.config.mjs
 node_modules/
 npm-debug.log*

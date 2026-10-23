@@ -38,14 +38,13 @@ export type SiteBrand = {
 	alternateNames: string[];
 	homeHeading: string;
 	homeTitle: string;
-	homeLede?: string;
-	/** Optional writing-section lede; when unset the section shows only its count line. */
-	writingLede?: string;
+	homeLede: string;
+	writingLede: string;
 	askChips: Array<{ label: string; query: string }>;
-	footerTagline?: string;
+	footerTagline: string;
 	projects: {
 		heading: string;
-		description?: string;
+		description: string;
 		lede: string;
 		titleSuffix: string;
 	};

@@ -1,0 +1,12 @@
+title: Simple_CNN
+description: CNN 的学习与代码复现，从卷积、池化到完整训练流程。
+slug: simple-cnn
+status: active
+stars: 0
+url: https://github.com/HYDtomako/Simple_CNN
+repository: https://github.com/HYDtomako/Simple_CNN
+tags: [深度学习, CNN, Python]
+category: oss
+featured: false
+sortRank: 24
+role: 作者

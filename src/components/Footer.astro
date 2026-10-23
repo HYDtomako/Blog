@@ -33,11 +33,9 @@ const siteHost = (() => {
             <span class="brand-wordmark">{copy.brand.wordmark}</span>
           </a>
         </div>
-        {copy.brand.footerTagline && (
-          <p class="footer-description">
-            {copy.brand.footerTagline}
-          </p>
-        )}
+        <p class="footer-description">
+          {copy.brand.footerTagline}
+        </p>
       </div>
       <div>
         <h4>{UI.footer.content}</h4>
@@ -53,9 +51,8 @@ const siteHost = (() => {
         <h4>{UI.footer.site}</h4>
         <ul>
           <li><a href={localizedHref(locale, '/projects/')}>{UI.nav.projects}</a></li>
-          <li><a href={localizedHref(locale, '/links/')}>{UI.nav.links}</a></li>
-          <li><a href={localizedHref(locale, '/guestbook/')}>{UI.nav.guestbook}</a></li>
           <li><a href={localizedHref(locale, '/about/')}>{UI.nav.about}</a></li>
+          <li><a href={localizedHref(locale, '/friends/')}>{UI.common.friends}</a></li>
           <li><a href={localizedHref(locale, '/ask/')}>{UI.ask.button}</a></li>
           <li><a href={localizedHref(locale, '/topics/')}>{UI.footer.topics}</a></li>
           <li><a href={localizedHref(locale, '/answers/')}>{UI.footer.answers}</a></li>

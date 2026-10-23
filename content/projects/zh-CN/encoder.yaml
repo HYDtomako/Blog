@@ -1,0 +1,12 @@
+title: EnCoder
+description: CoreCoder 的扩展版：定时调度、长期记忆、Agent 团队与任务管理。
+slug: encoder
+status: active
+stars: 0
+url: https://github.com/HYDtomako/EnCoder
+repository: https://github.com/HYDtomako/EnCoder
+tags: [Agent, Python]
+category: oss
+featured: false
+sortRank: 22
+role: 作者

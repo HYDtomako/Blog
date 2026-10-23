@@ -20,7 +20,7 @@ const distRoot = siteConfig.outDir;
 const defaultLocale = siteConfig.locales.default;
 const prefixedLocales = siteConfig.locales.list.filter((locale) => locale !== defaultLocale);
 const localePrefixOf = (locale) => (locale === defaultLocale ? '' : `/${locale}`);
-const hubPages = ['/', '/about/', '/projects/', '/links/', '/guestbook/', '/writing/', '/notes/', '/ask/', '/answers/'];
+const hubPages = ['/', '/about/', '/projects/', '/writing/', '/notes/', '/ask/', '/answers/', '/friends/'];
 const localeFiles = [
 	'/api/profile.json',
 	'/api/articles.json',
@@ -131,21 +131,15 @@ if (caps.ask) {
 }
 
 try {
-	const statsEnabled = siteConfig.stats?.enabled === true;
 	const htmlFiles = await listHtmlFiles(distRoot);
 	let commentPages = 0;
-	let statsPages = 0;
-	let statsHome = false;
 	for (const htmlPath of htmlFiles) {
 		const html = await readFile(htmlPath, 'utf8');
 		const relativePath = path.relative(distRoot, htmlPath).replaceAll('\\', '/');
 		const isArticle = articlePattern.test(relativePath);
 		const hasComments = html.includes('data-giscus-comments');
-		const hasStats = html.includes('data-page-stats');
 
 		if (hasComments) commentPages += 1;
-		if (hasStats) statsPages += 1;
-		if (relativePath === 'index.html' && html.includes('data-site-stats')) statsHome = true;
 		if (siteConfig.comments.enabled && isArticle && !hasComments) {
 			failures.push(`${relativePath} is an article but is missing the comments surface`);
 		}
@@ -154,12 +148,6 @@ try {
 		}
 		if (hasComments && !/data-term="article:[^"]+"/.test(html)) {
 			failures.push(`${relativePath} is missing its stable article comment term`);
-		}
-		if (statsEnabled && isArticle && !hasStats) {
-			failures.push(`${relativePath} is an article but is missing the stats surface`);
-		}
-		if (!statsEnabled && hasStats) {
-			failures.push(`${relativePath} includes the stats surface while stats are disabled`);
 		}
 
 		const expectedLocale = prefixedLocales.includes(relativePath.split('/')[0])
@@ -180,110 +168,8 @@ try {
 	if (!siteConfig.comments.enabled && commentPages > 0) {
 		failures.push('Comments are disabled but comment surfaces were generated');
 	}
-	if (statsEnabled && statsPages === 0) {
-		failures.push('Stats are enabled but no article stats surfaces were generated');
-	}
-	if (statsEnabled && !statsHome) {
-		failures.push('Stats are enabled but the home page has no site stats block');
-	}
 } catch (error) {
 	failures.push(`HTML integration verification failed: ${error.message}`);
-}
-
-try {
-	const guestbookEnabled = siteConfig.guestbook?.enabled === true;
-	let guestbookPages = 0;
-	for (const locale of siteConfig.locales.list) {
-		const relativePath = `${localePrefixOf(locale).replace(/^\//, '')}guestbook/index.html`;
-		let html;
-		try {
-			html = await readFile(path.join(distRoot, relativePath), 'utf8');
-		} catch {
-			continue;
-		}
-		guestbookPages += 1;
-		const hasGuestbook = html.includes('data-guestbook');
-		if (guestbookEnabled && !hasGuestbook) {
-			failures.push(`${relativePath} is a guestbook page but is missing the guestbook surface`);
-		}
-		if (!guestbookEnabled && hasGuestbook) {
-			failures.push(`${relativePath} includes the guestbook surface while the guestbook is disabled`);
-		}
-	}
-	if (guestbookPages === 0) {
-		failures.push('Missing the guestbook page in every locale');
-	}
-} catch (error) {
-	failures.push(`Guestbook integration verification failed: ${error.message}`);
-}
-
-try {
-	const linksEnabled = siteConfig.links?.enabled === true;
-	const authoredLinks = JSON.parse(
-		await readFile(path.join(siteConfig.contentRoot, 'links.json'), 'utf8').catch(() => '[]'),
-	);
-	const linksAuthored = Array.isArray(authoredLinks) && authoredLinks.length > 0;
-	for (const locale of siteConfig.locales.list) {
-		const relativePath = `${localePrefixOf(locale).replace(/^\//, '')}links/index.html`;
-		let html;
-		try {
-			html = await readFile(path.join(distRoot, relativePath), 'utf8');
-		} catch {
-			continue;
-		}
-		const hasSonar = html.includes('data-links-sonar');
-		const hasSubmit = html.includes('data-links-submit');
-		if (!hasSonar) failures.push(`${relativePath} is a links page but is missing the sonar surface`);
-		if (linksAuthored && !html.includes('data-links-signal')) {
-			failures.push(`${relativePath} ships no signals for the authored links`);
-		}
-		if (linksEnabled && !hasSubmit) {
-			failures.push(`${relativePath} is missing the links submission surface`);
-		}
-		if (linksEnabled && !html.includes('data-links-wall')) {
-			failures.push(`${relativePath} is missing the public links wall`);
-		}
-		if (!linksEnabled && hasSubmit) {
-			failures.push(`${relativePath} includes the links submission surface while links submissions are disabled`);
-		}
-	}
-} catch (error) {
-	failures.push(`Links integration verification failed: ${error.message}`);
-}
-
-try {
-	const progressEnabled = siteConfig.readingProgress?.enabled === true;
-	const progressPages = [
-		...siteConfig.locales.list.flatMap((locale) => {
-			const prefix = localePrefixOf(locale).replace(/^\//, '');
-			return [`${prefix}projects/index.html`, `${prefix}about/index.html`];
-		}),
-		...(await listHtmlFiles(distRoot))
-			.map((file) => path.relative(distRoot, file).replaceAll('\\', '/'))
-			.filter((relativePath) => articlePattern.test(relativePath)),
-	];
-	let checked = 0;
-	for (const relativePath of progressPages) {
-		let html;
-		try {
-			html = await readFile(path.join(distRoot, relativePath), 'utf8');
-		} catch {
-			continue;
-		}
-		checked += 1;
-		const hasBall = html.includes('data-water-ball');
-		if (progressEnabled && !hasBall) {
-			failures.push(`${relativePath} is missing the reading progress ball`);
-		}
-		if (!progressEnabled && hasBall) {
-			failures.push(`${relativePath} includes the reading progress ball while it is disabled`);
-		}
-	}
-	if (checked === 0) {
-		failures.push('No page carries the reading progress ball surface');
-	}
-} catch (error) {
-	failures.push(`Reading progress verification failed: ${error.message}`);
 }
 
 if (failures.length > 0) {

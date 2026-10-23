@@ -2,13 +2,11 @@
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import { getCollection } from 'astro:content';
 import GitHubActivity from '../GitHubActivity.astro';
-import ScrollWaterBall from '../ScrollWaterBall.astro';
 import Icon from '../Icon.astro';
 import { breadcrumbJsonLd, collectionPageJsonLd, entryLocale, getPublicProfile } from '../../lib/public-data';
 import { withBase } from '../../lib/paths';
 import { DEFAULT_LOCALE, localeFromPath, localizedHref, localizedSitePath } from '../../lib/locale';
 import { getSiteCopy } from '../../lib/site-copy';
-import { siteConfig } from '../../../site.config.mjs';
 
 const COURSE_CABINET_SIZE = 3;
 
@@ -42,10 +40,10 @@ const eyebrows: Record<string, string> = locale === DEFAULT_LOCALE
   ? { featured: '精选', oss: '开源', courses: '公开课', archive: '归档' }
   : { featured: 'Featured', oss: 'Open source', courses: 'Open Courses', archive: 'Archive' };
 
+const projectsDescription = pageCopy.description;
 const projectsLlmSummary = locale === DEFAULT_LOCALE
   ? `${copy.brand.persona} 公开发布的项目、课程与实验。`
   : `Public projects and experiments by ${copy.brand.persona}.`;
-const projectsDescription = pageCopy.description ?? projectsLlmSummary;
 
 const structuredData = [
   collectionPageJsonLd({
@@ -295,7 +293,6 @@ const structuredData = [
       </section>
     )}
   </div>
-  {siteConfig.readingProgress?.enabled && <ScrollWaterBall />}
 </StarlightPage>
 
 <style>

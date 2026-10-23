@@ -1,0 +1,12 @@
+title: Simple_CNN
+description: CNN study notes and code reproductions, from convolution and pooling to a full training run.
+slug: simple-cnn
+status: active
+stars: 0
+url: https://github.com/HYDtomako/Simple_CNN
+repository: https://github.com/HYDtomako/Simple_CNN
+tags: [Deep learning, CNN, Python]
+category: oss
+featured: false
+sortRank: 24
+role: Author

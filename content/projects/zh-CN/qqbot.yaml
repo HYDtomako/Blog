@@ -1,0 +1,12 @@
+title: QQbot
+description: 以 pi 为大脑、NapCatQQ 为连接的 QQ 机器人，覆盖知识问答、课表查询、群管理、定时任务、长期记忆与模型热切换。
+slug: qqbot
+status: active
+stars: 0
+url: https://github.com/HYDtomako/QQbot
+repository: https://github.com/HYDtomako/QQbot
+tags: [QQ 机器人, TypeScript, LLM]
+category: oss
+featured: false
+sortRank: 20
+role: 作者

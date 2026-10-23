@@ -1,15 +1,10 @@
 /** Locale UI chrome for Refined-X (not brand/content identity). */
 
-import type { GuestbookErrorCode } from '../scripts/guestbook';
-import type { LinksErrorCode } from '../scripts/links-sonar';
-
 export type UiCopy = {
 	nav: {
 		writing: string;
 		notes: string;
 		projects: string;
-		guestbook: string;
-		links: string;
 		about: string;
 		primaryAria: string;
 		mobileAria: string;
@@ -67,6 +62,7 @@ export type UiCopy = {
 		notesLink: string;
 		ossHeading: string;
 		ossLink: string;
+		educationHeading: string;
 	};
 	notes: {
 		label: string;
@@ -164,6 +160,7 @@ export type UiCopy = {
 	common: {
 		home: string;
 		close: string;
+		friends: string;
 		relatedReading: string;
 		breadcrumbAria: string;
 		articleTocAria: string;
@@ -172,7 +169,6 @@ export type UiCopy = {
 		notFoundTitle: string;
 		notFoundLede: string;
 		backHome: string;
-		backToTop: string;
 		browseWriting: string;
 		prevPage: string;
 		nextPage: string;
@@ -182,102 +178,6 @@ export type UiCopy = {
 		published: string;
 		updated: string;
 		readingMinutes: (n: number) => string;
-	};
-	intro: {
-		/** Escape hatch on the home page's deep-sea instrument intro. */
-		skip: string;
-	};
-	stats: {
-		heading: string;
-		articles: string;
-		notes: string;
-		totalViews: string;
-		viewsLabel: string;
-		likeAction: string;
-		unlikeAction: string;
-		failed: string;
-	};
-	/**
-	 * Anonymous guestbook. Numeric parameters also accept runtime tokens (`__USED__`,
-	 * `__COUNT__`, …) so the board can reuse the same copy for its client-side strings.
-	 */
-	guestbook: {
-		heading: string;
-		lede: string;
-		/** Machine-facing one-liner for the page `llmSummary` and structured data. */
-		summary: string;
-		placeholder: string;
-		send: string;
-		sending: string;
-		justNow: string;
-		hint: string;
-		counter: (used: number | string, max: number | string) => string;
-		empty: string;
-		loading: string;
-		failed: string;
-		loadMore: string;
-		reply: string;
-		replyingTo: (handle: string) => string;
-		cancelReply: string;
-		likeAction: string;
-		unlikeAction: string;
-		guest: (handle: string) => string;
-		mine: string;
-		retract: string;
-		retracted: string;
-		slowDown: string;
-		slowDownIn: (seconds: number | string) => string;
-		replyCount: (n: number | string) => string;
-		showingLatest: (n: number | string) => string;
-		tooLong: string;
-		unavailable: string;
-		sendFailed: string;
-		noScript: string;
-		emojiToggle: string;
-		emojiPanel: string;
-		errors: Record<GuestbookErrorCode, string>;
-	};
-	/**
-	 * Deep-sea sonar links page. Instrument readouts (`SIGNALS DETECTED`, `SIGNAL LOST`)
-	 * stay in the Latin HUD register in every locale, like the home-page diving instrument;
-	 * everything the visitor acts on is localized.
-	 */
-	links: {
-		heading: string;
-		eyebrow: string;
-		lede: string;
-		/** Machine-facing one-liner for the page `llmSummary` and structured data. */
-		summary: string;
-		indexDescription: string;
-		signalsDetected: string;
-		depthRange: string;
-		depthNote: string;
-		cta: string;
-		ctaButton: string;
-		formTitle: string;
-		urlLabel: string;
-		placeholder: string;
-		connect: string;
-		connecting: string;
-		formNote: string;
-		close: string;
-		received: string;
-		receivedNote: string;
-		/** The public wall of submitted links. */
-		wallHeading: string;
-		wallLede: string;
-		wallLoading: string;
-		wallEmpty: string;
-		wallFailed: string;
-		/** State chips on a wall row. */
-		wallWaiting: string;
-		wallJoined: string;
-		unavailable: string;
-		noScript: string;
-		signalAria: (name: string, depth: string) => string;
-		openSite: (name: string) => string;
-		errorTitle: string;
-		errors: Record<LinksErrorCode, string>;
 	};
 	footer: {
 		content: string;

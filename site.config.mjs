@@ -23,7 +23,7 @@ export const siteRoot = findPackageRoot();
 
 const defaults = {
 	/** Site name — locale-neutral; used by Starlight chrome and machine-readable identity. */
-	title: 'Your Site',
+	title: 'HYD',
 	/**
 	 * `default` is served at `/`; every other entry is served under `/<locale>/`.
 	 * UI chrome copy lives in `src/i18n`, public identity copy in `brand` below.
@@ -34,7 +34,7 @@ const defaults = {
 		/** Compact labels for the header language switch and Starlight locale UI. */
 		labels: { 'zh-CN': '中文', en: 'EN' },
 	},
-	site: 'https://example.com',
+	site: 'https://hydtomako.pages.dev',
 	timeZone: 'UTC',
 	contentRoot: './content',
 	publicDir: './public',
@@ -42,11 +42,9 @@ const defaults = {
 	/** Optional image library root; when unset, collect-assets is a no-op. */
 	assetSource: undefined,
 	social: {
-		/** Set your GitHub profile URL to refresh the contribution graph and project stars. */
-		github: '',
+		github: 'https://github.com/HYDtomako',
 	},
 	ask: {
-		/** Optional Live Ask endpoints — leave empty for a static-only site (see docs/deploy-live-ask.md). */
 		askUrl: '',
 		mcpUrl: '',
 		healthUrl: '',
@@ -57,7 +55,7 @@ const defaults = {
 		 */
 		protocolProfile: 'undeclared',
 		/** Must match the Worker PERSIST_INTERACTIONS setting when Live Ask is enabled. */
-		persistInteractions: false,
+		persistInteractions: true,
 	},
 	/** Optional giscus repository/category identifiers. Leave all fields empty to disable comments. */
 	comments: {
@@ -66,62 +64,30 @@ const defaults = {
 		category: '',
 		categoryId: '',
 	},
-	/**
-	 * Page-view/like counters. Off by default: turn it on after deploying the site Worker
-	 * (`worker/`). Keep `url` empty for same-origin; point it at `wrangler dev` while developing the API.
-	 */
-	stats: {
-		enabled: false,
-		url: '',
-	},
-	/** Corner water ball that fills with the reading progress of articles, /projects/, and /about/. */
-	readingProgress: {
-		enabled: true,
-	},
-	/** Deep-sea diving instrument intro on the home page (see `src/components/DeepSeaIntro.astro`). */
-	intro: {
-		enabled: true,
-	},
-	/**
-	 * Anonymous guestbook at /guestbook/. Keep `url` empty for same-origin; point it at
-	 * `wrangler dev` while developing the API.
-	 */
-	guestbook: {
-		enabled: true,
-		url: '',
-	},
-	/**
-	 * Links page: `content/links.json` is always rendered as the sonar; `enabled` only
-	 * controls the "send a signal" box and the public wall under it, which need the site Worker.
-	 * Keep `url` empty for same-origin; point it at `wrangler dev` while developing the API.
-	 */
-	links: {
-		enabled: true,
-		url: '',
-	},
-	/** Renamed pages keep their old URLs working: `{ '/old-path': '/new-path/' }`. */
 	redirects: {},
 	/** Per-locale public identity and page copy, keyed by locale id. */
 	brand: {
 		'zh-CN': {
 			description:
-				'这里是你的站点简介：公开文章、随笔、项目与自我介绍，同一份内容同时供人阅读、搜索引擎收录与 AI Agent 读取。',
-			persona: '你的名字',
-			wordmark: 'Your Site',
-			alternateNames: ['你的名字'],
-			homeHeading: '你的名字',
-			homeTitle: '你的名字 — 个人站点',
+				'HYD 的个人站点：公开文章、项目与自我介绍。同一份内容同时供人阅读、搜索引擎收录与 AI Agent 读取。',
+			persona: 'HYD',
+			wordmark: 'HYD Personal Blog',
+			alternateNames: ['HYD'],
+			homeHeading: 'HYD',
+			homeTitle: 'HYD — 个人站点',
 			homeLede: '把文章、项目与自我介绍发布一次，让人和 Agent 都能读到。',
-			writingLede: '平时沉淀的长文，欢迎分享你的见解。',
+			writingLede: '关于前端架构、AI 工程实践与工程判断的长文。',
 			askChips: [
 				{ label: '这是谁？', query: '作者是谁？' },
-				{ label: '写了什么？', query: '站点上有哪些文章？' },
-				{ label: '有哪些项目？', query: '有哪些项目？' },
-				{ label: '怎么联系？', query: '怎么联系作者？' },
+				{ label: 'AI 实践', query: '站点记录了哪些 AI 实践？' },
+				{ label: '开源项目', query: '有哪些开源项目？' },
+				{ label: '合作方式', query: '如何与我合作？' },
 			],
+			footerTagline: '为人类与 Agent 同时构建。',
 			projects: {
 				heading: '项目',
-				lede: '这里放你做过的东西。',
+				description: '通过这个站点公开发布的项目、课程与实验。',
+				lede: '如果你也热爱开源，欢迎交流！',
 				titleSuffix: '项目',
 			},
 			about: {
@@ -131,23 +97,27 @@ const defaults = {
 		},
 		en: {
 			description:
-				'Your site description: articles, notes, projects, and a public profile — one corpus for readers, search engines, and AI agents.',
-			persona: 'Your Name',
-			wordmark: 'Your Site',
-			alternateNames: ['Your Name'],
-			homeHeading: 'Your Name',
-			homeTitle: 'Your Name — Personal site',
-			homeLede: 'Publish your writing, projects, and profile once — for people and agents alike.',
-			writingLede: 'Long-form pieces written over time — your thoughts are welcome.',
+				'HYD is an agent-ready personal site for Astro + Starlight: opinionated public content schema, editorial design, and machine-readable surfaces (llms.txt, OpenAPI, MCP discovery).',
+			persona: 'HYD',
+			wordmark: 'HYD Personal Blog',
+			alternateNames: ['HYD'],
+			homeHeading: 'HYD',
+			homeTitle: 'HYD — Personal site',
+			homeLede: 'Editorial personal publishing with agent-friendly surfaces.',
+			writingLede:
+				'Long-form writing on frontend architecture, AI engineering practice, and professional judgment.',
 			askChips: [
 				{ label: 'Who is this?', query: 'Who is the author?' },
-				{ label: 'What is here?', query: 'What articles are on this site?' },
-				{ label: 'Projects', query: 'Which projects are here?' },
-				{ label: 'Contact', query: 'How do I contact the author?' },
+				{ label: 'AI practice', query: 'What AI practices are documented?' },
+				{ label: 'Open source', query: 'What open source projects are featured?' },
+				{ label: 'Collaborate', query: 'How can I collaborate?' },
 			],
+			footerTagline: 'Built for humans and agents.',
 			projects: {
 				heading: 'Projects',
-				lede: 'Things built and shipped.',
+				description:
+					'Selected public projects, courses, and experiments published with this site.',
+				lede: 'Into open source too? Let’s talk.',
 				titleSuffix: 'Projects',
 			},
 			about: {
@@ -229,11 +199,6 @@ const merged = {
 	locales,
 	social: { ...defaults.social, ...(overlayRest.social ?? {}) },
 	ask: { ...defaults.ask, ...(overlayRest.ask ?? {}) },
-	stats: { ...defaults.stats, ...(overlayRest.stats ?? {}) },
-	readingProgress: { ...defaults.readingProgress, ...(overlayRest.readingProgress ?? {}) },
-	intro: { ...defaults.intro, ...(overlayRest.intro ?? {}) },
-	guestbook: { ...defaults.guestbook, ...(overlayRest.guestbook ?? {}) },
-	links: { ...defaults.links, ...(overlayRest.links ?? {}) },
 	comments: resolveCommentsConfig({ ...defaults.comments, ...(overlayRest.comments ?? {}) }),
 	brand: mergedBrand,
 	discovery: { ...defaults.discovery, ...(overlayRest.discovery ?? {}) },

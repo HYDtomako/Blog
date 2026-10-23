@@ -1,0 +1,12 @@
+title: Minimind-notes
+description: Study notes on MiniMind, covering model architecture, training methods, and how the pieces fit together.
+slug: minimind-notes
+status: active
+stars: 0
+url: https://github.com/HYDtomako/Minimind-notes
+repository: https://github.com/HYDtomako/Minimind-notes
+tags: [LLM, notes, Python]
+category: oss
+featured: false
+sortRank: 21
+role: Author
