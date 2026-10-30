@@ -81,7 +81,7 @@ for (const file of assetFiles.sort()) {
 
 const references = new Set();
 references.add('avatar.jpg');
-references.add('og-default.png');
+references.add('og-default-v3.jpg');
 for (const file of markdownFiles) {
 	for (const reference of findReferences(await readFile(file, 'utf8'))) references.add(reference);
 }

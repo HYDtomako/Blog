@@ -184,9 +184,6 @@ export const zhCN: UiCopy = {
 		updated: '更新',
 		readingMinutes: (n) => `${n} 分钟阅读`,
 	},
-	intro: {
-		skip: '跳过开屏',
-	},
 	stats: {
 		heading: '站点统计',
 		articles: '博客',

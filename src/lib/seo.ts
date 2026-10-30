@@ -4,7 +4,7 @@ import { seoLogicalPath } from './paths';
 import { localePath } from './locale';
 import { absoluteUrl } from './public-data';
 
-export const DEFAULT_SEO_IMAGE = '/asset/og-default.png';
+export const DEFAULT_SEO_IMAGE = '/asset/og-default-v3.jpg';
 
 export type SeoHeadTag = {
 	tag: 'title' | 'base' | 'link' | 'style' | 'meta' | 'script' | 'noscript' | 'template';

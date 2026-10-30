@@ -66,7 +66,7 @@ below. Work through the table, then delete what you do not need.
 | 3  | Articles, notes, curated answers, standalone pages                          | `content/{articles,notes,answers,pages}/<locale>/*.md`                                     |
 | 4  | Projects                                                                    | `content/projects/<locale>/*.yaml`                                                         |
 | 5  | Series — optional grouping for articles                                     | `content/series/<locale>/series.json` + `<slug>.yaml`                                      |
-| 6  | Avatar, hero image, share image, favicons, project covers                   | `public/asset/avatar.jpg`, `public/asset/hero-home.jpg`, `public/asset/og-default.png`, `public/favicon.png`, `public/apple-touch-icon.png`, `public/projects/**` |
+| 6  | Avatar, hero image, share image, favicons, project covers                   | `public/asset/avatar.jpg`, `public/asset/hero-home.jpg`, `public/asset/og-default-v3.jpg`, `public/favicon.png`, `public/apple-touch-icon.png`, `public/projects/**` |
 | 7  | Navigation and UI wording                                                   | `src/i18n/zh-CN.ts`, `src/i18n/en.ts`                                                      |
 | 8  | Counters — optional                                                         | `wrangler.jsonc`, `package.json` (`db:migrate*` scripts)                                    |
 | 9  | Live Ask — optional                                                         | `site.config.mjs` (`ask`), `.env`, `examples/public-ask-worker/`                            |
@@ -93,7 +93,6 @@ template with an overlay file `instance.config.mjs` (git-ignored) or the
 | `stats.enabled` / `stats.url`      | Counters on/off; `url` empty means same-origin  |
 | `guestbook.enabled` / `guestbook.url` | Anonymous guestbook on/off; `url` empty means same-origin |
 | `readingProgress.enabled` | Corner water ball on articles, `/projects/`, and `/about/`                                            |
-| `intro.enabled` | Home-page intro (the deep-sea diving instrument; plays on a first visit, always skippable)                                            |
 | `redirects`                        | Old path → new path map; delete the sample entries                                        |
 | `contentRoot`, `publicDir`, `outDir`, `assetSource` | Where content, assets and build output live; keep a vault outside the template if you like |
 | `discovery.awp`                    | Optional AWP experiment, off by default                                                    |
@@ -183,7 +182,7 @@ stays free-form.
 | ------------------------------- | ---------------------------------------------------------- | -------------------------- |
 | `public/asset/avatar.jpg`       | Home hero portrait, about page portrait, and the image in `/api/profile.json` | Square, 512×512 |
 | `public/asset/hero-home.jpg`    | Home page background, preloaded by the document head        | Wide, ~2247×1268 or larger |
-| `public/asset/og-default.png`   | Default social share image when a page sets no `seoImage`   | 1200×1200                  |
+| `public/asset/og-default-v3.jpg` | Default social share image when a page sets no `seoImage`   | 1200×630                   |
 | `public/favicon.png`            | Browser tab icon                                            | 32×32                      |
 | `public/apple-touch-icon.png`   | iOS home screen icon                                        | 180×180                    |
 | `public/projects/**`            | Project covers referenced from project YAML                 | As needed                  |

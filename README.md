@@ -63,7 +63,7 @@ npm run verify          # 缺页面或接口不符合约定时会失败
 | 3  | 文章、随笔、常见问题、独立页面                              | `content/{articles,notes,answers,pages}/<locale>/*.md`                                       |
 | 4  | 项目                                                        | `content/projects/<locale>/*.yaml`                                                           |
 | 5  | 专题（可选，用来给文章分组）                                | `content/series/<locale>/series.json` + `<slug>.yaml`                                         |
-| 6  | 头像、首页大图、分享图、favicon、项目封面                   | `public/asset/avatar.jpg`、`public/asset/hero-home.jpg`、`public/asset/og-default.png`、`public/favicon.png`、`public/apple-touch-icon.png`、`public/projects/**` |
+| 6  | 头像、首页大图、分享图、favicon、项目封面                   | `public/asset/avatar.jpg`、`public/asset/hero-home.jpg`、`public/asset/og-default-v3.jpg`、`public/favicon.png`、`public/apple-touch-icon.png`、`public/projects/**` |
 | 7  | 导航与界面文案                                              | `src/i18n/zh-CN.ts`、`src/i18n/en.ts`                                                        |
 | 8  | 统计（可选）                                                | `wrangler.jsonc`、`package.json`（`db:migrate*` 脚本）                                        |
 | 9  | Live Ask（可选）                                            | `site.config.mjs`（`ask`）、`.env`、`examples/public-ask-worker/`                              |
@@ -90,7 +90,6 @@ overlay 的字段会覆盖默认值。
 | `stats.enabled` / `stats.url`        | 统计开关；`url` 留空表示同源接口 |
 | `guestbook.enabled` / `guestbook.url` | 匿名留言板开关；`url` 留空表示同源接口 |
 | `readingProgress.enabled` | 右下角水球阅读进度开关（文章页 / 项目页 / 关于页）                                                                |
-| `intro.enabled` | 首页开屏动画开关（深海下潜仪表；首访播放，可跳过）                                                                |
 | `redirects`                          | 旧路径到新路径的跳转表，示例条目可以删掉                                                        |
 | `contentRoot`、`publicDir`、`outDir`、`assetSource` | 内容、静态资源、构建产物的位置；也可以把内容仓库放在模板之外                     |
 | `discovery.awp`                      | 可选的 AWP 实验开关，默认关闭                                                                   |
@@ -178,7 +177,7 @@ proofPoints: [已有 2000 位用户在用]
 | ----------------------------- | --------------------------------------------------------------- | --------------------- |
 | `public/asset/avatar.jpg`     | 首页首屏头像、关于页头像、`/api/profile.json` 里的头像            | 正方形，512×512        |
 | `public/asset/hero-home.jpg`  | 首页背景图，由页面头部预加载                                      | 横向，2247×1268 或更大 |
-| `public/asset/og-default.png` | 页面没设 `seoImage` 时的默认分享图                                | 1200×1200             |
+| `public/asset/og-default-v3.jpg` | 页面没设 `seoImage` 时的默认分享图                                | 1200×630              |
 | `public/favicon.png`          | 浏览器标签页图标                                                  | 32×32                 |
 | `public/apple-touch-icon.png` | iOS 添加到主屏幕的图标                                            | 180×180               |
 | `public/projects/**`          | 项目 YAML 里引用的封面                                            | 按需                  |
