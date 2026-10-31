@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Nightly GitHub Actions workflow (`.github/workflows/sync-and-deploy.yml`) refreshes the contribution snapshot, project stars, and link metadata at 21:20 Asia/Shanghai, commits that content to `main`, and deploys the Cloudflare Worker with `npm run deploy`. Cloudflare credentials and the Turnstile site key stay in Actions secrets/variables
+
 - Redesigned admin console (`/admin`) with separate login and four navigation sections: 站点概况, 访问统计, 友链申请, and 留言管理. Overview shows lifetime/today/30-day PV, pending links and recent activity; traffic combines a 30-day chart, searchable page ranking and UTC daily views, likes, messages and submissions from `/api/admin/daily`. Daily views start with `worker/migrations/0004_daily_views.sql`; other daily metrics aggregate existing creation dates. Moderation includes filters, deletion confirmation, loading/retry states and protection against stale responses; link approval still requires manual publication in `content/links.json`
 - Water ball reading progress: every article (and future ones), `/projects/`, and `/about/` show a transparent ball in the bottom-right corner that fills with blue as you scroll, sized down on phones. Clicking it returns to the top, and `readingProgress.enabled` in `site.config.mjs` turns it off
 - Favicons generated from the avatar: `favicon.png` and `apple-touch-icon.png` are derived from `public/asset/avatar.jpg`, the same image the home hero and About page use

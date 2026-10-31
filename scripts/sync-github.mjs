@@ -6,9 +6,17 @@
  * Usage: npm run sync:github
  * Wired into `prebuild`, but never fails the build: on a network error it keeps the
  * previous snapshot and prints a warning.
+ *
+ * Env (all optional, none are read from the repo):
+ *   - `GITHUB_TOKEN` or `GH_TOKEN` — sent only to api.github.com for the public repo list.
+ *     A 401/403 retries once without the token. The contribution calendar is public HTML.
+ *   - `SYNC_GITHUB_STRICT=1` — exit 1 when a task fails (the nightly workflow). `prebuild` leaves this unset.
+ *   - `SYNC_GITHUB_SKIP=1` — no-op. The nightly deploy sets this so the build publishes the snapshot just committed.
  */
+import { realpathSync } from 'node:fs';
 import { readFile, writeFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { siteConfig } from '../site.config.mjs';
 
 const CONTRIBUTIONS_URL = (owner) => `https://github.com/users/${owner}/contributions`;
@@ -28,13 +36,38 @@ function resolveOwner() {
 	}
 }
 
-async function fetchText(url, accept) {
+function apiToken(env = process.env) {
+	return env.GITHUB_TOKEN || env.GH_TOKEN || '';
+}
+
+/** Bearer token is attached only to api.github.com. The contribution calendar is public HTML. */
+export function requestHeaders(url, accept, env = process.env) {
+	const headers = { 'user-agent': USER_AGENT, accept };
+	const token = apiToken(env);
+	if (token && url.startsWith('https://api.github.com/')) {
+		headers.authorization = `Bearer ${token}`;
+	}
+	return headers;
+}
+
+async function fetchTextOnce(url, accept, env) {
 	const response = await fetch(url, {
-		headers: { 'user-agent': USER_AGENT, accept },
+		headers: requestHeaders(url, accept, env),
 		signal: AbortSignal.timeout(20_000),
 	});
 	if (!response.ok) throw new Error(`${url} → HTTP ${response.status}`);
 	return response.text();
+}
+
+async function fetchText(url, accept) {
+	try {
+		return await fetchTextOnce(url, accept, process.env);
+	} catch (error) {
+		const authedApi = Boolean(apiToken()) && url.startsWith('https://api.github.com/');
+		if (!authedApi || !/HTTP 40[13]/.test(String(error.message))) throw error;
+		console.warn(`[sync:github] GitHub API rejected the token (${error.message}); retrying unauthenticated`);
+		return fetchTextOnce(url, accept, {});
+	}
 }
 
 function attribute(tag, name) {
@@ -122,15 +155,41 @@ async function syncStars(owner) {
 	return updated === 0 ? 'stars unchanged' : `stars updated in ${updated} file(s)`;
 }
 
-const owner = resolveOwner();
-if (!owner) {
-	console.warn('[sync:github] skipped: siteConfig.social.github is not set');
-} else {
+function invokedDirectly() {
+	const entry = process.argv[1];
+	if (!entry) return false;
+	try {
+		return import.meta.url === pathToFileURL(realpathSync(entry)).href;
+	} catch {
+		return false;
+	}
+}
+
+async function main() {
+	if (process.env.SYNC_GITHUB_SKIP === '1') {
+		console.log('[sync:github] skipped: SYNC_GITHUB_SKIP=1');
+		return;
+	}
+
+	const owner = resolveOwner();
+	if (!owner) {
+		console.warn('[sync:github] skipped: siteConfig.social.github is not set');
+		if (process.env.SYNC_GITHUB_STRICT === '1') process.exitCode = 1;
+		return;
+	}
+
+	let failed = false;
 	for (const task of [syncActivity, syncStars]) {
 		try {
 			console.log(`[sync:github] ${await task(owner)}`);
 		} catch (error) {
+			failed = true;
 			console.warn(`[sync:github] ${task.name} failed, keeping previous data — ${error.message}`);
 		}
 	}
+	if (failed && process.env.SYNC_GITHUB_STRICT === '1') process.exitCode = 1;
+}
+
+if (invokedDirectly()) {
+	await main();
 }

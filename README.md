@@ -273,6 +273,27 @@ D1 数据库名也出现在 `package.json` 的 `db:migrate` / `db:migrate:local`
 
 友链的「发送信号」表单走 `POST /api/links/submit`，同样复用这份身份与 D1（`worker/migrations/0003_links.sql`）：服务端读取提交的站点后写入 `link_submissions`，状态一律是 `pending`，页面只把待接入信号显示给提交者本人。它同样需要 `STATS_ACTOR_SECRET`，缺少时表单返回 503 并显示为不可用。
 
+### 每晚同步贡献图、star 与友链
+
+贡献图（项目页上的「数据同步于」）、项目 `stars` 和友链标题都写进构建产物，Worker 自己的定时任务刷新不了这些页面。
+[`.github/workflows/sync-and-deploy.yml`](.github/workflows/sync-and-deploy.yml) 每天 **21:20（Asia/Shanghai）**
+执行 `npm run sync:github` 和 `npm run sync:links`，内容有变化就提交到 `main`，再用上面的 `npm run deploy`
+发布到 Cloudflare Worker。GitHub Actions 的 cron 只用 UTC，中国没有夏令时，所以时间表是 `20 13 * * *`。
+这不是 [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml)（那份只手动发布上游演示站）。
+
+密钥和变量放在 GitHub → **Settings → Secrets and variables → Actions**，或 Cloudflare 仪表盘。不要写进仓库：
+
+| 名称 | 放哪里 | 作用 |
+| --- | --- | --- |
+| `CLOUDFLARE_API_TOKEN` | Secret | 部署 `blog` Worker、迁移 D1 `hydblog-stats`、更新 `hydblog.xyz` 自定义域。权限：Account 的 Workers Scripts Edit、D1 Edit，以及该域名所在 Zone 的 Workers Routes Edit |
+| `CLOUDFLARE_ACCOUNT_ID` | Secret 或 Variable | Cloudflare 账号 ID（Workers 概览右侧） |
+| `PUBLIC_TURNSTILE_SITE_KEY` | Variable | `/ask` 的正式 Turnstile site key。留空则这次部署直接失败，不会改用 CI 里始终通过的测试 key |
+| `SYNC_PUSH_TOKEN` | Secret，可选 | 只有默认 `GITHUB_TOKEN` 推不上 `main` 时才需要。Fine-grained PAT，Contents 写权限 |
+
+公开仓库的 star 用 Actions 自带的 `GITHUB_TOKEN` 读取，不用另建令牌。`STATS_ACTOR_SECRET`、`ADMIN_TOKEN` 和 Live Ask 的密钥仍然只放在 Cloudflare，这个工作流不会读写它们。
+
+Actions 的工作流权限需要允许写入内容（**Settings → Actions → General → Workflow permissions → Read and write**）。`main` 目前没有分支保护，所以可以直接提交；以后如果打开保护，再配 `SYNC_PUSH_TOKEN`。仓库连续 60 天没有任何活动时，GitHub 会停掉 schedule，手动跑一次工作流即可恢复。
+
 ### 可选：Live Ask
 
 实时回答、NLWeb 兼容的 `POST /ask` 和 MCP 入口来自另一个 Cloudflare Worker。先部署
@@ -313,6 +334,7 @@ PUBLIC_TURNSTILE_SITE_KEY=your_site_key npm run build
 | `npm run test:links`    | 友链：URL/metadata 解析、信号布局与页面交互测试 |
 | `npm run sync:github`       | 从 GitHub 刷新 `content/github-activity.json` 和项目 star 数                        |
 | `npm run sync:links`        | 从各友链站点刷新 `content/links.json` 的名称、简介与图标                              |
+| `npm run test:sync`         | 夜间同步的请求头与提交范围检查                                                          |
 | `npm run collect-assets`    | 把外部图库同步进 `public/asset`（没配 `assetSource` 时什么都不做）                   |
 | `npm run dev:worker`        | `wrangler dev`：同时跑构建产物和统计接口                                             |
 | `npm run db:migrate:local` / `db:migrate` | 把 `worker/migrations` 应用到本地 / 线上 D1                            |

@@ -19,6 +19,14 @@ site key (`PUBLIC_TURNSTILE_SITE_KEY` in the environment, or a gitignored `.env.
 snapshot (`content/github-activity.json`, rendered by `src/components/GitHubActivity.astro`) and
 the `stars` field of matching `content/projects/<locale>/*.yaml` entries from
 `siteConfig.social.github`. It keeps the previous snapshot and warns when GitHub is unreachable.
+`prebuild` also runs `npm run sync:links`.
+
+The live site stays fresh via `.github/workflows/sync-and-deploy.yml`: 21:20 Asia/Shanghai
+(GitHub cron is UTC, so `20 13 * * *`), then `npm run sync:github`, `npm run sync:links`, a
+content commit to `main`, and `npm run deploy`. Do not schedule `deploy-pages.yml` — that
+workflow is a manual GitHub Pages demo. `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`,
+and `PUBLIC_TURNSTILE_SITE_KEY` live in Actions secrets/variables; Worker secrets stay in
+the Cloudflare dashboard. Nothing from that list belongs in the tree.
 
 ## Stats counters
 

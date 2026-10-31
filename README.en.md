@@ -254,6 +254,23 @@ are kept. Set `stats.enabled` to `false` to remove the widgets and their verific
 
 The guestbook (`/guestbook/`) reuses the same identity and the same D1 database: posting, liking, and retracting all go through `/api/guestbook/*`, and the author hash stays on the server. It needs `npx wrangler secret put STATS_ACTOR_SECRET` (shared with likes); without it every guestbook route answers 503 and the board hides itself. Set `guestbook.enabled` to `false` to remove it.
 
+### Nightly contribution, star, and link sync
+
+The contribution graph (the projects page “synced at” date), project `stars`, and link titles are baked into the build, so a Worker cron cannot refresh them. [`.github/workflows/sync-and-deploy.yml`](.github/workflows/sync-and-deploy.yml) runs every day at **21:20 Asia/Shanghai**: `npm run sync:github`, `npm run sync:links`, a commit to `main` when that content changed, then the same `npm run deploy` as a local release. GitHub Actions cron is UTC only and China has no daylight saving time, so the schedule is `20 13 * * *`. This is not [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml) (manual GitHub Pages demo only).
+
+Keep credentials in GitHub → **Settings → Secrets and variables → Actions**, or in the Cloudflare dashboard. Do not commit them.
+
+| Name | Where | Purpose |
+| --- | --- | --- |
+| `CLOUDFLARE_API_TOKEN` | Secret | Deploy the `blog` Worker, migrate D1 `hydblog-stats`, and update the `hydblog.xyz` custom domain. Permissions: Account Workers Scripts Edit, Account D1 Edit, and Zone Workers Routes Edit for that domain |
+| `CLOUDFLARE_ACCOUNT_ID` | Secret or Variable | Cloudflare account id (Workers overview sidebar) |
+| `PUBLIC_TURNSTILE_SITE_KEY` | Variable | Production Turnstile site key for `/ask`. An empty value fails the deploy instead of substituting CI's always-pass test key |
+| `SYNC_PUSH_TOKEN` | Secret, optional | Fine-grained PAT with Contents write, only when the default `GITHUB_TOKEN` cannot push to `main` |
+
+Star counts use the automatic `GITHUB_TOKEN`. `STATS_ACTOR_SECRET`, `ADMIN_TOKEN`, and Live Ask secrets stay in Cloudflare; this workflow never reads or writes them.
+
+Workflow permissions must allow content writes (**Settings → Actions → General → Workflow permissions → Read and write**). `main` is not branch-protected, so the bot pushes directly; add `SYNC_PUSH_TOKEN` if protection is turned on later. GitHub disables the schedule after 60 days without repository activity — run the workflow once by hand to resume it.
+
 ### Optional: Live Ask
 
 Live answers, the NLWeb-compatible `POST /ask` and the MCP endpoint come from a separate Cloudflare
@@ -292,6 +309,8 @@ Full checklist and troubleshooting: [`docs/deploy-live-ask.md`](docs/deploy-live
 | `npm run test:stats`        | Counter Worker and client tests                                                          |
 | `npm run test:guestbook`    | Guestbook client and interaction tests                                                   |
 | `npm run sync:github`       | Refreshes `content/github-activity.json` and project `stars` from GitHub                 |
+| `npm run sync:links`        | Refreshes `name` / `description` / `icon` in `content/links.json`                         |
+| `npm run test:sync`         | Checks the nightly sync request headers and the commit allowlist                          |
 | `npm run collect-assets`    | Copies an external image library into `public/asset` (no-op unless `assetSource` is set)  |
 | `npm run dev:worker`        | `wrangler dev` — built assets plus the counters API                                      |
 | `npm run db:migrate:local` / `db:migrate` | Applies `worker/migrations` to the local / remote D1                    |

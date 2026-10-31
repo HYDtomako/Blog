@@ -7,6 +7,9 @@
  * Usage: npm run sync:links
  * Wired into `prebuild`, but never fails the build: authored fields always win,
  * an unreachable site keeps its previous values and only prints a warning.
+ *
+ * `SYNC_LINKS_SKIP=1` is a no-op. The nightly deploy sets it so the build publishes
+ * the metadata just committed. `prebuild` leaves it unset.
  */
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -75,4 +78,8 @@ async function run() {
 	console.log(`[sync:links] metadata updated for ${entries.length} link${entries.length === 1 ? '' : 's'}`);
 }
 
-await run();
+if (process.env.SYNC_LINKS_SKIP === '1') {
+	console.log('[sync:links] skipped: SYNC_LINKS_SKIP=1');
+} else {
+	await run();
+}
