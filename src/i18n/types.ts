@@ -126,6 +126,11 @@ export type UiCopy = {
 		starsAria: (n: number) => string;
 		activityHeading: string;
 		activityTotal: (n: number) => string;
+		activityNoun: (n: number) => string;
+		activityDayAria: (date: string, count: number) => string;
+		activityAvatarAlt: (name: string) => string;
+		activityProfileAria: (name: string) => string;
+		activityKeys: string;
 		activitySynced: (date: string) => string;
 		activityAria: string;
 		projectShotAlt: (title: string) => string;
