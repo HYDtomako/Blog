@@ -1,0 +1,154 @@
+# Nightly refresh of the live Cloudflare Worker site (hydblog.xyz).
+#
+# 21:20 Asia/Shanghai. GitHub Actions cron is UTC and does not honor CRON_TZ;
+# China has no daylight saving time, so 21:20 CST is 13:20 UTC (`20 13 * * *`).
+# GitHub may start the job a few minutes late, and disables the schedule after
+# 60 days without repository activity.
+#
+# The job runs `npm run sync:github` and `npm run sync:links`, commits the
+# content diff to `main` (this repo is not branch-protected and lands work by
+# pushing to main), then publishes with `npm run deploy` — the same Worker
+# path as a local release. It does not run `.github/workflows/deploy-pages.yml`
+# (that workflow is a manual GitHub Pages demo only).
+#
+# A Worker cron trigger cannot do this: the contribution graph, project stars,
+# and link metadata are baked into the static build.
+#
+# Secrets and variables — GitHub Settings → Secrets and variables → Actions,
+# or the Cloudflare dashboard. Never commit them.
+#
+#   CLOUDFLARE_API_TOKEN       Secret. Deploy the `blog` Worker, apply D1
+#                              migrations to `hydblog-stats`, and update the
+#                              hydblog.xyz custom domain. Token permissions:
+#                              Account / Workers Scripts / Edit, Account / D1 /
+#                              Edit, and Zone / Workers Routes / Edit on that zone.
+#   CLOUDFLARE_ACCOUNT_ID      Secret or Variable. Account id from the Workers overview.
+#   PUBLIC_TURNSTILE_SITE_KEY  Variable. Production Turnstile site key for /ask.
+#                              The job refuses to deploy when this is empty so it
+#                              cannot fall back to CI's always-pass test key.
+#   SYNC_PUSH_TOKEN            Secret, optional. Fine-grained PAT with Contents
+#                              write (and bypass for rulesets) only if the default
+#                              GITHUB_TOKEN cannot push to main. Leave unset while
+#                              Actions has "Read and write" workflow permissions
+#                              and main stays unprotected.
+#
+# Star counts use the automatic GITHUB_TOKEN (public api.github.com only).
+# The contribution calendar is scraped from the public profile HTML.
+# STATS_ACTOR_SECRET, ADMIN_TOKEN, and Live Ask secrets stay in the Cloudflare
+# dashboard; this workflow never reads or writes them.
+name: Nightly sync and Worker deploy
+
+on:
+  schedule:
+    - cron: '20 13 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nightly-worker-deploy
+  cancel-in-progress: false
+
+jobs:
+  sync-and-deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+          token: ${{ secrets.SYNC_PUSH_TOKEN || github.token }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Sync GitHub activity, stars, and link metadata
+        env:
+          # Public repo list only. Not a repository secret.
+          GITHUB_TOKEN: ${{ github.token }}
+          SYNC_GITHUB_STRICT: '1'
+        run: |
+          echo "Shanghai now: $(TZ=Asia/Shanghai date '+%Y-%m-%d %H:%M %Z')"
+          npm run sync:github
+          npm run sync:links
+
+      - name: Stage sync outputs
+        id: changes
+        run: |
+          git add -- content/github-activity.json content/links.json content/projects
+          code=0
+          node scripts/nightly-sync-guard.mjs || code=$?
+          if [ "$code" -eq 0 ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          elif [ "$code" -eq 2 ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No content changes."
+          else
+            exit "$code"
+          fi
+
+      # Fail before the commit when publish credentials are missing, so main does not
+      # move ahead of a site that never shipped. A later night (or a manual run) retries both.
+      - name: Require deploy credentials
+        if: steps.changes.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
+          PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.PUBLIC_TURNSTILE_SITE_KEY }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "Missing CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID."
+            echo "Add them under Settings → Secrets and variables → Actions. Do not commit them."
+            exit 1
+          fi
+          if [ -z "$PUBLIC_TURNSTILE_SITE_KEY" ]; then
+            echo "Missing repository variable PUBLIC_TURNSTILE_SITE_KEY."
+            echo "Set the production Turnstile site key. This job will not substitute CI's test key."
+            exit 1
+          fi
+
+      - name: Commit and push to main
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit \
+            -m "chore(content): refresh GitHub activity, project stars, and link metadata" \
+            -m "Nightly sync at 21:20 Asia/Shanghai. The contribution snapshot and project stars come from npm run sync:github; link name, description, and icon come from npm run sync:links. Authored fields are left unchanged."
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
+
+      # Manual dispatch still deploys when this UTC day was already committed, so a
+      # failed publish can be retried without waiting for the next date change.
+      - name: Deploy Cloudflare Worker
+        if: steps.changes.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
+          PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.PUBLIC_TURNSTILE_SITE_KEY }}
+          # Publish the snapshot committed above. prebuild stays unchanged for local builds.
+          SYNC_GITHUB_SKIP: '1'
+          SYNC_LINKS_SKIP: '1'
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "Missing CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID."
+            echo "Add them under Settings → Secrets and variables → Actions. Do not commit them."
+            exit 1
+          fi
+          if [ -z "$PUBLIC_TURNSTILE_SITE_KEY" ]; then
+            echo "Missing repository variable PUBLIC_TURNSTILE_SITE_KEY."
+            echo "Set the production Turnstile site key. This job will not substitute CI's test key."
+            exit 1
+          fi
+          npm run deploy
