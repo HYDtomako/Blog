@@ -127,7 +127,14 @@ export const en: UiCopy = {
 		maintaining: 'Maintained',
 		starsAria: (n) => `${n} stars`,
 		activityHeading: 'Activity',
-		activityTotal: (n) => `${n} contributions in the past year`,
+		activityTotal: (n) =>
+			`${n.toLocaleString('en-US')} ${n === 1 ? 'contribution' : 'contributions'}`,
+		activityNoun: (n) => (n === 1 ? 'contribution' : 'contributions'),
+		activityDayAria: (date, count) =>
+			`${date}, ${count.toLocaleString('en-US')} ${count === 1 ? 'contribution' : 'contributions'}`,
+		activityAvatarAlt: (name) => `${name} avatar`,
+		activityProfileAria: (name) => `${name} on GitHub`,
+		activityKeys: 'Use arrow keys to move between days',
 		activitySynced: (date) => `Synced ${date}`,
 		activityAria: 'GitHub contribution activity graph',
 		projectShotAlt: (title) => `${title} screenshot`,
