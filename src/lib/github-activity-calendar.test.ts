@@ -68,7 +68,7 @@ test('checked-in contribution snapshot still lays out as a year of weeks', async
 	assert.equal(calendar.monthLabels[0], '');
 	assert.equal(calendar.monthLabels.filter(Boolean)[0], '11月');
 	assert.equal(calendar.monthLabels.filter(Boolean).at(-1), '10月');
-	const rendered = calendar.cells.filter((cell) => cell);
+	const rendered = calendar.cells.filter((cell): cell is GitHubActivityDay => cell !== null);
 	assert.deepEqual(
 		rendered.map((cell) => cell.date),
 		raw.days.map((cell) => cell.date),
