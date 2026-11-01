@@ -1,6 +1,7 @@
 import { createBlaze, type BlazeInstance, type BlazeOptions } from '../components/canvasui/BlazeVanilla.ts';
 import { createFlameWrap, type FlameWrapInstance, type FlameWrapOptions } from '../components/canvasui/FlameWrapVanilla.ts';
 import { createRipple, type RippleInstance, type RippleOptions } from '../components/canvasui/RippleVanilla.ts';
+import { sitePath, stripBase } from '../lib/paths.ts';
 
 /** Site sonar accents. Light `#005fcc`, dark `#7fb4d8`. */
 export const LINKS_FX_ACCENT = {
@@ -65,11 +66,46 @@ export function hslToRgb01(hue: number, saturation: number, lightness: number): 
 }
 
 /**
+ * Non-default locale URL segments. Mirrors `PREFIXED_LOCALES` in `src/lib/locale.ts`
+ * (`en` today). Kept here so the client flame script does not import `site.config`.
+ */
+export const FLAME_LOCALE_PREFIXES = ['en'] as const;
+
+/**
+ * Locale-invariant flame identity.
+ * Absolute friend URLs stay the canonical string already stored on the card
+ * (submission `URL.href`), so their tint does not move.
+ * Site paths drop the deploy base and any locale prefix, then use the canonical
+ * trailing-slash path: HOST `/about/` and `/en/about/` share one key.
+ */
+export function flameIdentityKey(raw: string, base?: string): string {
+	const trimmed = raw.trim();
+	if (!trimmed || /^[a-z][a-z0-9+.-]*:/i.test(trimmed)) return trimmed;
+	const [pathOnly, suffix = ''] = trimmed.split(/(?=[#?])/);
+	const withSlash = pathOnly.startsWith('/') ? pathOnly : `/${pathOnly}`;
+	let path = stripBase(withSlash, base);
+	if (!path.startsWith('/')) path = `/${path}`;
+	for (const locale of FLAME_LOCALE_PREFIXES) {
+		const prefix = `/${locale}`;
+		if (path === prefix || path === `${prefix}/`) {
+			path = '/';
+			break;
+		}
+		if (path.startsWith(`${prefix}/`)) {
+			path = path.slice(prefix.length);
+			break;
+		}
+	}
+	return sitePath(`${path}${suffix}`);
+}
+
+/**
  * Stable “random” flame tint for one friend-link entry.
  * Same key → same color across reloads; different keys fan across the hue wheel.
+ * Path keys are normalized first so locale variants of one page share a tint.
  */
 export function flameColorForKey(key: string, theme: LinksFxTheme = 'light'): Rgb01 {
-	const hash = hashString(key.trim().toLowerCase());
+	const hash = hashString(flameIdentityKey(key).toLowerCase());
 	const hue = hash % 360;
 	const saturation = 0.58 + ((hash >>> 9) % 22) / 100;
 	const lightness = theme === 'dark' ? 0.64 : 0.5;
@@ -80,10 +116,10 @@ export function flameColorForKey(key: string, theme: LinksFxTheme = 'light'): Rg
 export function flameKeyFromCard(card: HTMLElement): string {
 	const signal = card.closest?.('[data-links-signal]');
 	const fromSignal = signal?.getAttribute?.('data-url')?.trim();
-	if (fromSignal) return fromSignal;
+	if (fromSignal) return flameIdentityKey(fromSignal);
 	const visit = card.querySelector?.<HTMLAnchorElement>('.ls-card-visit, a[href]');
 	const href = visit?.getAttribute?.('href')?.trim() || visit?.href?.trim();
-	if (href) return href;
+	if (href) return flameIdentityKey(href);
 	return card.getAttribute?.('aria-label')?.trim() || 'links-card';
 }
 
