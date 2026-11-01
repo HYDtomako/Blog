@@ -143,6 +143,8 @@ const profile = owner ? `https://github.com/${encodeURIComponent(owner)}` : '';
 	.gh-figure {
 		position: relative;
 		margin: 0;
+		/* Tooltip and cell ink stay inside the figure so they cannot grow the page. */
+		overflow: clip;
 	}
 	.gh-card {
 		--gh-gap: 3px;
@@ -180,12 +182,26 @@ const profile = owner ? `https://github.com/${encodeURIComponent(owner)}` : '';
 		--gh-glow: rgba(213, 230, 251, 0.45);
 	}
 	.gh-scroll {
+		/* overflow-x: auto would otherwise force overflow-y to auto as well, so a
+		   hovered cell's scale or glow flashes a scrollbar. Clip the cross axis,
+		   and keep the bar itself hidden: overlay bars still fade in on hover/touch. */
 		overflow-x: auto;
+		overflow-y: hidden;
 		padding: 4px 2px 2px;
 		margin: -4px -2px 0;
+		scrollbar-width: none;
+		touch-action: pan-x pan-y;
+		overscroll-behavior-x: contain;
+	}
+	.gh-scroll::-webkit-scrollbar {
+		display: none;
+		width: 0;
+		height: 0;
 	}
 	.gh-plot {
 		width: max(100%, calc(var(--gh-weeks) * 11px));
+		/* Scaled cells and focus rings paint here and must not change scrollWidth. */
+		overflow: clip;
 	}
 	.gh-months {
 		display: grid;
@@ -250,6 +266,9 @@ const profile = owner ? `https://github.com/${encodeURIComponent(owner)}` : '';
 		border-radius: 2px;
 		background: var(--gh-0);
 		transition: transform 0.18s ease;
+		/* Buttons otherwise delay the pan while the browser waits for a tap. */
+		touch-action: pan-x pan-y;
+		-webkit-tap-highlight-color: transparent;
 	}
 	.gh-cell-pad {
 		visibility: hidden;
