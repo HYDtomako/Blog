@@ -29,9 +29,16 @@ export function initGitHubActivity(doc: Document = document, win: Window = windo
 	const digitReels = reels as HTMLElement[];
 	root.dataset.ghReady = 'true';
 	const reducedMotion = prefersReducedMotion(win);
+	const scrollport = root.querySelector<HTMLElement>('.gh-scroll');
 	const cells = [...base.querySelectorAll<HTMLElement>('.gh-cell')];
 	const interactive = cells.map((cell) => cell.dataset.date !== undefined);
 	let active: HTMLElement | null = null;
+	let gridOrigin: { left: number; top: number } | null = null;
+	let moveFrame = 0;
+	let queuedPoint: { x: number; y: number; target: EventTarget | null } | null = null;
+	/** Touch drags pan the graph. Skip hover work until the gesture is a tap. */
+	let touch: { x: number; y: number; scrolling: boolean } | null = null;
+	let activePointer: 'touch' | 'mouse' | 'pen' = 'mouse';
 
 	const applyCount = (value: number) => {
 		const frames = odometerColumns(value, digitReels.length, { staggerMs: reducedMotion ? 0 : 70 });
@@ -73,37 +80,112 @@ export function initGitHubActivity(doc: Document = document, win: Window = windo
 		tooltip.dataset.visible = 'true';
 	};
 
-	const focusCell = (cell: HTMLElement) => {
+	const focusCell = (cell: HTMLElement, preventScroll = false) => {
 		for (const entry of cells) entry.tabIndex = entry === cell ? 0 : -1;
-		if (doc.activeElement !== cell) cell.focus();
+		if (doc.activeElement !== cell) cell.focus({ preventScroll });
 		const spot = spotlightOffset(toBox(cell.getBoundingClientRect()), toBox(grid.getBoundingClientRect()));
 		grid.style.setProperty('--mx', `${spot.x}px`);
 		grid.style.setProperty('--my', `${spot.y}px`);
 		showTooltip(cell);
 	};
 
+	const invalidateOrigin = () => {
+		gridOrigin = null;
+	};
+
+	const spotlightAt = (x: number, y: number) => {
+		if (!gridOrigin) {
+			const rect = grid.getBoundingClientRect();
+			gridOrigin = { left: rect.left, top: rect.top };
+		}
+		grid.style.setProperty('--mx', `${x - gridOrigin.left}px`);
+		grid.style.setProperty('--my', `${y - gridOrigin.top}px`);
+	};
+
+	const applyPointer = () => {
+		moveFrame = 0;
+		const point = queuedPoint;
+		queuedPoint = null;
+		if (!point) return;
+		spotlightAt(point.x, point.y);
+		const cell =
+			point.target instanceof Element
+				? point.target.closest<HTMLElement>('.gh-layer-base .gh-cell[data-date]')
+				: null;
+		if (cell && base.contains(cell)) {
+			if (cell !== active) showTooltip(cell);
+			return;
+		}
+		if (!grid.contains(doc.activeElement)) hideTooltip();
+	};
+
+	const queuePointer = (event: PointerEvent) => {
+		queuedPoint = { x: event.clientX, y: event.clientY, target: event.target };
+		if (moveFrame) return;
+		moveFrame = win.requestAnimationFrame(applyPointer);
+	};
+
+	const endTouch = (event: PointerEvent) => {
+		const gesture = touch;
+		touch = null;
+		if (!gesture || gesture.scrolling) return;
+		const dx = event.clientX - gesture.x;
+		const dy = event.clientY - gesture.y;
+		if (dx * dx + dy * dy > TOUCH_SLOP_PX * TOUCH_SLOP_PX) return;
+		const cell = cellFromEvent(event);
+		if (cell) focusCell(cell, true);
+	};
+
 	grid.addEventListener('pointermove', (event) => {
 		const point = event as PointerEvent;
-		const rect = grid.getBoundingClientRect();
-		grid.style.setProperty('--mx', `${point.clientX - rect.left}px`);
-		grid.style.setProperty('--my', `${point.clientY - rect.top}px`);
-		const cell = cellFromEvent(point);
-		if (cell) showTooltip(cell);
-		else if (!grid.contains(doc.activeElement)) hideTooltip();
-	});
+		if (point.pointerType === 'touch') {
+			activePointer = 'touch';
+			if (!touch || touch.scrolling) return;
+			const dx = point.clientX - touch.x;
+			const dy = point.clientY - touch.y;
+			if (dx * dx + dy * dy > TOUCH_SLOP_PX * TOUCH_SLOP_PX) touch.scrolling = true;
+			return;
+		}
+		activePointer = point.pointerType === 'pen' ? 'pen' : 'mouse';
+		queuePointer(point);
+	}, { passive: true });
 
 	grid.addEventListener('pointerdown', (event) => {
-		const cell = cellFromEvent(event as PointerEvent);
+		const point = event as PointerEvent;
+		if (point.pointerType === 'touch') {
+			activePointer = 'touch';
+			touch = { x: point.clientX, y: point.clientY, scrolling: false };
+			return;
+		}
+		activePointer = point.pointerType === 'pen' ? 'pen' : 'mouse';
+		const cell = cellFromEvent(point);
 		if (cell) showTooltip(cell);
-	});
+	}, { passive: true });
+
+	grid.addEventListener('pointerup', (event) => {
+		if ((event as PointerEvent).pointerType !== 'touch') return;
+		endTouch(event as PointerEvent);
+	}, { passive: true });
+
+	grid.addEventListener('pointercancel', (event) => {
+		if ((event as PointerEvent).pointerType !== 'touch') return;
+		touch = null;
+	}, { passive: true });
 
 	grid.addEventListener('pointerleave', () => {
+		if (touch || activePointer === 'touch') return;
+		if (moveFrame) {
+			win.cancelAnimationFrame(moveFrame);
+			moveFrame = 0;
+			queuedPoint = null;
+		}
 		const focused = doc.activeElement;
 		if (focused instanceof HTMLElement && focused.dataset.date && grid.contains(focused)) {
 			const spot = spotlightOffset(
 				toBox(focused.getBoundingClientRect()),
 				toBox(grid.getBoundingClientRect()),
 			);
+			gridOrigin = null;
 			grid.style.setProperty('--mx', `${spot.x}px`);
 			grid.style.setProperty('--my', `${spot.y}px`);
 			showTooltip(focused);
@@ -115,6 +197,9 @@ export function initGitHubActivity(doc: Document = document, win: Window = windo
 	});
 
 	base.addEventListener('focusin', (event) => {
+		/* A touch scrolls first. Focusing the day button here scales it and
+		   forces layout in the same frame the pan starts. */
+		if (touch) return;
 		const cell = event.target instanceof HTMLElement ? event.target.closest<HTMLElement>('.gh-cell[data-date]') : null;
 		if (!cell || !base.contains(cell)) return;
 		focusCell(cell);
@@ -142,6 +227,14 @@ export function initGitHubActivity(doc: Document = document, win: Window = windo
 		focusCell(next);
 	});
 
+	scrollport?.addEventListener('scroll', () => {
+		invalidateOrigin();
+		// A pan moves the days under a tap tooltip. Drop it instead of sliding the layout.
+		if (active && activePointer === 'touch') hideTooltip();
+	}, { passive: true });
+	win.addEventListener('scroll', invalidateOrigin, { passive: true });
+	win.addEventListener('resize', invalidateOrigin);
+
 	root.querySelector<HTMLImageElement>('[data-gh-avatar]')?.addEventListener('error', () => {
 		const image = root.querySelector<HTMLImageElement>('[data-gh-avatar]');
 		const fallback = root.querySelector<HTMLElement>('[data-gh-avatar-fallback]');
@@ -149,6 +242,9 @@ export function initGitHubActivity(doc: Document = document, win: Window = windo
 		if (fallback) fallback.dataset.shown = 'true';
 	});
 }
+
+/** Movement past this (px) is a pan, not a tap on a day. */
+const TOUCH_SLOP_PX = 8;
 
 function cellFromEvent(event: Event): HTMLElement | null {
 	if (!(event.target instanceof Element)) return null;
