@@ -35,6 +35,58 @@ export function hexToRgb01(hex: string): Rgb01 {
 		Number.parseInt(value.slice(4, 6), 16) / 255,
 	];
 }
+export function hashString(input: string): number {
+	let hash = 2166136261;
+	for (let i = 0; i < input.length; i++) {
+		hash ^= input.charCodeAt(i);
+		hash = Math.imul(hash, 16777619);
+	}
+	return hash >>> 0;
+}
+
+/** HSL → RGB in 0–1. Hue is degrees. */
+export function hslToRgb01(hue: number, saturation: number, lightness: number): Rgb01 {
+	const h = ((hue % 360) + 360) % 360 / 360;
+	const s = Math.min(Math.max(saturation, 0), 1);
+	const l = Math.min(Math.max(lightness, 0), 1);
+	if (s < 1e-6) return [l, l, l];
+	const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+	const p = 2 * l - q;
+	const channel = (t: number) => {
+		let u = t;
+		if (u < 0) u += 1;
+		if (u > 1) u -= 1;
+		if (u < 1 / 6) return p + (q - p) * 6 * u;
+		if (u < 1 / 2) return q;
+		if (u < 2 / 3) return p + (q - p) * (2 / 3 - u) * 6;
+		return p;
+	};
+	return [channel(h + 1 / 3), channel(h), channel(h - 1 / 3)];
+}
+
+/**
+ * Stable “random” flame tint for one friend-link entry.
+ * Same key → same color across reloads; different keys fan across the hue wheel.
+ */
+export function flameColorForKey(key: string, theme: LinksFxTheme = 'light'): Rgb01 {
+	const hash = hashString(key.trim().toLowerCase());
+	const hue = hash % 360;
+	const saturation = 0.58 + ((hash >>> 9) % 22) / 100;
+	const lightness = theme === 'dark' ? 0.64 : 0.5;
+	return hslToRgb01(hue, saturation, lightness);
+}
+
+/** Prefer the signal URL; fall back to the visit link or card label. */
+export function flameKeyFromCard(card: HTMLElement): string {
+	const signal = card.closest?.('[data-links-signal]');
+	const fromSignal = signal?.getAttribute?.('data-url')?.trim();
+	if (fromSignal) return fromSignal;
+	const visit = card.querySelector?.<HTMLAnchorElement>('.ls-card-visit, a[href]');
+	const href = visit?.getAttribute?.('href')?.trim() || visit?.href?.trim();
+	if (href) return href;
+	return card.getAttribute?.('aria-label')?.trim() || 'links-card';
+}
+
 
 export function linksFxPalette(theme: LinksFxTheme): LinksFxPalette {
 	const accent = hexToRgb01(LINKS_FX_ACCENT[theme]);
@@ -103,9 +155,9 @@ export function blazeOptions(palette: LinksFxPalette): BlazeOptions {
 	};
 }
 
-export function flameOptions(palette: LinksFxPalette): FlameWrapOptions {
+export function flameOptions(palette: LinksFxPalette, color: Rgb01 = palette.flame): FlameWrapOptions {
 	return {
-		color: palette.flame,
+		color,
 		intensity: 0.34,
 		height: 36,
 		spread: 8,
@@ -297,12 +349,15 @@ function mountLinksCanvasFx(doc: Document, win: Window): () => void {
 	};
 
 	const mountFlame = (card: HTMLElement): FxHandle | null => {
-		const options = flameOptions(palette);
+		const key = flameKeyFromCard(card);
+		const tint = flameColorForKey(key, readTheme(doc, win));
+		const options = flameOptions(palette, tint);
 		const { reach, glow } = flameWrapCanvasOutset(options.height ?? 36, options.spread ?? 8);
 		const source = hiddenSource(doc);
 		const output = doc.createElement('canvas');
 		output.className = 'ls-fx-flame';
 		output.dataset.linksFx = 'flame';
+		output.dataset.linksFxKey = key;
 		output.setAttribute('aria-hidden', 'true');
 		output.style.top = `${-reach}px`;
 		output.style.right = `${-glow}px`;
@@ -318,8 +373,8 @@ function mountLinksCanvasFx(doc: Document, win: Window): () => void {
 			return null;
 		}
 		return {
-			setPalette(next) {
-				instance.setOptions({ color: next.flame });
+			setPalette() {
+				instance.setOptions({ color: flameColorForKey(key, readTheme(doc, win)) });
 			},
 			destroy() {
 				instance.destroy();

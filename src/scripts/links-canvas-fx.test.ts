@@ -8,7 +8,10 @@ import {
 	flameCardShouldMount,
 	flameIsRestrained,
 	flameOptions,
+	flameColorForKey,
+	flameKeyFromCard,
 	flameWrapCanvasOutset,
+	hashString,
 	hexToRgb01,
 	linksCanvasEnabled,
 	linksFxPalette,
@@ -92,3 +95,36 @@ test('theme follows data-theme, then the color scheme', () => {
 test('flame canvas outset matches the wrapper reach so the licks are not clipped', () => {
 	assert.deepEqual(flameWrapCanvasOutset(36, 8), { reach: Math.round(36 * 1.5) + 40, glow: Math.round(8 * 3) + 16 });
 });
+
+test('flame tint is stable per friend-link key and varies across keys', () => {
+	const a = flameColorForKey('https://alice.example/', 'light');
+	const aAgain = flameColorForKey('https://alice.example/', 'light');
+	const b = flameColorForKey('https://bob.example/', 'light');
+	assert.deepEqual(a, aAgain);
+	assert.notDeepEqual(a, b);
+	for (const channel of a) assert.ok(channel >= 0 && channel <= 1);
+	const dark = flameColorForKey('https://alice.example/', 'dark');
+	assert.notDeepEqual(a, dark);
+	assert.equal(hashString('https://alice.example/'), hashString('https://alice.example/'));
+});
+
+test('flame key prefers data-url on the signal wrapper', () => {
+	const signal = {
+		getAttribute(name: string) {
+			return name === 'data-url' ? 'https://friend.example/' : null;
+		},
+	};
+	const card = {
+		closest() {
+			return signal;
+		},
+		querySelector() {
+			return null;
+		},
+		getAttribute() {
+			return 'Friend';
+		},
+	} as unknown as HTMLElement;
+	assert.equal(flameKeyFromCard(card), 'https://friend.example/');
+});
+
