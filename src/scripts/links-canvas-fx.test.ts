@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { PREFIXED_LOCALES } from '../lib/locale.ts';
 import {
 	LINKS_FX_ACCENT,
 	blazeIsRestrained,
@@ -8,7 +9,9 @@ import {
 	flameCardShouldMount,
 	flameIsRestrained,
 	flameOptions,
+	FLAME_LOCALE_PREFIXES,
 	flameColorForKey,
+	flameIdentityKey,
 	flameKeyFromCard,
 	flameWrapCanvasOutset,
 	hashString,
@@ -108,23 +111,54 @@ test('flame tint is stable per friend-link key and varies across keys', () => {
 	assert.equal(hashString('https://alice.example/'), hashString('https://alice.example/'));
 });
 
-test('flame key prefers data-url on the signal wrapper', () => {
-	const signal = {
-		getAttribute(name: string) {
-			return name === 'data-url' ? 'https://friend.example/' : null;
-		},
-	};
-	const card = {
+function cardWithUrl(url: string | null, href?: string): HTMLElement {
+	const signal = url === null
+		? null
+		: {
+			getAttribute(name: string) {
+				return name === 'data-url' ? url : null;
+			},
+		};
+	return {
 		closest() {
 			return signal;
 		},
 		querySelector() {
-			return null;
+			if (!href) return null;
+			return {
+				getAttribute(name: string) {
+					return name === 'href' ? href : null;
+				},
+				href,
+			};
 		},
 		getAttribute() {
 			return 'Friend';
 		},
 	} as unknown as HTMLElement;
-	assert.equal(flameKeyFromCard(card), 'https://friend.example/');
+}
+
+test('flame key prefers data-url on the signal wrapper', () => {
+	assert.equal(flameKeyFromCard(cardWithUrl('https://friend.example/')), 'https://friend.example/');
+});
+
+test('zh and en path variants share one flame key and tint', () => {
+	assert.deepEqual([...FLAME_LOCALE_PREFIXES], [...PREFIXED_LOCALES]);
+	const zh = flameKeyFromCard(cardWithUrl('/about/'));
+	const en = flameKeyFromCard(cardWithUrl('/en/about/'));
+	assert.equal(zh, '/about/');
+	assert.equal(en, zh);
+	assert.deepEqual(flameColorForKey(zh, 'light'), flameColorForKey(en, 'light'));
+	assert.deepEqual(flameColorForKey('/about/', 'light'), flameColorForKey('/en/about/', 'light'));
+	assert.deepEqual(flameColorForKey('/about/', 'dark'), flameColorForKey('/en/about/', 'dark'));
+	assert.equal(flameIdentityKey('/en/about'), '/about/');
+	assert.equal(flameKeyFromCard(cardWithUrl(null, '/en/about/')), '/about/');
+	assert.equal(flameIdentityKey('/blog/en/about/', '/blog/'), flameIdentityKey('/blog/about/', '/blog/'));
+	assert.equal(flameIdentityKey('/english/about/'), '/english/about/');
+	const friendLocalized = 'https://friend.example/en/about/';
+	const friendCanonical = 'https://friend.example/about/';
+	assert.equal(flameKeyFromCard(cardWithUrl(friendLocalized)), friendLocalized);
+	assert.equal(flameKeyFromCard(cardWithUrl(friendCanonical)), friendCanonical);
+	assert.notDeepEqual(flameColorForKey(friendLocalized, 'light'), flameColorForKey(friendCanonical, 'light'));
 });
 
