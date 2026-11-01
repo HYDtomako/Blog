@@ -25,7 +25,7 @@ const DEMO_FLAME = { intensity: 0.5, height: 170, sparks: 1.5, smoke: 1.5, ember
  * this tall, and the shader fills that band (`height: 1`) instead of the demo's
  * near-fullscreen fire.
  */
-export const BLAZE_BAND = 0.22;
+export const BLAZE_BAND = 0.32;
 
 export function hexToRgb01(hex: string): Rgb01 {
 	const value = hex.replace('#', '');
@@ -71,14 +71,14 @@ export function flameWrapCanvasOutset(height: number, spread: number): { reach: 
 
 export function rippleOptions(): RippleOptions {
 	return {
-		amplitude: 0.4,
-		speed: 0.62,
-		wavelength: 96,
-		rings: 2,
-		decay: 1.2,
-		refraction: 64,
-		dispersion: 0.28,
-		shine: 0.35,
+		amplitude: 0.95,
+		speed: 0.7,
+		wavelength: 72,
+		rings: 3,
+		decay: 0.85,
+		refraction: 120,
+		dispersion: 0.45,
+		shine: 0.85,
 		trigger: 'click',
 		interval: 0,
 		capture: false,
@@ -88,15 +88,15 @@ export function rippleOptions(): RippleOptions {
 export function blazeOptions(palette: LinksFxPalette): BlazeOptions {
 	return {
 		height: 1,
-		distortion: 0.2,
-		distortionScale: 0.45,
-		speed: 0.65,
-		sparks: 0.42,
-		sparkDensity: 1.2,
-		sparkSize: 0.85,
-		layers: 3,
-		smoke: 0.36,
-		glow: 1.15,
+		distortion: 0.48,
+		distortionScale: 0.55,
+		speed: 0.9,
+		sparks: 0.48,
+		sparkDensity: 1.45,
+		sparkSize: 1.05,
+		layers: 4,
+		smoke: 0.46,
+		glow: 1.42,
 		sparkColor: palette.spark,
 		smokeColor: palette.smoke,
 		capture: false,
