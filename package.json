@@ -31,7 +31,7 @@
     "test:related": "node --test src/lib/related-articles.test.ts",
     "test:comments": "node --test src/lib/comments.test.mjs src/scripts/giscus-comments.test.ts",
     "test:stats": "node --test worker/*.test.ts src/scripts/page-stats.test.ts src/scripts/site-stats.test.ts",
-    "test:links": "node --test shared/link-metadata.test.ts src/lib/links.test.ts src/scripts/links-sonar.test.ts",
+    "test:links": "node --test shared/link-metadata.test.ts src/lib/links.test.ts src/scripts/links-sonar.test.ts src/scripts/links-canvas-fx.test.ts",
     "test:sync": "node --test scripts/sync-github.test.mjs scripts/nightly-sync-guard.test.mjs",
     "test:guestbook": "node --test src/scripts/guestbook.test.ts",
     "test:ui": "node --test src/lib/github-activity-calendar.test.ts src/scripts/scroll-water-ball.test.ts",
