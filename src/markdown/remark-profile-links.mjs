@@ -1,4 +1,5 @@
 import { visit } from 'unist-util-visit';
+import { resumeHeadingId } from '../lib/about-toc.mjs';
 
 /**
  * Link presentation for the public profile resume (`profile/<locale>/resume.md`):
@@ -99,6 +100,14 @@ function photoChip(link) {
 export function remarkProfileLinks() {
 	return (tree, file) => {
 		if (!resumeFile.test(file?.path ?? '')) return;
+
+		visit(tree, 'heading', (node) => {
+			if (node.depth !== 2) return;
+			const text = node.children.map((child) => child.value ?? '').join('');
+			const id = resumeHeadingId(text);
+			if (!id) return;
+			node.data = { ...node.data, hProperties: { ...node.data?.hProperties, id } };
+		});
 
 		visit(tree, 'list', (node, index, parent) => {
 			if (index === undefined || !parent) return;

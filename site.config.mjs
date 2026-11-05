@@ -86,6 +86,10 @@ const defaults = {
 		enabled: true,
 		url: '',
 	},
+	/** Address shown in the about-page contact block. Clicking it copies; it is not a mailto link. */
+	contact: {
+		email: 'hydagent10@gmail.com',
+	},
 	/** Renamed answers keep their old URLs working. */
 	redirects: {
 		'/answers/what-is-refined-x': '/answers/what-is-this-site/',
@@ -223,6 +227,7 @@ const merged = {
 	stats: { ...defaults.stats, ...(overlayRest.stats ?? {}) },
 	guestbook: { ...defaults.guestbook, ...(overlayRest.guestbook ?? {}) },
 	links: { ...defaults.links, ...(overlayRest.links ?? {}) },
+	contact: { ...defaults.contact, ...(overlayRest.contact ?? {}) },
 	readingProgress: { ...defaults.readingProgress, ...(overlayRest.readingProgress ?? {}) },
 	comments: resolveCommentsConfig({ ...defaults.comments, ...(overlayRest.comments ?? {}) }),
 	brand: mergedBrand,

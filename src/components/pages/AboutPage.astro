@@ -7,6 +7,8 @@ import { absoluteUrl, breadcrumbJsonLd, entryLocale, getPublicProfile, personJso
 import { withBase } from '../../lib/paths';
 import { DEFAULT_LOCALE, localeFromPath, localizedHref, localizedSitePath } from '../../lib/locale';
 import { getSiteCopy } from '../../lib/site-copy';
+import { copyValueFromContact } from '../../scripts/copy-text';
+import { ABOUT_TOC } from '../../lib/about-toc.mjs';
 import { siteConfig } from '../../../site.config.mjs';
 
 const locale = localeFromPath(Astro.url.pathname);
@@ -31,6 +33,12 @@ const publicProfile = await getPublicProfile(contentLocale);
 const aboutCopy = copy.brand.about;
 const { Content } = await render(resume);
 const aboutPath = localizedSitePath(locale, '/about/');
+const sidebarEmail = copyValueFromContact(person.links?.email);
+const contactEmail = copyValueFromContact(siteConfig.contact?.email);
+const contactAt = contactEmail ? UI.about.contactLede.indexOf(contactEmail) : -1;
+const contactBefore = contactAt >= 0 ? UI.about.contactLede.slice(0, contactAt) : UI.about.contactLede;
+const contactAfter = contactAt >= 0 ? UI.about.contactLede.slice(contactAt + contactEmail.length) : '';
+const qqNumber = (person.qq ?? '').trim();
 const aboutStructuredData = {
   '@context': 'https://schema.org',
   '@graph': [
@@ -84,17 +92,33 @@ const aboutStructuredData = {
               GitHub
             </a>
           )}
-          {person.links?.email && (
-            <a class="about-link" href={person.links.email}>
+          {sidebarEmail && (
+            <button
+              class="about-link"
+              type="button"
+              data-copy-text={sidebarEmail}
+              data-copied-label={UI.about.copied}
+              data-copy-failed-label={UI.about.copyFailed}
+              aria-label={UI.about.copyEmail(sidebarEmail)}
+            >
               <Icon name="mail" size={16} />
-              {person.links.email.replace('mailto:', '')}
-            </a>
+              <span data-copy-label>{sidebarEmail}</span>
+              <span class="visually-hidden" data-copy-live aria-live="polite"></span>
+            </button>
           )}
-          {person.qq && (
-            <span class="about-link about-link-static">
+          {qqNumber && (
+            <button
+              class="about-link"
+              type="button"
+              data-copy-text={qqNumber}
+              data-copied-label={UI.about.copied}
+              data-copy-failed-label={UI.about.copyFailed}
+              aria-label={UI.about.copyQq(qqNumber)}
+            >
               <Icon name="message" size={16} />
-              {UI.about.qq(person.qq)}
-            </span>
+              <span data-copy-label>{UI.about.qq(qqNumber)}</span>
+              <span class="visually-hidden" data-copy-live aria-live="polite"></span>
+            </button>
           )}
           <a class="about-link" href={localizedHref(locale, '/projects/')}>
             <Icon name="grid" size={16} />
@@ -104,8 +128,45 @@ const aboutStructuredData = {
       </aside>
 
       <div class="about-main">
+        <details class="article-toc article-toc-mobile" data-about-toc>
+          <summary class="article-toc-summary">
+            <span class="article-toc-summary-label">{UI.common.toc}</span>
+            <span class="mono article-toc-count">{UI.common.tocSections(ABOUT_TOC.length)}</span>
+          </summary>
+          <nav class="article-toc-nav" aria-label={UI.common.articleTocAria}>
+            <ol class="article-toc-list">
+              {ABOUT_TOC.map((item) => (
+                <li class="article-toc-item is-level-2">
+                  <a href={`#${item.id}`} class="article-toc-link" data-toc-slug={item.id}>{item.title}</a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        </details>
         <div class="about-markdown">
           <Content />
+          {contactEmail && (
+            <>
+              <h2 id="about-contact">{UI.about.contactHeading}</h2>
+              <p>
+                {contactBefore}
+                {contactAt >= 0 && (
+                  <button
+                    class="about-inline-copy"
+                    type="button"
+                    data-copy-text={contactEmail}
+                    data-copied-label={UI.about.copied}
+                    data-copy-failed-label={UI.about.copyFailed}
+                    aria-label={UI.about.copyEmail(contactEmail)}
+                  >
+                    <span data-copy-label>{contactEmail}</span>
+                    <span class="visually-hidden" data-copy-live aria-live="polite"></span>
+                  </button>
+                )}
+                {contactAfter}
+              </p>
+            </>
+          )}
         </div>
 
         <section class="cooperation-panel" aria-labelledby="about-cooperation">
@@ -114,31 +175,78 @@ const aboutStructuredData = {
           </h2>
           <p class="cooperation-description">{publicProfile.cooperation?.description}</p>
           <div class="cooperation-actions">
-            {person.links?.email && (
-              <a class="btn btn-solid" href={person.links.email}>
+            {sidebarEmail && (
+              <button
+                class="btn btn-solid"
+                type="button"
+                data-copy-text={sidebarEmail}
+                data-copied-label={UI.about.copied}
+                data-copy-failed-label={UI.about.copyFailed}
+                aria-label={UI.about.copyEmail(sidebarEmail)}
+              >
                 <Icon name="mail" size={15} />
-                {UI.about.sendEmail}
-              </a>
+                <span data-copy-label>{UI.about.sendEmail}</span>
+                <span class="visually-hidden" data-copy-live aria-live="polite"></span>
+              </button>
             )}
             <button class="btn btn-ghost" type="button" data-open-ask data-query={UI.about.askCollaborate(copy.brand.persona)}>{UI.about.askCollaborateButton}</button>
           </div>
         </section>
       </div>
+      <aside class="article-toc-rail about-toc-rail" data-about-toc aria-label={UI.common.articleTocAria}>
+        <p class="eyebrow article-toc-label">{UI.common.toc}</p>
+        <nav class="article-toc-nav">
+          <ol class="article-toc-list">
+            {ABOUT_TOC.map((item) => (
+              <li class="article-toc-item is-level-2">
+                <a href={`#${item.id}`} class="article-toc-link" data-toc-slug={item.id}>{item.title}</a>
+              </li>
+            ))}
+          </ol>
+        </nav>
+      </aside>
     </div>
   </div>
   {siteConfig.readingProgress?.enabled && <ScrollWaterBall />}
 </StarlightPage>
 
+<script>
+  import { initCopyButtons } from '../../scripts/copy-text';
+  import { initAboutToc } from '../../scripts/about-toc';
+
+  initCopyButtons(document);
+  initAboutToc(document);
+</script>
+
 <style>
-  .about-link-static {
-    cursor: default;
-  }
-  .about-link-static:hover,
-  .about-link-static:focus-visible {
+  button.about-link {
+    width: 100%;
+    border: 0;
+    border-bottom: 1px solid var(--line-soft);
+    border-radius: 0;
+    background: transparent;
+    text-align: left;
+    font: inherit;
     color: var(--muted);
   }
-  .about-link-static:hover svg,
-  .about-link-static:focus-visible svg {
-    color: var(--faint);
+  button.about-link[data-copied='true'] {
+    color: var(--ink);
+  }
+  button.about-inline-copy {
+    display: inline;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    font: inherit;
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--line-soft);
+    text-underline-offset: 4px;
+  }
+  button.about-inline-copy:hover,
+  button.about-inline-copy:focus-visible {
+    text-decoration-color: var(--ink);
   }
 </style>
