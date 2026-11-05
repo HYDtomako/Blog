@@ -34,6 +34,9 @@ const { Content } = await render(resume);
 const aboutPath = localizedSitePath(locale, '/about/');
 const sidebarEmail = copyValueFromContact(person.links?.email);
 const contactEmail = copyValueFromContact(siteConfig.contact?.email);
+const contactAt = contactEmail ? UI.about.contactLede.indexOf(contactEmail) : -1;
+const contactBefore = contactAt >= 0 ? UI.about.contactLede.slice(0, contactAt) : UI.about.contactLede;
+const contactAfter = contactAt >= 0 ? UI.about.contactLede.slice(contactAt + contactEmail.length) : '';
 const qqNumber = (person.qq ?? '').trim();
 const aboutStructuredData = {
   '@context': 'https://schema.org',
@@ -129,19 +132,23 @@ const aboutStructuredData = {
           {contactEmail && (
             <>
               <h2 id="about-contact">{UI.about.contactHeading}</h2>
-              <p>{UI.about.contactLede}</p>
-              <button
-                class="about-link"
-                type="button"
-                data-copy-text={contactEmail}
-                data-copied-label={UI.about.copied}
-                data-copy-failed-label={UI.about.copyFailed}
-                aria-label={UI.about.copyEmail(contactEmail)}
-              >
-                <Icon name="mail" size={16} />
-                <span data-copy-label>{contactEmail}</span>
-                <span class="visually-hidden" data-copy-live aria-live="polite"></span>
-              </button>
+              <p>
+                {contactBefore}
+                {contactAt >= 0 && (
+                  <button
+                    class="about-inline-copy"
+                    type="button"
+                    data-copy-text={contactEmail}
+                    data-copied-label={UI.about.copied}
+                    data-copy-failed-label={UI.about.copyFailed}
+                    aria-label={UI.about.copyEmail(contactEmail)}
+                  >
+                    <span data-copy-label>{contactEmail}</span>
+                    <span class="visually-hidden" data-copy-live aria-live="polite"></span>
+                  </button>
+                )}
+                {contactAfter}
+              </p>
             </>
           )}
         </div>
@@ -195,7 +202,21 @@ const aboutStructuredData = {
   button.about-link[data-copied='true'] {
     color: var(--ink);
   }
-  .about-markdown > button.about-link {
-    margin-top: 4px;
+  button.about-inline-copy {
+    display: inline;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    font: inherit;
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--line-soft);
+    text-underline-offset: 4px;
+  }
+  button.about-inline-copy:hover,
+  button.about-inline-copy:focus-visible {
+    text-decoration-color: var(--ink);
   }
 </style>

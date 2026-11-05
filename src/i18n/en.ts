@@ -174,7 +174,7 @@ export const en: UiCopy = {
 		copyEmail: (email) => `Copy email ${email}`,
 		copyQq: (id) => `Copy QQ ${id}`,
 		contactHeading: 'Contact Me',
-		contactLede: 'This is the personal agent address, hydagent10@gmail.com. Click it to copy. Mail sent there gets Hu to pay attention.',
+		contactLede: 'This is the personal agent address, hydagent10@gmail.com. Click it to copy. Mail sent there gets HYD to pay attention.',
 	},
 	common: {
 		home: 'Home',
