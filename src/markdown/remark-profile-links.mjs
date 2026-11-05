@@ -94,7 +94,9 @@ const photoIcon = strokeIcon(
 );
 
 function photoChip(link) {
-	return `<a class="photo-link" href="${escapeHtml(link.url)}" target="_blank" rel="noreferrer">${photoIcon}<span>${escapeHtml(link.label)}</span></a>`;
+	const src = escapeHtml(link.url);
+	const label = escapeHtml(link.label);
+	return `<a class="photo-link photo-card" href="${src}" target="_blank" rel="noreferrer"><span class="photo-card-frame" data-blur-fade><img class="photo-card-img" src="${src}" alt="" loading="lazy" decoding="async" /><span class="photo-lens" aria-hidden="true"><img class="photo-lens-zoom" alt="" src="${src}" draggable="false" /></span></span><span class="photo-card-caption">${photoIcon}<span>${label}</span></span></a>`;
 }
 
 export function remarkProfileLinks() {

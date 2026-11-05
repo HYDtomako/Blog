@@ -59,6 +59,7 @@ export default defineConfig({
 			pagefind: false,
 			customCss: [
 				'./src/styles/refined-x.css',
+				'./src/styles/theme-reveal.css',
 				'./src/styles/hero-theme-crossfade.css',
 				'./src/styles/hero-glass-react.css',
 				'./src/styles/chat-transcript.css',

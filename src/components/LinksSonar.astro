@@ -72,6 +72,12 @@ const particles: [number, number, number][] = [
 	[19.4, 55.6, 0.3],
 	[91.2, 34.8, 0.25],
 ];
+
+/** Magic UI ripple: eight concentric rings, opacity falling off from the core. */
+const rippleRings = Array.from({ length: 8 }, (_, index) => ({
+	index,
+	opacity: Math.max(0.05, 0.24 - index * 0.03).toFixed(2),
+}));
 ---
 
 <section
@@ -85,6 +91,11 @@ const particles: [number, number, number][] = [
 	aria-labelledby="links-heading"
 >
 	<div class="ls-stage" data-links-stage>
+		<div class="ls-ripple" aria-hidden="true">
+			{rippleRings.map((ring) => (
+				<span class="ls-ripple-ring" style={`--i:${ring.index};opacity:${ring.opacity}`}></span>
+			))}
+		</div>
 		<svg class="ls-figure" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
 			<g class="ls-rings">
 				<circle cx="50" cy="50" r="12" />
@@ -147,7 +158,12 @@ const particles: [number, number, number][] = [
 		<p class="ls-cta-line mono">{links.cta}</p>
 		{submitEnabled ? (
 			<div class="ls-add">
-				<button class="ls-add-toggle" type="button" data-links-dialog-open>{links.ctaButton}<Icon name="external" size={14} /></button>
+				<button class="ls-add-toggle" type="button" data-links-dialog-open>
+					<span class="ls-shimmer" aria-hidden="true"><span class="ls-shimmer-slide"><span class="ls-shimmer-spin"></span></span></span>
+					<span class="ls-shimmer-fill" aria-hidden="true"></span>
+					<span class="ls-add-label">{links.ctaButton}<Icon name="external" size={14} /></span>
+					<span class="ls-shimmer-highlight" aria-hidden="true"></span>
+				</button>
 				<dialog class="ls-dialog" data-links-dialog aria-labelledby="links-dialog-title" aria-describedby="links-dialog-note">
 				<button type="button" class="ls-dialog-close" data-links-dialog-close aria-label={links.close}>×</button>
 				<form class="ls-form" data-links-form novalidate>
@@ -298,6 +314,36 @@ const particles: [number, number, number][] = [
 	.ls-rings circle.ls-rim {
 		stroke: var(--ls-hair);
 		stroke-width: 0.5;
+	}
+
+	/* Inner range rings give way to the concentric ripple behind the disc. */
+	.ls-rings circle:not(.ls-rim) {
+		display: none;
+	}
+
+	.ls-ripple {
+		position: absolute;
+		inset: 0;
+		z-index: 0;
+		overflow: hidden;
+		border-radius: 50%;
+		pointer-events: none;
+		-webkit-mask-image: radial-gradient(circle at 50% 46%, #000 0%, #000 52%, transparent 78%);
+		mask-image: radial-gradient(circle at 50% 46%, #000 0%, #000 52%, transparent 78%);
+	}
+
+	.ls-ripple-ring {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		width: calc(28% + var(--i) * 9%);
+		height: calc(28% + var(--i) * 9%);
+		border: 1px solid color-mix(in srgb, var(--ink) 72%, transparent);
+		border-radius: 50%;
+		background: color-mix(in srgb, var(--ink) 12%, transparent);
+		box-shadow: 0 10px 28px color-mix(in srgb, var(--ink) 10%, transparent);
+		transform: translate(-50%, -50%) scale(1);
+		animation: ls-magic-ripple 2s ease calc(var(--i) * 0.06s) infinite;
 	}
 
 	.ls-axis line {
@@ -847,32 +893,104 @@ const particles: [number, number, number][] = [
 	}
 
 	.ls-add-toggle {
+		--spread: 90deg;
+		--shimmer-color: #ffffff;
+		--radius: 100px;
+		--speed: 3s;
+		--cut: 0.05em;
+		--bg: rgba(0, 0, 0, 1);
+		position: relative;
+		z-index: 0;
+		isolation: isolate;
 		display: inline-flex;
 		align-items: center;
-		gap: 8px;
-		padding: 10px 18px;
+		justify-content: center;
+		overflow: hidden;
+		padding: 10px 22px;
 		min-height: 44px;
-		border: 1px solid var(--ink);
-		border-radius: var(--r);
-		background: var(--ink);
-		color: var(--bg);
+		border: 1px solid rgba(255, 255, 255, 0.12);
+		border-radius: var(--radius);
+		background: var(--bg);
+		color: #fff;
+		font: inherit;
 		font-size: 14px;
 		font-weight: 500;
+		white-space: nowrap;
 		cursor: pointer;
 		list-style: none;
+		transform: translateZ(0);
 	}
 
 	.ls-add-toggle::-webkit-details-marker {
 		display: none;
 	}
 
-	.ls-add-toggle:hover {
-		opacity: 0.85;
+	.ls-add-toggle:active {
+		transform: translateY(1px);
 	}
 
-	.ls-add[open] .ls-add-toggle {
-		background: transparent;
-		color: var(--ink);
+	.ls-add-label {
+		position: relative;
+		z-index: 1;
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.ls-shimmer {
+		position: absolute;
+		inset: 0;
+		z-index: -30;
+		overflow: visible;
+		container-type: size;
+		filter: blur(2px);
+		pointer-events: none;
+	}
+
+	.ls-shimmer-slide {
+		position: absolute;
+		inset: 0;
+		height: 100cqh;
+		aspect-ratio: 1;
+		animation: ls-shimmer-slide var(--speed) ease-in-out infinite alternate;
+	}
+
+	.ls-shimmer-spin {
+		position: absolute;
+		inset: -100%;
+		background: conic-gradient(
+			from calc(270deg - (var(--spread) * 0.5)),
+			transparent 0,
+			var(--shimmer-color) var(--spread),
+			transparent var(--spread)
+		);
+		animation: ls-spin-around calc(var(--speed) * 2) infinite linear;
+	}
+
+	.ls-shimmer-fill {
+		position: absolute;
+		inset: var(--cut);
+		z-index: -20;
+		border-radius: var(--radius);
+		background: var(--bg);
+		pointer-events: none;
+	}
+
+	.ls-shimmer-highlight {
+		position: absolute;
+		inset: 0;
+		z-index: 2;
+		border-radius: inherit;
+		pointer-events: none;
+		box-shadow: inset 0 -8px 10px #ffffff1f;
+	}
+
+	.ls-add-toggle:hover .ls-shimmer-highlight {
+		box-shadow: inset 0 -6px 10px #ffffff3f;
+	}
+
+	.ls-add-toggle:active .ls-shimmer-highlight {
+		box-shadow: inset 0 -10px 10px #ffffff3f;
 	}
 
 	.ls-form {
@@ -1036,6 +1154,39 @@ const particles: [number, number, number][] = [
 		50% {
 			opacity: 0.7;
 			transform: translate(-50%, -50%) scale(1.08);
+		}
+	}
+
+	@keyframes ls-magic-ripple {
+		0%,
+		100% {
+			transform: translate(-50%, -50%) scale(1);
+		}
+		50% {
+			transform: translate(-50%, -50%) scale(0.9);
+		}
+	}
+
+	@keyframes ls-shimmer-slide {
+		to {
+			transform: translate(calc(100cqw - 100%), 0);
+		}
+	}
+
+	@keyframes ls-spin-around {
+		0% {
+			transform: translateZ(0) rotate(0);
+		}
+		15%,
+		35% {
+			transform: translateZ(0) rotate(90deg);
+		}
+		65%,
+		85% {
+			transform: translateZ(0) rotate(270deg);
+		}
+		100% {
+			transform: translateZ(0) rotate(360deg);
 		}
 	}
 

@@ -1761,35 +1761,106 @@ h4 {
   margin-right: 6px;
 }
 
-/* Photo link chips in the about-page resume */
+/* About-page photos: blur-fade in, then a pointer lens. Visible without script. */
 .about-markdown a.photo-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 32px;
-  padding: 4px 12px;
-  margin-left: 6px;
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 320px);
+  margin: 12px 0 2px;
+  padding: 0;
+  overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
+  background: var(--surface);
   color: var(--muted);
   font-size: 13.5px;
   text-decoration: none;
-  vertical-align: middle;
-  transition:
-    color var(--duration-fast) var(--ease-out-quart),
-    border-color var(--duration-fast) var(--ease-out-quart),
-    background var(--duration-fast) var(--ease-out-quart);
 }
 .about-markdown a.photo-link:hover,
 .about-markdown a.photo-link:focus-visible {
   color: var(--ink);
   border-color: var(--ink);
+}
+.about-markdown a.photo-link:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+.photo-card-frame {
+  --lx: 50%;
+  --ly: 50%;
+  position: relative;
+  display: block;
+  overflow: hidden;
   background: var(--bg-sunken);
+}
+.photo-card-frame.is-pending:not(.is-visible) {
+  opacity: 0;
+  filter: blur(6px);
+  transform: translateY(-6px);
+}
+.photo-card-frame.is-visible {
+  opacity: 1;
+  filter: blur(0);
+  transform: translateY(0);
+  transition:
+    opacity 0.4s ease-out,
+    filter 0.4s ease-out,
+    transform 0.4s ease-out;
+  transition-delay: calc(0.04s + var(--bf-delay, 0s));
+}
+.photo-card-img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.photo-lens {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(circle 75px at var(--lx) var(--ly), #000 99%, transparent 100%);
+  mask-image: radial-gradient(circle 75px at var(--lx) var(--ly), #000 99%, transparent 100%);
+}
+.photo-card-frame.is-lens .photo-lens {
+  opacity: 1;
+}
+.photo-lens-zoom {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(2);
+  transform-origin: var(--lx) var(--ly);
+}
+.photo-card-frame.is-lens::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  width: 150px;
+  height: 150px;
+  left: var(--lx);
+  top: var(--ly);
+  border-radius: 50%;
+  border: 2px solid rgb(255 255 255 / 88%);
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 40%),
+    0 12px 28px rgb(0 0 0 / 28%);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.photo-card-caption {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px 10px;
+  line-height: 1.4;
 }
 .about-markdown a.photo-link svg {
   flex: none;
   color: var(--faint);
-  transition: color var(--duration-fast) var(--ease-out-quart);
 }
 .about-markdown a.photo-link:hover svg,
 .about-markdown a.photo-link:focus-visible svg {
@@ -2000,6 +2071,7 @@ h4 {
   font-family: var(--serif);
   font-size: 32px;
   line-height: 1;
+  font-variant-numeric: tabular-nums;
   color: var(--ink);
 }
 .stats-cell dd {

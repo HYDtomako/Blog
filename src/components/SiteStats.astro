@@ -28,11 +28,11 @@ const format = (value: number) => value.toLocaleString(locale);
 	</div>
 	<dl class="stats-grid">
 		<div class="stats-cell">
-			<dt>{format(articles)}</dt>
+			<dt data-number-ticker={String(articles)}>{format(articles)}</dt>
 			<dd>{UI.stats.articles}</dd>
 		</div>
 		<div class="stats-cell">
-			<dt>{format(notes)}</dt>
+			<dt data-number-ticker={String(notes)}>{format(notes)}</dt>
 			<dd>{UI.stats.notes}</dd>
 		</div>
 		<div class="stats-cell">
@@ -42,7 +42,9 @@ const format = (value: number) => value.toLocaleString(locale);
 	</dl>
 	<p class="stats-note" hidden data-stats-note>{UI.stats.failed}</p>
 	<script>
+		import { initNumberTickers } from '../scripts/number-ticker';
 		import { initSiteStats } from '../scripts/site-stats';
+		initNumberTickers();
 		initSiteStats();
 	</script>
 </section>

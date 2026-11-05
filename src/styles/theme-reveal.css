@@ -1,0 +1,27 @@
+/*
+ * Circle clip reveal for the header theme toggle (View Transitions API).
+ * The collapsed clip is pinned in CSS so the new theme does not flash
+ * unclipped before the WAAPI animation on ::view-transition-new(root) starts.
+ * Persistence stays on the existing light/dark preference; this file only paints.
+ */
+
+::view-transition-old(root),
+::view-transition-new(root) {
+	animation: none;
+	mix-blend-mode: normal;
+}
+
+html[data-magicui-theme-vt='active']::view-transition-group(root) {
+	animation-duration: var(--magicui-theme-toggle-vt-duration, 400ms);
+}
+
+html[data-magicui-theme-vt='active']::view-transition-old(root) {
+	z-index: 1;
+}
+
+html[data-magicui-theme-vt='active']::view-transition-new(root) {
+	z-index: 2147483646;
+	animation: none;
+	mix-blend-mode: normal;
+	clip-path: var(--magicui-theme-vt-clip-from, circle(0% at 50% 50%));
+}
