@@ -1485,6 +1485,100 @@ h4 {
   border-color: var(--ink);
   color: var(--bg);
 }
+/* Nick, email, URL, the textarea, and send share one panel. The comment list stays outside it. */
+.article-comments .twikoo .tk-submit {
+  box-sizing: border-box;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--bg);
+}
+.article-comments .twikoo .tk-comments > .tk-submit {
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+.article-comments .twikoo .tk-submit .tk-meta-input {
+  margin-bottom: 12px;
+}
+.article-comments .twikoo .tk-submit > .tk-row.actions,
+.article-comments .twikoo .tk-submit .tk-preview-container {
+  margin-left: 3.5rem;
+}
+.article-comments .twikoo .tk-submit > .tk-row.actions {
+  flex-wrap: wrap;
+  row-gap: 8px;
+  margin-top: 12px;
+  margin-bottom: 0;
+}
+.article-comments .twikoo .tk-submit .tk-preview-container {
+  margin-top: 12px;
+  margin-bottom: 0;
+  border-color: var(--line);
+  border-radius: var(--r);
+  background: var(--bg-sunken);
+  color: var(--text);
+}
+.article-comments .twikoo .tk-submit .el-input__inner,
+.article-comments .twikoo .tk-submit .el-textarea__inner,
+.article-comments .twikoo .tk-submit .el-input-group__prepend {
+  border-color: var(--line);
+}
+.article-comments .twikoo .tk-submit .el-input-group__prepend {
+  background: var(--bg-sunken);
+  color: var(--muted);
+}
+.article-comments .twikoo .tk-submit .el-input__inner,
+.article-comments .twikoo .tk-submit .el-textarea__inner {
+  background: var(--bg);
+  box-shadow: none;
+}
+.article-comments .twikoo .tk-submit .el-textarea__inner {
+  border-radius: var(--r);
+}
+.article-comments .twikoo .tk-submit .el-input-group__prepend {
+  border-radius: var(--r) 0 0 var(--r);
+}
+.article-comments .twikoo .tk-submit .el-input-group--prepend .el-input__inner {
+  border-radius: 0 var(--r) var(--r) 0;
+}
+.article-comments .twikoo .tk-submit .el-textarea__inner:focus,
+.article-comments .twikoo .tk-submit .el-input__inner:focus {
+  border-color: var(--ink);
+}
+.article-comments .twikoo .tk-submit .tk-preview.el-button,
+.article-comments .twikoo .tk-submit .tk-cancel.el-button,
+.article-comments .twikoo .tk-submit .tk-preview.el-button:hover,
+.article-comments .twikoo .tk-submit .tk-preview.el-button:focus,
+.article-comments .twikoo .tk-submit .tk-cancel.el-button:hover,
+.article-comments .twikoo .tk-submit .tk-cancel.el-button:focus {
+  background: var(--bg);
+  border-color: var(--line);
+  color: var(--ink);
+}
+.article-comments .twikoo .tk-submit .tk-preview.el-button:hover,
+.article-comments .twikoo .tk-submit .tk-preview.el-button:focus,
+.article-comments .twikoo .tk-submit .tk-cancel.el-button:hover,
+.article-comments .twikoo .tk-submit .tk-cancel.el-button:focus {
+  border-color: var(--ink);
+}
+.article-comments .twikoo .tk-submit .tk-send.el-button--primary,
+.article-comments .twikoo .tk-submit .tk-send.el-button--primary:hover,
+.article-comments .twikoo .tk-submit .tk-send.el-button--primary:focus,
+.article-comments .twikoo .tk-submit .tk-send.el-button--primary:active,
+.article-comments .twikoo .tk-submit .tk-send.el-button--primary.is-disabled,
+.article-comments .twikoo .tk-submit .tk-send.el-button--primary.is-disabled:hover,
+.article-comments .twikoo .tk-submit .tk-send.el-button--primary.is-disabled:focus,
+.article-comments .twikoo .tk-submit .tk-send.el-button--primary.is-disabled:active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bg);
+}
+.article-comments .twikoo .tk-submit .tk-send.el-button--primary.is-disabled,
+.article-comments .twikoo .tk-submit .tk-send.el-button--primary.is-disabled:hover,
+.article-comments .twikoo .tk-submit .tk-send.el-button--primary.is-disabled:focus,
+.article-comments .twikoo .tk-submit .tk-send.el-button--primary.is-disabled:active {
+  opacity: 0.4;
+}
 .article-comments-noscript {
   margin: 18px 0 0;
   color: var(--muted);
@@ -3442,6 +3536,9 @@ body:has(.overlay[open]) {
   }
   .article-comments-frame {
     margin-top: 20px;
+  }
+  .article-comments .twikoo .tk-submit {
+    padding: 16px;
   }
   .overlay {
     padding: 5vh 12px 12px;
