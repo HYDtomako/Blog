@@ -170,7 +170,7 @@ export const zhCN: UiCopy = {
 		copyFailed: '复制失败',
 		copyEmail: (email) => `复制邮箱 ${email}`,
 		copyQq: (id) => `复制 QQ ${id}`,
-		contactHeading: '联系我',
+		contactHeading: 'Contact Me',
 		contactLede: '这是 personal agent 邮箱 hydagent10@gmail.com。点一下就能复制；寄到这里，会提醒胡同学注意喵。',
 	},
 	common: {
