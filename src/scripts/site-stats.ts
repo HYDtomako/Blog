@@ -1,3 +1,5 @@
+import { armNumberTicker } from './number-ticker.ts';
+
 export type SiteStatsSnapshot = {
 	views: number;
 	likes: number;
@@ -48,7 +50,10 @@ export function initSiteStats(doc: Document = document, fetchImpl: typeof fetch 
 			if (note) note.hidden = false;
 			return;
 		}
-		if (target) target.textContent = formatStatNumber(snapshot.views, locale);
+		if (target) {
+			target.textContent = formatStatNumber(snapshot.views, locale);
+			armNumberTicker(target, snapshot.views, locale);
+		}
 		if (note) note.hidden = true;
 	});
 }

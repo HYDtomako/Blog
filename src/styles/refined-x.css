@@ -2000,6 +2000,7 @@ h4 {
   font-family: var(--serif);
   font-size: 32px;
   line-height: 1;
+  font-variant-numeric: tabular-nums;
   color: var(--ink);
 }
 .stats-cell dd {
