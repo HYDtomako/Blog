@@ -153,21 +153,23 @@ const aboutStructuredData = {
         </section>
 
         {contactEmail && (
-          <section class="cooperation-panel contact-panel" aria-labelledby="about-contact">
-            <h2 id="about-contact" class="section-title cooperation-title">{UI.about.contactHeading}</h2>
-            <p class="cooperation-description">{UI.about.contactLede}</p>
-            <button
-              class="btn btn-solid"
-              type="button"
-              data-copy-text={contactEmail}
-              data-copied-label={UI.about.copied}
-              data-copy-failed-label={UI.about.copyFailed}
-              aria-label={UI.about.copyEmail(contactEmail)}
-            >
-              <Icon name="mail" size={15} />
-              <span data-copy-label>{contactEmail}</span>
-              <span class="visually-hidden" data-copy-live aria-live="polite"></span>
-            </button>
+          <section class="about-contact" aria-labelledby="about-contact">
+            <h2 id="about-contact" class="section-title">{UI.about.contactHeading}</h2>
+            <p class="about-contact-lede">{UI.about.contactLede}</p>
+            <nav class="about-links" aria-label={UI.about.contactHeading}>
+              <button
+                class="about-link"
+                type="button"
+                data-copy-text={contactEmail}
+                data-copied-label={UI.about.copied}
+                data-copy-failed-label={UI.about.copyFailed}
+                aria-label={UI.about.copyEmail(contactEmail)}
+              >
+                <Icon name="mail" size={16} />
+                <span data-copy-label>{contactEmail}</span>
+                <span class="visually-hidden" data-copy-live aria-live="polite"></span>
+              </button>
+            </nav>
           </section>
         )}
       </div>
@@ -195,5 +197,18 @@ const aboutStructuredData = {
   }
   button.about-link[data-copied='true'] {
     color: var(--ink);
+  }
+  .about-contact {
+    margin-top: clamp(48px, 6vw, 64px);
+  }
+  .about-contact-lede {
+    margin: 8px 0 4px;
+    max-width: 52ch;
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.65;
+  }
+  .about-contact .about-links {
+    max-width: 260px;
   }
 </style>

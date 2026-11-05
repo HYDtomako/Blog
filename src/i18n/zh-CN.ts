@@ -171,7 +171,7 @@ export const zhCN: UiCopy = {
 		copyEmail: (email) => `复制邮箱 ${email}`,
 		copyQq: (id) => `复制 QQ ${id}`,
 		contactHeading: '联系我',
-		contactLede: '合作、交流，或只是打个招呼，发邮件就好。点一下地址会复制到剪贴板。',
+		contactLede: '这是 personal agent 邮箱 hydagent10@gmail.com。点一下就能复制；寄到这里，会提醒胡同学注意喵。',
 	},
 	common: {
 		home: '首页',
