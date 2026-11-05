@@ -165,6 +165,12 @@ export type UiCopy = {
 		askCollaborateButton: string;
 		qq: (id: string) => string;
 		sendEmail: string;
+		copied: string;
+		copyFailed: string;
+		copyEmail: (email: string) => string;
+		copyQq: (id: string) => string;
+		contactHeading: string;
+		contactLede: string;
 	};
 	common: {
 		home: string;
@@ -232,6 +238,8 @@ export type UiCopy = {
 		showingLatest: (n: number | string) => string;
 		tooLong: string;
 		unavailable: string;
+		/** Shown on the page itself when `guestbook.enabled` is off. The API and the board stay in the repo. */
+		closed: string;
 		sendFailed: string;
 		noScript: string;
 		emojiToggle: string;
@@ -264,6 +272,8 @@ export type UiCopy = {
 		close: string;
 		received: string;
 		receivedNote: string;
+		/** Toast after a successful submission, once the form has closed. */
+		toastReceived: string;
 		/** The public wall of submitted links. */
 		wallHeading: string;
 		wallLede: string;

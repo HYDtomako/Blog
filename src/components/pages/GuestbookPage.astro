@@ -10,12 +10,13 @@ const locale = localeFromPath(Astro.url.pathname);
 const UI = getSiteCopy(locale).ui;
 const guestbook = UI.guestbook;
 const guestbookEnabled = siteConfig.guestbook?.enabled === true;
+const pageLede = guestbookEnabled ? guestbook.lede : guestbook.closed;
 const guestbookPath = localizedSitePath(locale, '/guestbook/');
 const structuredData = [
 	webPageJsonLd({
 		path: guestbookPath,
 		name: guestbook.heading,
-		description: guestbook.lede,
+		description: pageLede,
 		locale,
 	}),
 	breadcrumbJsonLd([
@@ -28,7 +29,7 @@ const structuredData = [
 <StarlightPage
   frontmatter={{
     title: guestbook.heading,
-    description: guestbook.lede,
+    description: pageLede,
     template: 'splash',
     contentType: 'page',
     slug: 'guestbook',
@@ -41,15 +42,7 @@ const structuredData = [
   <div class="wrap page">
     <div class="crumbs"><a href={localizedHref(locale, '/')}>{UI.common.home}</a><span class="sep">/</span><span>{guestbook.heading}</span></div>
     <h1 id="guestbook-heading" class="display page-heading">{guestbook.heading}</h1>
-    <p class="lede page-lede">{guestbook.lede}</p>
-    {guestbookEnabled ? <GuestbookBoard /> : <p class="mono guestbook-offline">{guestbook.unavailable}</p>}
+    <p class="lede page-lede">{pageLede}</p>
+    {guestbookEnabled && <GuestbookBoard />}
   </div>
 </StarlightPage>
-
-<style>
-  .guestbook-offline {
-    margin: 24px 0 0;
-    color: var(--faint);
-    font-size: 12.5px;
-  }
-</style>

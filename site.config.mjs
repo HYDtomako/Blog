@@ -57,12 +57,20 @@ const defaults = {
 		/** Must match the Worker PERSIST_INTERACTIONS setting when Live Ask is enabled. */
 		persistInteractions: false,
 	},
-	/** Optional giscus repository/category identifiers. Leave all fields empty to disable comments. */
+	/**
+	 * Article comments via the existing giscus widget. `enabled` is derived when all four
+	 * identifiers are set. `repoId` is the GitHub node id of HYDtomako/Blog.
+	 * Discussions are disabled on that repo (no category node exists, and this environment
+	 * cannot turn them on). `category` is the visitor-writable category to use once
+	 * Discussions and the giscus app are on. Replace `categoryId` with that category's
+	 * node id from https://giscus.app before a thread can actually be created; the value
+	 * here is what lets the widget mount.
+	 */
 	comments: {
-		repo: '',
-		repoId: '',
-		category: '',
-		categoryId: '',
+		repo: 'HYDtomako/Blog',
+		repoId: 'R_kgDOUrbZ7A',
+		category: 'General',
+		categoryId: 'PENDING',
 	},
 	/** Page-view/like counters. Keep `url` empty for same-origin; point it at `wrangler dev` while developing the API. */
 	stats: {
@@ -73,9 +81,13 @@ const defaults = {
 	readingProgress: {
 		enabled: true,
 	},
-		/** Anonymous guestbook at /guestbook/. Keep `url` empty for same-origin; point it at `wrangler dev` while developing the API. */
+	/**
+	 * Anonymous guestbook at /guestbook/. `enabled` gates the nav/footer entry and the board.
+	 * The page stays reachable and shows a closed notice; the Worker and its routes stay in place.
+	 * Keep `url` empty for same-origin; point it at `wrangler dev` while developing the API.
+	 */
 	guestbook: {
-		enabled: true,
+		enabled: false,
 		url: '',
 	},
 	/**
@@ -85,6 +97,10 @@ const defaults = {
 	links: {
 		enabled: true,
 		url: '',
+	},
+	/** Address shown in the about-page contact block. Clicking it copies; it is not a mailto link. */
+	contact: {
+		email: 'hydagent10@gmail.com',
 	},
 	/** Renamed answers keep their old URLs working. */
 	redirects: {
@@ -223,6 +239,7 @@ const merged = {
 	stats: { ...defaults.stats, ...(overlayRest.stats ?? {}) },
 	guestbook: { ...defaults.guestbook, ...(overlayRest.guestbook ?? {}) },
 	links: { ...defaults.links, ...(overlayRest.links ?? {}) },
+	contact: { ...defaults.contact, ...(overlayRest.contact ?? {}) },
 	readingProgress: { ...defaults.readingProgress, ...(overlayRest.readingProgress ?? {}) },
 	comments: resolveCommentsConfig({ ...defaults.comments, ...(overlayRest.comments ?? {}) }),
 	brand: mergedBrand,

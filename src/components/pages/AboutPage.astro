@@ -7,6 +7,7 @@ import { absoluteUrl, breadcrumbJsonLd, entryLocale, getPublicProfile, personJso
 import { withBase } from '../../lib/paths';
 import { DEFAULT_LOCALE, localeFromPath, localizedHref, localizedSitePath } from '../../lib/locale';
 import { getSiteCopy } from '../../lib/site-copy';
+import { copyValueFromContact } from '../../scripts/copy-text';
 import { siteConfig } from '../../../site.config.mjs';
 
 const locale = localeFromPath(Astro.url.pathname);
@@ -31,6 +32,9 @@ const publicProfile = await getPublicProfile(contentLocale);
 const aboutCopy = copy.brand.about;
 const { Content } = await render(resume);
 const aboutPath = localizedSitePath(locale, '/about/');
+const sidebarEmail = copyValueFromContact(person.links?.email);
+const contactEmail = copyValueFromContact(siteConfig.contact?.email);
+const qqNumber = (person.qq ?? '').trim();
 const aboutStructuredData = {
   '@context': 'https://schema.org',
   '@graph': [
@@ -84,17 +88,33 @@ const aboutStructuredData = {
               GitHub
             </a>
           )}
-          {person.links?.email && (
-            <a class="about-link" href={person.links.email}>
+          {sidebarEmail && (
+            <button
+              class="about-link"
+              type="button"
+              data-copy-text={sidebarEmail}
+              data-copied-label={UI.about.copied}
+              data-copy-failed-label={UI.about.copyFailed}
+              aria-label={UI.about.copyEmail(sidebarEmail)}
+            >
               <Icon name="mail" size={16} />
-              {person.links.email.replace('mailto:', '')}
-            </a>
+              <span data-copy-label>{sidebarEmail}</span>
+              <span class="visually-hidden" data-copy-live aria-live="polite"></span>
+            </button>
           )}
-          {person.qq && (
-            <span class="about-link about-link-static">
+          {qqNumber && (
+            <button
+              class="about-link"
+              type="button"
+              data-copy-text={qqNumber}
+              data-copied-label={UI.about.copied}
+              data-copy-failed-label={UI.about.copyFailed}
+              aria-label={UI.about.copyQq(qqNumber)}
+            >
               <Icon name="message" size={16} />
-              {UI.about.qq(person.qq)}
-            </span>
+              <span data-copy-label>{UI.about.qq(qqNumber)}</span>
+              <span class="visually-hidden" data-copy-live aria-live="polite"></span>
+            </button>
           )}
           <a class="about-link" href={localizedHref(locale, '/projects/')}>
             <Icon name="grid" size={16} />
@@ -114,31 +134,66 @@ const aboutStructuredData = {
           </h2>
           <p class="cooperation-description">{publicProfile.cooperation?.description}</p>
           <div class="cooperation-actions">
-            {person.links?.email && (
-              <a class="btn btn-solid" href={person.links.email}>
+            {sidebarEmail && (
+              <button
+                class="btn btn-solid"
+                type="button"
+                data-copy-text={sidebarEmail}
+                data-copied-label={UI.about.copied}
+                data-copy-failed-label={UI.about.copyFailed}
+                aria-label={UI.about.copyEmail(sidebarEmail)}
+              >
                 <Icon name="mail" size={15} />
-                {UI.about.sendEmail}
-              </a>
+                <span data-copy-label>{UI.about.sendEmail}</span>
+                <span class="visually-hidden" data-copy-live aria-live="polite"></span>
+              </button>
             )}
             <button class="btn btn-ghost" type="button" data-open-ask data-query={UI.about.askCollaborate(copy.brand.persona)}>{UI.about.askCollaborateButton}</button>
           </div>
         </section>
+
+        {contactEmail && (
+          <section class="cooperation-panel contact-panel" aria-labelledby="about-contact">
+            <h2 id="about-contact" class="section-title cooperation-title">{UI.about.contactHeading}</h2>
+            <p class="cooperation-description">{UI.about.contactLede}</p>
+            <button
+              class="btn btn-solid"
+              type="button"
+              data-copy-text={contactEmail}
+              data-copied-label={UI.about.copied}
+              data-copy-failed-label={UI.about.copyFailed}
+              aria-label={UI.about.copyEmail(contactEmail)}
+            >
+              <Icon name="mail" size={15} />
+              <span data-copy-label>{contactEmail}</span>
+              <span class="visually-hidden" data-copy-live aria-live="polite"></span>
+            </button>
+          </section>
+        )}
       </div>
     </div>
   </div>
   {siteConfig.readingProgress?.enabled && <ScrollWaterBall />}
 </StarlightPage>
 
+<script>
+  import { initCopyButtons } from '../../scripts/copy-text';
+
+  initCopyButtons(document);
+</script>
+
 <style>
-  .about-link-static {
-    cursor: default;
-  }
-  .about-link-static:hover,
-  .about-link-static:focus-visible {
+  button.about-link {
+    width: 100%;
+    border: 0;
+    border-bottom: 1px solid var(--line-soft);
+    border-radius: 0;
+    background: transparent;
+    text-align: left;
+    font: inherit;
     color: var(--muted);
   }
-  .about-link-static:hover svg,
-  .about-link-static:focus-visible svg {
-    color: var(--faint);
+  button.about-link[data-copied='true'] {
+    color: var(--ink);
   }
 </style>

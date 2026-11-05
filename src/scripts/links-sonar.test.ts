@@ -214,6 +214,7 @@ const TEST_LABELS: LinksLabels = {
 	connecting: 'Connecting',
 	received: 'SIGNAL RECEIVED',
 	receivedNote: 'on the wall now',
+	toastReceived: 'request received',
 	wallLoading: 'loading wall',
 	wallEmpty: 'no signals yet',
 	wallFailed: 'wall failed',
@@ -307,11 +308,24 @@ function buildSonar(options: { fine?: boolean; endpoint?: string; joined?: strin
 	cta.setAttribute('data-links-cta', '');
 	root.appendChild(cta);
 
+	const dialog = new StubNode('dialog');
+	dialog.setAttribute('data-links-dialog', '');
+	const opener = new StubNode('button');
+	opener.setAttribute('data-links-dialog-open', '');
+	const closer = new StubNode('button');
+	closer.setAttribute('data-links-dialog-close', '');
+	root.append(dialog, opener, closer);
+
+	const toast = new StubNode('p');
+	toast.setAttribute('data-links-toast', '');
+	toast.hidden = true;
+	root.appendChild(toast);
+
 	const doc = new StubDocument(root);
 	const win = {
 		matchMedia: () => ({ matches: options.fine !== false }),
 	} as unknown as Window;
-	return { doc, stub: doc, win, root, stage, signal, form, input, submit, status, cta, wallRoot: wall, wallList, wallStatus, wallEmpty };
+	return { doc, stub: doc, win, root, stage, signal, form, input, submit, status, cta, wallRoot: wall, wallList, wallStatus, wallEmpty, dialog, opener, closer, toast };
 }
 
 function jsonResponse(body: unknown, status = 200) {
@@ -573,6 +587,7 @@ test('a submitted url waits for approval without entering the public wall', asyn
 	initLinksSonar(stub.doc as unknown as Document, stub.win, impl);
 	await settling();
 
+	stub.dialog.open = true;
 	stub.input.value = 'astro.build';
 	stub.form.dispatch('submit');
 	assert.equal(stub.status.textContent, TEST_LABELS.connecting);
@@ -586,8 +601,11 @@ test('a submitted url waits for approval without entering the public wall', asyn
 	assert.equal(rows.length, 0);
 	assert.equal(stub.wallList.hidden, true);
 	assert.equal(stub.input.value, '');
-	assert.equal(stub.status.textContent, `${TEST_LABELS.received} — ${TEST_LABELS.receivedNote}`);
-	assert.equal(stub.status.getAttribute('data-state'), 'ok');
+	assert.equal(stub.status.textContent, '');
+	assert.equal(stub.status.getAttribute('data-state'), 'idle');
+	assert.equal(stub.dialog.open, false);
+	assert.equal(stub.toast.hidden, false);
+	assert.equal(stub.toast.textContent, TEST_LABELS.toastReceived);
 });
 
 test('an unreachable site reports SIGNAL LOST and keeps the wall untouched', async () => {
@@ -600,6 +618,7 @@ test('an unreachable site reports SIGNAL LOST and keeps the wall untouched', asy
 	initLinksSonar(stub.doc as unknown as Document, stub.win, impl);
 	await settling();
 
+	stub.dialog.open = true;
 	stub.input.value = 'https://gone.example.com/';
 	stub.form.dispatch('submit');
 	await settling();
@@ -607,6 +626,8 @@ test('an unreachable site reports SIGNAL LOST and keeps the wall untouched', asy
 	assert.equal(stub.status.textContent, 'SIGNAL LOST — unreachable site');
 	assert.equal(stub.status.getAttribute('data-state'), 'error');
 	assert.equal(stub.input.getAttribute('aria-invalid'), 'true');
+	assert.equal(stub.dialog.open, true);
+	assert.equal(stub.toast.hidden, true);
 	assert.equal(stub.wallList.querySelectorAll('.ls-row').length, 0);
 	assert.equal(stub.submit.disabled, false);
 });
@@ -624,15 +645,11 @@ test('the sonar still opens cards when submissions are switched off', () => {
 
 test('native dialog focuses input and restores the opener after close', () => {
 	const stub = buildSonar();
-	const dialog = new StubNode('dialog'); dialog.setAttribute('data-links-dialog', '');
-	const opener = new StubNode('button'); opener.setAttribute('data-links-dialog-open', '');
-	const closer = new StubNode('button'); closer.setAttribute('data-links-dialog-close', '');
-	stub.root.append(dialog, opener, closer);
 	initLinksSonar(stub.doc as unknown as Document, stub.win, fakeFetch(() => jsonResponse({ submissions: [] })).impl);
-	opener.dispatch('click');
-	assert.equal(dialog.open, true); assert.equal(stub.input.focused, true);
-	closer.dispatch('click');
-	assert.equal(dialog.open, false); assert.equal(opener.focused, true);
+	stub.opener.dispatch('click');
+	assert.equal(stub.dialog.open, true); assert.equal(stub.input.focused, true);
+	stub.closer.dispatch('click');
+	assert.equal(stub.dialog.open, false); assert.equal(stub.opener.focused, true);
 });
 
 test('dynamic signals merge, refresh on focus, revoke and retain static fallback on failure', async () => {

@@ -17,6 +17,7 @@ export type LinksLabels = {
 	connecting: string;
 	received: string;
 	receivedNote: string;
+	toastReceived: string;
 	wallLoading: string;
 	wallEmpty: string;
 	wallFailed: string;
@@ -66,6 +67,7 @@ export const FALLBACK_LABELS: LinksLabels = {
 	connecting: 'CONNECTING…',
 	received: 'SIGNAL RECEIVED',
 	receivedNote: 'Received, awaiting approval.',
+	toastReceived: 'Link request received. Waiting for approval.',
 	wallLoading: 'Loading signals…',
 	wallEmpty: 'No signals yet. Be the first.',
 	wallFailed: 'The signal wall is unavailable right now.',
@@ -328,6 +330,21 @@ export function initLinksSonar(
 		status.textContent = text;
 	};
 
+	const toast = root.querySelector<HTMLElement>('[data-links-toast]');
+	let toastTimer: ReturnType<typeof setTimeout> | undefined;
+	const hideToast = () => {
+		if (!toast) return;
+		toast.hidden = true;
+		toast.textContent = '';
+	};
+	const showToast = (text: string) => {
+		if (!toast) return;
+		toast.textContent = text;
+		toast.hidden = false;
+		clearTimeout(toastTimer);
+		toastTimer = setTimeout(() => hideToast(), 4200);
+	};
+
 	const setWallStatus = (text: string) => {
 		wallStatus.textContent = text;
 	};
@@ -419,14 +436,17 @@ export function initLinksSonar(
 					if (!parsed.ok) {
 						input.setAttribute('aria-invalid', 'true');
 						setStatus('error', errorText(parsed.code));
+						hideToast();
 						return;
 					}
 					input.removeAttribute('aria-invalid');
 					input.value = '';
-
-					setStatus('ok', `${labels.received} — ${labels.receivedNote}`);
+					setStatus('idle', '');
+					showToast(labels.toastReceived);
+					dialog?.close();
 				} catch {
 					setStatus('error', errorText('unavailable'));
+					hideToast();
 				} finally {
 					submitButton.disabled = false;
 				}

@@ -30,6 +30,7 @@ const labels = {
 	connecting: links.connecting,
 	received: links.received,
 	receivedNote: links.receivedNote,
+	toastReceived: links.toastReceived,
 	wallLoading: links.wallLoading,
 	wallEmpty: links.wallEmpty,
 	wallFailed: links.wallFailed,
@@ -204,6 +205,8 @@ const particles: [number, number, number][] = [
 			</a>
 		</li>
 	</template>
+
+	<p class="ls-toast" data-links-toast hidden role="status" aria-live="polite"></p>
 </section>
 
 <style is:global>
@@ -941,6 +944,29 @@ const particles: [number, number, number][] = [
 	}
 
 	.ls-status:empty {
+		display: none;
+	}
+
+	.ls-toast {
+		position: fixed;
+		left: 50%;
+		bottom: 28px;
+		z-index: 80;
+		transform: translateX(-50%);
+		max-width: min(420px, calc(100vw - 32px));
+		margin: 0;
+		padding: 12px 16px;
+		border: 1px solid var(--line);
+		border-radius: var(--r);
+		background: var(--surface);
+		color: var(--ink);
+		box-shadow: var(--shadow);
+		font-size: 14px;
+		line-height: 1.5;
+		text-align: center;
+	}
+
+	.ls-toast[hidden] {
 		display: none;
 	}
 
