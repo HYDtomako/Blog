@@ -1433,17 +1433,6 @@ h4 {
   font-size: 14px;
   line-height: 1.6;
 }
-.article-comments-link {
-  color: var(--muted);
-  font-size: 12px;
-  text-decoration: none;
-  text-underline-offset: 4px;
-}
-.article-comments-link:hover,
-.article-comments-link:focus-visible {
-  color: var(--ink);
-  text-decoration: underline;
-}
 .article-comments-frame {
   position: relative;
   min-height: 148px;
@@ -1476,9 +1465,25 @@ h4 {
 .article-comments.is-unavailable .article-comments-status {
   color: var(--muted);
 }
-.article-comments .giscus,
-.article-comments .giscus-frame {
+.article-comments .twikoo {
   width: 100%;
+  color: var(--ink);
+  font-family: inherit;
+}
+.article-comments .twikoo .tk-content,
+.article-comments .twikoo .tk-nick,
+.article-comments .twikoo .tk-meta,
+.article-comments .twikoo .el-textarea__inner,
+.article-comments .twikoo .el-input__inner {
+  color: var(--ink);
+  background: var(--bg);
+  border-color: var(--line);
+  font-family: inherit;
+}
+.article-comments .twikoo .el-button--primary {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bg);
 }
 .article-comments-noscript {
   margin: 18px 0 0;
@@ -3413,11 +3418,6 @@ body:has(.overlay[open]) {
     align-items: flex-start;
     flex-direction: column;
     gap: 14px;
-  }
-  .article-comments-link {
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
   }
   .article-comments-frame {
     margin-top: 20px;

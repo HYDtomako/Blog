@@ -104,7 +104,6 @@ export type UiCopy = {
 		loading: string;
 		unavailable: string;
 		noScript: string;
-		openDiscussions: string;
 	};
 	projects: {
 		ossHeading: string;

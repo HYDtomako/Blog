@@ -99,13 +99,12 @@ export const zhCN: UiCopy = {
 		pageProgress: (page, total) => `第 ${page} / ${total} 页`,
 	},
 	comments: {
-		heading: '评论与讨论',
-		meta: 'GitHub Discussions',
-		note: '讨论由 GitHub Discussions 托管，参与评论需要 GitHub 账号。',
+		heading: '评论',
+		meta: 'Twikoo',
+		note: '评论写在这篇文章下面，刷新之后还在。',
 		loading: '正在加载评论…',
-		unavailable: '评论暂时无法加载，你仍可前往 Discussions 参与。',
-		noScript: '浏览器未启用 JavaScript。',
-		openDiscussions: '前往 Discussions',
+		unavailable: '评论暂时无法加载，稍后再看。',
+		noScript: '评论需要浏览器启用 JavaScript。',
 	},
 	projects: {
 		ossHeading: '开源项目',

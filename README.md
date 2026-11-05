@@ -21,7 +21,7 @@
 | 提问       | `⌘K` 浮层与 `/ask` 页面，在常见问题、文章与随笔里检索；可选接入实时 AI 回答                                                |
 | 机器可读   | `/llms.txt`、`/llms-full.txt`、每个页面的 Markdown 镜像、`/api/*.json`、`/openapi.json`、`/.well-known/about.json`、`/rss.xml`、`/robots.txt`、站点地图 |
 | 统计       | 可选：首页显示站点总量，文章/随笔显示浏览量并支持点赞，由同源的 Cloudflare Worker + D1 提供                              |
-| 评论       | 可选：文章页接入 giscus                                                                                                   |
+| 评论       | 可选：文章页接入 Twikoo（`comments.envId`）                                                                               |
 
 ## 技术栈
 
@@ -86,7 +86,7 @@ overlay 的字段会覆盖默认值。
 | `brand.<locale>.*`                   | 公开身份与页面文案：`description`、`persona`、`wordmark`、`alternateNames`、`homeHeading`、`homeTitle`、`homeLede`、`writingLede`、`askChips`、`projects.*`、`about.*` |
 | `social.github`                      | GitHub 链接；`npm run sync:github` 按这个账号拉取贡献图与项目 star 数                            |
 | `ask.askUrl` / `mcpUrl` / `healthUrl` | 可选的 Live Ask 接口；留空就是纯静态站点                                                        |
-| `comments.repo` / `repoId` / `category` / `categoryId` | 可选的 giscus 配置；四项都空 = 关闭评论                                       |
+| `comments.envId` | 可选的 Twikoo Worker 地址，须含 `https://`；留空 = 关闭评论。本地可填 `http://127.0.0.1:8787` |
 | `stats.enabled` / `stats.url`        | 统计开关；`url` 留空表示同源接口 |
 | `guestbook.enabled` / `guestbook.url` | 匿名留言板开关；`url` 留空表示同源接口 |
 | `readingProgress.enabled` | 右下角水球阅读进度开关（文章页 / 项目页 / 关于页）                                                                |
@@ -328,7 +328,7 @@ PUBLIC_TURNSTILE_SITE_KEY=your_site_key npm run build
 | `npm run verify`            | 校验构建产物：必需页面、机器可读接口、能力声明是否齐全                               |
 | `npm run test:public-ask`   | 提问/发现/契约层的单元测试                                                          |
 | `npm run test:related`      | 相关文章选取的测试                                                                  |
-| `npm run test:comments`     | giscus 配置测试                                                                    |
+| `npm run test:comments`     | Twikoo 配置与前端挂载测试                                                          |
 | `npm run test:stats`        | 统计 Worker 与前端组件测试                                                          |
 | `npm run test:guestbook` | 留言板前端与交互测试 |
 | `npm run test:links`    | 友链：URL/metadata 解析、信号布局与页面交互测试 |

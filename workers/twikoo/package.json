@@ -1,0 +1,22 @@
+{
+	"name": "hydblog-twikoo",
+	"private": true,
+	"type": "module",
+	"description": "Twikoo on Cloudflare Workers + D1 for hydblog article comments. Do not deploy from this package without an explicit request.",
+	"scripts": {
+		"dev": "wrangler dev",
+		"db:migrate:local": "wrangler d1 execute hydblog-twikoo --local --file=./schema.sql"
+	},
+	"dependencies": {
+		"twikoo-func": "1.6.44",
+		"url": "0.11.4",
+		"uuid": "9.0.1",
+		"xss": "1.0.15"
+	},
+	"devDependencies": {
+		"wrangler": "4.68.1"
+	},
+	"overrides": {
+		"axios": "git+https://github.com/wuzhengmao/axios-cf-worker.git#v0.x-cf"
+	}
+}

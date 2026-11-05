@@ -100,13 +100,12 @@ export const en: UiCopy = {
 		pageProgress: (page, total) => `Page ${page} / ${total}`,
 	},
 	comments: {
-		heading: 'Comments & discussion',
-		meta: 'GitHub Discussions',
-		note: 'Comments are hosted by GitHub Discussions. A GitHub account is required to participate.',
+		heading: 'Comments',
+		meta: 'Twikoo',
+		note: 'Comments stay on this article.',
 		loading: 'Loading comments…',
-		unavailable: 'Comments could not load. You can still join the discussion on GitHub.',
-		noScript: 'JavaScript is disabled in this browser.',
-		openDiscussions: 'Open Discussions',
+		unavailable: 'Comments could not load. Try again later.',
+		noScript: 'Comments need JavaScript enabled in this browser.',
 	},
 	projects: {
 		ossHeading: 'Open source',

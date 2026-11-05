@@ -58,19 +58,12 @@ const defaults = {
 		persistInteractions: false,
 	},
 	/**
-	 * Article comments via the existing giscus widget. `enabled` is derived when all four
-	 * identifiers are set. `repoId` is the GitHub node id of HYDtomako/Blog.
-	 * Discussions are disabled on that repo (no category node exists, and this environment
-	 * cannot turn them on). `category` is the visitor-writable category to use once
-	 * Discussions and the giscus app are on. Replace `categoryId` with that category's
-	 * node id from https://giscus.app before a thread can actually be created; the value
-	 * here is what lets the widget mount.
+	 * Article comments via Twikoo. `enabled` is derived from `envId`.
+	 * Leave it empty to keep the comment block off. A public Worker uses `https://…`;
+	 * point local preview at `http://127.0.0.1:8787` while `workers/twikoo` is running.
 	 */
 	comments: {
-		repo: 'HYDtomako/Blog',
-		repoId: 'R_kgDOUrbZ7A',
-		category: 'General',
-		categoryId: 'PENDING',
+		envId: '',
 	},
 	/** Page-view/like counters. Keep `url` empty for same-origin; point it at `wrangler dev` while developing the API. */
 	stats: {

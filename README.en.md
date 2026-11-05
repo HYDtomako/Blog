@@ -21,7 +21,7 @@ This repository is meant to be used as a **template**. Clone it, then work throu
 | Asking          | `⌘K` overlay and the `/ask` page, searching curated answers, articles and notes; optional live AI answers               |
 | Machine-readable| `/llms.txt`, `/llms-full.txt`, a Markdown mirror for every page, `/api/*.json`, `/openapi.json`, `/.well-known/about.json`, `/rss.xml`, `/robots.txt`, sitemap |
 | Counters        | Optional site totals on the home page and per-page views + likes, served same-origin by a Cloudflare Worker with D1     |
-| Comments        | Optional giscus discussion on articles                                                                                  |
+| Comments        | Optional Twikoo comments on articles (`comments.envId`)                                                                |
 
 ## Stack
 
@@ -89,7 +89,7 @@ template with an overlay file `instance.config.mjs` (git-ignored) or the
 | `brand.<locale>.*`                 | Public identity and page copy: `description`, `persona`, `wordmark`, `alternateNames`, `homeHeading`, `homeTitle`, `homeLede`, `writingLede`, `askChips`, `projects.*`, `about.*` |
 | `social.github`                    | GitHub link; its owner drives `npm run sync:github` (contribution snapshot + project stars) |
 | `ask.askUrl` / `mcpUrl` / `healthUrl` | Optional Live Ask endpoints; leave empty for the static-only site                      |
-| `comments.repo` / `repoId` / `category` / `categoryId` | Optional giscus identifiers; all four empty = comments off         |
+| `comments.envId` | Optional Twikoo Worker URL, including `https://`; empty = comments off. Local dev may use `http://127.0.0.1:8787` |
 | `stats.enabled` / `stats.url`      | Counters on/off; `url` empty means same-origin  |
 | `guestbook.enabled` / `guestbook.url` | Anonymous guestbook on/off; `url` empty means same-origin |
 | `readingProgress.enabled` | Corner water ball on articles, `/projects/`, and `/about/`                                            |
@@ -305,7 +305,7 @@ Full checklist and troubleshooting: [`docs/deploy-live-ask.md`](docs/deploy-live
 | `npm run verify`            | Verifies the built output: required pages, machine-readable surfaces, capabilities       |
 | `npm run test:public-ask`   | Unit tests for the ask/discovery/contract layer                                          |
 | `npm run test:related`      | Related-articles selection tests                                                         |
-| `npm run test:comments`     | giscus configuration tests                                                               |
+| `npm run test:comments`     | Twikoo configuration and mount tests                                                     |
 | `npm run test:stats`        | Counter Worker and client tests                                                          |
 | `npm run test:guestbook`    | Guestbook client and interaction tests                                                   |
 | `npm run sync:github`       | Refreshes `content/github-activity.json` and project `stars` from GitHub                 |

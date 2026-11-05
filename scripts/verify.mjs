@@ -140,7 +140,7 @@ try {
 		const html = await readFile(htmlPath, 'utf8');
 		const relativePath = path.relative(distRoot, htmlPath).replaceAll('\\', '/');
 		const isArticle = articlePattern.test(relativePath);
-		const hasComments = html.includes('data-giscus-comments');
+		const hasComments = html.includes('data-twikoo-comments');
 		const hasStats = html.includes('data-page-stats');
 
 		if (hasComments) commentPages += 1;
@@ -152,8 +152,11 @@ try {
 		if (hasComments && !isArticle) {
 			failures.push(`${relativePath} is not an article but includes the comments surface`);
 		}
-		if (hasComments && !/data-term="article:[^"]+"/.test(html)) {
-			failures.push(`${relativePath} is missing its stable article comment term`);
+		if (hasComments && !/data-path="\/[^"]+\/"/.test(html)) {
+			failures.push(`${relativePath} is missing its stable article comment path`);
+		}
+		if (hasComments && !/data-env-id="https?:\/\/[^"]+"/.test(html)) {
+			failures.push(`${relativePath} is missing its Twikoo envId`);
 		}
 		if (statsEnabled && isArticle && !hasStats) {
 			failures.push(`${relativePath} is an article but is missing the stats surface`);

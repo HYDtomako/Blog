@@ -1,7 +1,7 @@
 ---
 import { siteConfig } from '../../site.config.mjs';
 import { getSiteCopy } from '../lib/site-copy';
-import { articleCommentTerm } from '../lib/comments.mjs';
+import { articleCommentPath } from '../lib/comments.mjs';
 import { localeFromPath } from '../lib/locale';
 
 interface Props {
@@ -13,17 +13,13 @@ const locale = localeFromPath(Astro.url.pathname);
 const copy = getSiteCopy(locale);
 const UI = copy.ui;
 const comments = siteConfig.comments;
-const discussionUrl = `https://github.com/${comments.repo}/discussions`;
 ---
 <section
 	class="article-comments"
 	aria-labelledby="article-comments-heading"
-	data-giscus-comments
-	data-repo={comments.repo}
-	data-repo-id={comments.repoId}
-	data-category={comments.category}
-	data-category-id={comments.categoryId}
-	data-term={articleCommentTerm(entryId)}
+	data-twikoo-comments
+	data-env-id={comments.envId}
+	data-path={articleCommentPath(entryId)}
 	data-lang={locale}
 	data-unavailable-label={UI.comments.unavailable}
 >
@@ -32,27 +28,21 @@ const discussionUrl = `https://github.com/${comments.repo}/discussions`;
 			<p class="mono article-comments-kicker">{UI.comments.meta}</p>
 			<h2 id="article-comments-heading" class="section-title">{UI.comments.heading}</h2>
 		</div>
-		<a class="mono article-comments-link" href={discussionUrl} rel="noopener noreferrer">
-			{UI.comments.openDiscussions}
-		</a>
 	</div>
 	<p class="article-comments-note">{UI.comments.note}</p>
 	<div class="article-comments-frame">
-		<p class="mono article-comments-status" data-giscus-status aria-live="polite">
+		<p class="mono article-comments-status" data-twikoo-status aria-live="polite">
 			{UI.comments.loading}
 		</p>
-		<div data-giscus-mount></div>
+		<div data-twikoo-mount></div>
 	</div>
 	<noscript>
-		<p class="article-comments-noscript">
-			{UI.comments.noScript}
-			<a href={discussionUrl} rel="noopener noreferrer">{UI.comments.openDiscussions}</a>
-		</p>
+		<p class="article-comments-noscript">{UI.comments.noScript}</p>
 	</noscript>
 </section>
 
 <script>
-	import { initGiscusComments } from '../scripts/giscus-comments';
+	import { initTwikooComments } from '../scripts/twikoo-comments';
 
-	document.querySelectorAll<HTMLElement>('[data-giscus-comments]').forEach(initGiscusComments);
+	document.querySelectorAll<HTMLElement>('[data-twikoo-comments]').forEach((root) => initTwikooComments(root));
 </script>

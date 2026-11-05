@@ -1,58 +1,36 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { articleCommentTerm, resolveCommentsConfig } from './comments.mjs';
+import { articleCommentPath, resolveCommentsConfig } from './comments.mjs';
 
 test('empty comments config stays disabled', () => {
-	assert.deepEqual(resolveCommentsConfig(), {
-		repo: '',
-		repoId: '',
-		category: '',
-		categoryId: '',
-		enabled: false,
+	assert.deepEqual(resolveCommentsConfig(), { envId: '', enabled: false });
+	assert.deepEqual(resolveCommentsConfig({ envId: '   ' }), { envId: '', enabled: false });
+});
+
+test('an https envId is normalized and enables comments', () => {
+	assert.deepEqual(resolveCommentsConfig({ envId: ' https://twikoo.example.com/ ' }), {
+		envId: 'https://twikoo.example.com',
+		enabled: true,
 	});
 });
 
-test('complete comments config is normalized and enabled', () => {
-	assert.deepEqual(
-		resolveCommentsConfig({
-			repo: ' tower1229/Refined-X ',
-			repoId: 'R_repo',
-			category: 'Comments',
-			categoryId: 'DIC_category',
-		}),
-		{
-			repo: 'tower1229/Refined-X',
-			repoId: 'R_repo',
-			category: 'Comments',
-			categoryId: 'DIC_category',
-			enabled: true,
-		},
-	);
+test('local wrangler dev URLs stay enabled', () => {
+	assert.equal(resolveCommentsConfig({ envId: 'http://127.0.0.1:8787/' }).enabled, true);
+	assert.equal(resolveCommentsConfig({ envId: 'http://localhost:8787' }).envId, 'http://localhost:8787');
 });
 
-test('partial comments config fails with the missing public fields', () => {
+test('a non-local http URL is rejected', () => {
 	assert.throws(
-		() => resolveCommentsConfig({ repo: 'tower1229/Refined-X' }),
-		/comments\.repoId、comments\.category、comments\.categoryId/,
+		() => resolveCommentsConfig({ envId: 'http://comments.example.com' }),
+		/https:\/\//,
 	);
 });
 
-test('comments repository must use owner/repo format', () => {
-	assert.throws(
-		() =>
-			resolveCommentsConfig({
-				repo: 'Refined-X',
-				repoId: 'R_repo',
-				category: 'Comments',
-				categoryId: 'DIC_category',
-			}),
-		/owner\/repo/,
-	);
+test('a value that is not a URL is rejected', () => {
+	assert.throws(() => resolveCommentsConfig({ envId: 'hydblog-twikoo' }), /完整 URL/);
 });
 
-test('article comment terms are stable and scoped', () => {
-	assert.equal(
-		articleCommentTerm('2026/09/01/giscus-comments'),
-		'article:2026/09/01/giscus-comments',
-	);
+test('article comment paths keep one trailing slash', () => {
+	assert.equal(articleCommentPath('2026/10/18/long-term-personal-agent'), '/2026/10/18/long-term-personal-agent/');
+	assert.equal(articleCommentPath('/en/2026/08/23/example/'), '/en/2026/08/23/example/');
 });
