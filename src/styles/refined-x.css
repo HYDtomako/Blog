@@ -1699,6 +1699,7 @@ h4 {
   color: var(--ink);
   font-weight: 500;
   margin: clamp(40px, 5vw, 56px) 0 28px;
+  scroll-margin-top: 96px;
 }
 .about-markdown > h2:first-of-type {
   margin-top: clamp(32px, 4vw, 44px);
@@ -3234,6 +3235,26 @@ body:has(.overlay[open]) {
 .answer-index-item:hover .answer-index-arrow {
   transform: translateX(3px);
   color: var(--ink);
+}
+
+.about-toc-rail {
+  display: none;
+}
+@media (min-width: 1180px) {
+  .about-page .about-grid {
+    grid-template-columns: minmax(200px, 230px) minmax(0, 1fr) minmax(148px, 176px);
+  }
+  .about-page .about-toc-rail {
+    display: block;
+    position: sticky;
+    top: 96px;
+    align-self: start;
+    max-height: calc(100vh - 120px);
+    overflow: auto;
+  }
+  .about-page .article-toc-mobile {
+    display: none;
+  }
 }
 
 @media (max-width: 940px) {
