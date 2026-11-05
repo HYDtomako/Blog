@@ -165,6 +165,12 @@ export type UiCopy = {
 		askCollaborateButton: string;
 		qq: (id: string) => string;
 		sendEmail: string;
+		copied: string;
+		copyFailed: string;
+		copyEmail: (email: string) => string;
+		copyQq: (id: string) => string;
+		contactHeading: string;
+		contactLede: string;
 	};
 	common: {
 		home: string;

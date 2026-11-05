@@ -166,6 +166,12 @@ export const zhCN: UiCopy = {
 		askCollaborateButton: '问 AI 如何合作',
 		qq: (id) => `QQ ${id}`,
 		sendEmail: '发邮件',
+		copied: '已复制',
+		copyFailed: '复制失败',
+		copyEmail: (email) => `复制邮箱 ${email}`,
+		copyQq: (id) => `复制 QQ ${id}`,
+		contactHeading: 'Contact Me',
+		contactLede: '这是 personal agent 邮箱 hydagent10@gmail.com。点一下就能复制；寄到这里，会提醒HYD注意喵。',
 	},
 	common: {
 		home: '首页',

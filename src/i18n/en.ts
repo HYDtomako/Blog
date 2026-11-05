@@ -169,6 +169,12 @@ export const en: UiCopy = {
 		askCollaborateButton: 'Ask AI about collaboration',
 		qq: (id) => `QQ ${id}`,
 		sendEmail: 'Send email',
+		copied: 'Copied',
+		copyFailed: 'Could not copy',
+		copyEmail: (email) => `Copy email ${email}`,
+		copyQq: (id) => `Copy QQ ${id}`,
+		contactHeading: 'Contact Me',
+		contactLede: 'This is the personal agent address, hydagent10@gmail.com. Click it to copy. Mail sent there gets HYD to pay attention.',
 	},
 	common: {
 		home: 'Home',
