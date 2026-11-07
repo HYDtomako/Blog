@@ -5,6 +5,9 @@ import {
 	MAX_MESSAGE_CODE_POINTS,
 	MAX_PAGE_SIZE,
 	GuestbookProblem,
+	OWNER_ACTOR_ID,
+	OWNER_HANDLE,
+	displayHandle,
 	handleOf,
 	likeBody,
 	listBody,
@@ -24,6 +27,7 @@ const ROW: GuestbookRow = {
 	id: 12,
 	body: 'hello',
 	actor_id: 'a3f9c0ffee',
+	is_owner: 0,
 	created_at: '2026-09-26 04:12:03',
 }
 
@@ -164,12 +168,13 @@ test('shaping builds the documented message, reply, list, like, and remove bodie
 		id: 12,
 		body: 'hello',
 		handle: 'a3f9',
+		owner: false,
 		mine: true,
 		createdAt: '2026-09-26 04:12:03',
 		likes: 0,
 		liked: false,
 	})
-	assert.deepEqual(Object.keys(reply), ['id', 'body', 'handle', 'mine', 'createdAt', 'likes', 'liked'])
+	assert.deepEqual(Object.keys(reply), ['id', 'body', 'handle', 'owner', 'mine', 'createdAt', 'likes', 'liked'])
 
 	const message = messageBody(ROW, 'someone-else', {
 		likes: 3,
@@ -181,6 +186,7 @@ test('shaping builds the documented message, reply, list, like, and remove bodie
 		'id',
 		'body',
 		'handle',
+		'owner',
 		'mine',
 		'createdAt',
 		'likes',
@@ -219,4 +225,17 @@ test('handleOf exposes only the leading characters of the actor hash', () => {
 	assert.equal(handleOf(ROW.actor_id), 'a3f9')
 	assert.equal(handleOf('ab'), 'ab')
 	assert.equal(handleOf(''), '')
+})
+
+test('an owner row is labeled 博主 and is never the visitor short id', () => {
+	const ownerRow: GuestbookRow = { ...ROW, actor_id: OWNER_ACTOR_ID, is_owner: 1 }
+	assert.equal(displayHandle(ownerRow), OWNER_HANDLE)
+	assert.equal(displayHandle(ROW), 'a3f9')
+	const shaped = replyBody(ownerRow, OWNER_ACTOR_ID, { likes: 2, liked: true })
+	assert.equal(shaped.handle, '博主')
+	assert.equal(shaped.owner, true)
+	assert.equal(shaped.mine, false)
+	assert.equal(JSON.stringify(shaped).includes(OWNER_ACTOR_ID), false)
+	assert.equal(JSON.stringify(shaped).includes('gues'), false)
+	assert.equal(JSON.stringify(shaped).includes('匿名'), false)
 })

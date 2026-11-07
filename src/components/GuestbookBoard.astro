@@ -28,6 +28,7 @@ const labels = {
 	justNow: guestbook.justNow,
 	counterTemplate: guestbook.counter('__USED__', '__MAX__'),
 	guestTemplate: guestbook.guest('__HANDLE__'),
+	owner: guestbook.owner,
 	replyingToTemplate: guestbook.replyingTo('__HANDLE__'),
 	replyCountTemplate: guestbook.replyCount('__COUNT__'),
 	showingLatestTemplate: guestbook.showingLatest('__COUNT__'),
@@ -335,6 +336,12 @@ const labels = {
 	.gb :global(.gb-handle) {
 		color: var(--ink);
 		font-size: 13.5px;
+	}
+	.gb :global(.gb-owner .gb-handle) {
+		letter-spacing: 0.08em;
+	}
+	.gb :global(.gb-owner .gb-avatar) {
+		box-shadow: inset 0 0 0 1px var(--line);
 	}
 	.gb :global(.gb-time) {
 		color: var(--faint);

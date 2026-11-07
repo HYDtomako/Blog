@@ -13,6 +13,7 @@ export type GuestbookReply = {
 	id: number
 	body: string
 	handle: string
+	owner: boolean
 	mine: boolean
 	createdAt: string
 	likes: number
@@ -46,10 +47,11 @@ export type GuestbookRow = {
 	id: number
 	body: string
 	actor_id: string
+	is_owner: number
 	created_at: string
 }
 
-export type GuestbookReplyRow = GuestbookRow & { parent_id: number }
+export type GuestbookReplyRow = GuestbookRow & { parent_id: number, thread_id: number }
 
 export type GuestbookCreateRequest = { body: string, parentId: number | null }
 export type GuestbookLikeRequest = { id: number, liked: boolean }
@@ -67,6 +69,15 @@ export const MAX_POSTS_PER_MINUTE = 3
 export const MAX_POSTS_PER_DAY = 30
 
 const HANDLE_LENGTH = 4
+
+/** Public label for a message the blog owner posted from /admin. */
+export const OWNER_HANDLE = '博主'
+
+/**
+ * Fixed pseudonym stored as `actor_id` for owner replies.
+ * It is not the admin token, the password, or a client IP.
+ */
+export const OWNER_ACTOR_ID = 'guestbook-owner'
 const MAX_LINKS = 2
 const CONTROL_CHARACTER_PATTERN = /[\u0000-\u0008\u000B-\u001F\u007F]/
 const EXCESS_NEWLINES_PATTERN = /\n{3,}/g
@@ -151,16 +162,28 @@ export function handleOf(actorId: string): string {
 	return actorId.slice(0, HANDLE_LENGTH)
 }
 
+export function isOwnerFlag(isOwner: number): boolean {
+	return Number(isOwner) === 1
+}
+
+/** Visitors keep a 4-character handle. Owner rows are always 「博主」, never that short id. */
+export function displayHandle(row: Pick<GuestbookRow, 'actor_id' | 'is_owner'>): string {
+	return isOwnerFlag(row.is_owner) ? OWNER_HANDLE : handleOf(row.actor_id)
+}
+
 export function replyBody(
 	row: GuestbookRow,
 	actorId: string,
 	stats: { likes: number, liked: boolean },
 ): GuestbookReply {
+	const owner = isOwnerFlag(row.is_owner)
 	return {
 		id: row.id,
 		body: row.body,
-		handle: handleOf(row.actor_id),
-		mine: row.actor_id === actorId,
+		handle: displayHandle(row),
+		owner,
+		// An owner reply is not the visitor's message, so it is never "mine" and cannot be withdrawn.
+		mine: owner ? false : row.actor_id === actorId,
 		createdAt: row.created_at,
 		likes: stats.likes,
 		liked: stats.liked,

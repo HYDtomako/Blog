@@ -11,6 +11,7 @@ export type GuestbookReply = {
 	id: number;
 	body: string;
 	handle: string;
+	owner: boolean;
 	mine: boolean;
 	createdAt: string;
 	likes: number;
@@ -58,6 +59,7 @@ export type GuestbookLabels = {
 	slowDown: string;
 	counterTemplate: string;
 	guestTemplate: string;
+	owner: string;
 	replyingToTemplate: string;
 	replyCountTemplate: string;
 	showingLatestTemplate: string;
@@ -121,6 +123,7 @@ const FALLBACK_LABELS: GuestbookLabels = {
 	slowDown: 'Slow down a little and try again in a moment.',
 	counterTemplate: '__USED__ / __MAX__',
 	guestTemplate: 'Guest __HANDLE__',
+	owner: '博主',
 	replyingToTemplate: 'Replying to __HANDLE__',
 	replyCountTemplate: '__COUNT__ replies',
 	showingLatestTemplate: 'Showing the latest __COUNT__ replies',
@@ -262,7 +265,16 @@ export function isRetractable(
 	return now.getTime() - created.getTime() < RETRACT_WINDOW_MS;
 }
 
-export function messageHandleLabel(message: Pick<GuestbookReply, 'handle' | 'mine'>, labels: GuestbookLabels) {
+/** Owner replies are 「博主」 on every locale, never the visitor handle or the "you" label. */
+export function isOwnerReply(message: Pick<GuestbookReply, 'owner' | 'handle'>) {
+	return message.owner === true || message.handle === '博主';
+}
+
+export function messageHandleLabel(
+	message: Pick<GuestbookReply, 'handle' | 'mine' | 'owner'>,
+	labels: GuestbookLabels,
+) {
+	if (isOwnerReply(message)) return labels.owner;
 	if (message.mine) return labels.mine;
 	return applyTemplate(labels.guestTemplate, { HANDLE: message.handle });
 }
@@ -297,6 +309,7 @@ export function parseReply(value: unknown): GuestbookReply | null {
 		id: data.id,
 		body: data.body,
 		handle: typeof data.handle === 'string' ? data.handle : '',
+		owner: data.owner === true,
 		mine: data.mine === true,
 		createdAt: typeof data.createdAt === 'string' ? data.createdAt : '',
 		likes: typeof data.likes === 'number' ? data.likes : 0,
@@ -487,6 +500,10 @@ function createHeartIcon(doc: Document, size = 14) {
 	return svg;
 }
 
+function rowClass(base: string, reply: GuestbookReply) {
+	return isOwnerReply(reply) ? `${base} gb-owner` : base;
+}
+
 function createAvatar(doc: Document, reply: GuestbookReply) {
 	const avatar = createNode(doc, 'div', 'gb-avatar', avatarInitial(reply.body));
 	avatar.setAttribute('aria-hidden', 'true');
@@ -541,7 +558,7 @@ function createActions(
 	);
 	actions.appendChild(replyButton);
 
-	if (isRetractable(reply, context.now)) {
+	if (!isOwnerReply(reply) && isRetractable(reply, context.now)) {
 		const retract = createActionButton(doc, 'gb-action');
 		retract.setAttribute('data-guestbook-retract', String(reply.id));
 		retract.textContent = context.labels.retract;
@@ -557,7 +574,7 @@ export function createReplyRow(
 	threadId: number,
 	context: GuestbookRowContext,
 ) {
-	const row = createNode(doc, 'article', 'gb-reply-item');
+	const row = createNode(doc, 'article', rowClass('gb-reply-item', reply));
 	row.setAttribute('data-guestbook-reply', String(reply.id));
 	row.appendChild(createAvatar(doc, reply));
 	const body = createNode(doc, 'div', 'gb-body');
@@ -573,7 +590,7 @@ export function createMessageRow(
 	message: GuestbookMessage,
 	context: GuestbookRowContext,
 ): GuestbookRow {
-	const row = createNode(doc, 'article', 'gb-item');
+	const row = createNode(doc, 'article', rowClass('gb-item', message));
 	row.setAttribute('data-guestbook-message', String(message.id));
 	row.appendChild(createAvatar(doc, message));
 

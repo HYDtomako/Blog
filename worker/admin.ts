@@ -1,6 +1,8 @@
 import type { Env } from './env.ts'
-import { failure, json, readJsonBody } from './http.ts'
+import { failure, json, readJsonBody, toErrorResponse } from './http.ts'
 import { ADMIN_HTML } from './admin-page.ts'
+import { MAX_MESSAGE_BYTES, parseMessageBody } from './guestbook-service.ts'
+import { createOwnerReply, deleteMessageTree } from './guestbook-store.ts'
 
 /**
  * The one-person control room for the site: totals, per-page stats, the guestbook
@@ -17,7 +19,7 @@ FROM page_stats`
 const PAGES_SELECT = `SELECT path, views, likes, updated_at FROM page_stats
 ORDER BY views DESC, likes DESC, path ASC LIMIT ?1`
 const GUESTBOOK_COUNT_SELECT = 'SELECT COUNT(*) AS total FROM guestbook_messages'
-const GUESTBOOK_SELECT = `SELECT m.id, m.parent_id, m.body, m.created_at, COUNT(l.actor_id) AS likes
+const GUESTBOOK_SELECT = `SELECT m.id, m.parent_id, m.body, m.is_owner, m.created_at, COUNT(l.actor_id) AS likes
 FROM guestbook_messages m
 LEFT JOIN guestbook_likes l ON l.message_id = m.id
 GROUP BY m.id
@@ -38,13 +40,6 @@ const DAILY_MESSAGES_SELECT = `SELECT date(created_at) AS day, COUNT(*) AS messa
 FROM guestbook_messages WHERE date(created_at) >= ?1 GROUP BY day`
 const DAILY_LINKS_SELECT = `SELECT date(created_at) AS day, COUNT(*) AS links
 FROM link_submissions WHERE date(created_at) >= ?1 GROUP BY day`
-
-// A message is removed together with its replies and every like attached to either.
-const REPLY_LIKE_DELETE = `DELETE FROM guestbook_likes
-WHERE message_id IN (SELECT id FROM guestbook_messages WHERE parent_id = ?1)`
-const REPLY_DELETE = 'DELETE FROM guestbook_messages WHERE parent_id = ?1'
-const MESSAGE_LIKE_DELETE = 'DELETE FROM guestbook_likes WHERE message_id = ?1'
-const MESSAGE_DELETE = 'DELETE FROM guestbook_messages WHERE id = ?1'
 
 const LINK_STATUS_UPDATE = 'UPDATE link_submissions SET status = ?1 WHERE id = ?2'
 const LINK_DELETE = 'DELETE FROM link_submissions WHERE id = ?1'
@@ -94,6 +89,10 @@ export async function handleAdmin(
 	if (pathname === '/api/admin/guestbook/delete') {
 		if (request.method !== 'POST') return methodNotAllowed('POST')
 		return deleteGuestbookMessage(request, env)
+	}
+	if (pathname === '/api/admin/guestbook/reply') {
+		if (request.method !== 'POST') return methodNotAllowed('POST')
+		return replyToGuestbook(request, env)
 	}
 	if (pathname === '/api/admin/links/status') {
 		if (request.method !== 'POST') return methodNotAllowed('POST')
@@ -182,6 +181,7 @@ async function readGuestbook(env: Env): Promise<unknown> {
 		id: number
 		parent_id: number | null
 		body: string
+		is_owner: number
 		created_at: string
 		likes: number
 	}>()
@@ -196,13 +196,37 @@ async function readLinks(env: Env): Promise<unknown> {
 async function deleteGuestbookMessage(request: Request, env: Env): Promise<Response> {
 	const id = await readId(request)
 	if (id === null) return failure(400, 'invalid_body', 'id must be a positive integer')
-	await env.STATS_DB.batch([
-		env.STATS_DB.prepare(REPLY_LIKE_DELETE).bind(id),
-		env.STATS_DB.prepare(REPLY_DELETE).bind(id),
-		env.STATS_DB.prepare(MESSAGE_LIKE_DELETE).bind(id),
-		env.STATS_DB.prepare(MESSAGE_DELETE).bind(id),
-	])
+	await deleteMessageTree(env.STATS_DB, id)
 	return json({ ok: true, id })
+}
+
+async function replyToGuestbook(request: Request, env: Env): Promise<Response> {
+	let payload: unknown
+	try {
+		payload = await readJsonBody(request, MAX_MESSAGE_BYTES)
+	} catch (error) {
+		return toErrorResponse(error)
+	}
+	if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
+		return failure(400, 'invalid_body', 'body must be a JSON object')
+	}
+	const record = payload as Record<string, unknown>
+	const parentId = positiveInteger(record.parent_id)
+	if (parentId === null) return failure(400, 'invalid_body', 'parent_id must be a positive integer')
+
+	let body: string
+	try {
+		body = parseMessageBody(record.body)
+	} catch (error) {
+		return toErrorResponse(error)
+	}
+
+	try {
+		const reply = await createOwnerReply(env.STATS_DB, parentId, body)
+		return json({ ok: true, id: reply.id })
+	} catch (error) {
+		return toErrorResponse(error)
+	}
 }
 
 async function setLinkStatus(request: Request, env: Env): Promise<Response> {

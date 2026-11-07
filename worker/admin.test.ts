@@ -97,7 +97,7 @@ test('serves the admin console without a token and without caching', async () =>
 
 test('every admin api route refuses a request without the token', async () => {
 	const env = createEnv()
-	for (const route of ['/api/admin/overview', '/api/admin/pages', '/api/admin/daily', '/api/admin/guestbook', '/api/admin/links']) {
+	for (const route of ['/api/admin/overview', '/api/admin/pages', '/api/admin/daily', '/api/admin/guestbook', '/api/admin/guestbook/reply', '/api/admin/links']) {
 		const missing = await worker.fetch(new Request(BASE + route), env)
 		assert.equal(missing.status, 401, route)
 		assert.equal(missing.headers.get('www-authenticate'), 'Bearer')
@@ -371,7 +371,7 @@ function consoleHarness(fetcher: typeof fetch, storageBlocked = false) {
 	}
 }
 
-async function settle() { for (let i = 0; i < 6; i++) await new Promise((resolve) => setImmediate(resolve)) }
+async function settle() { for (let i = 0; i < 20; i++) await new Promise((resolve) => setImmediate(resolve)) }
 const workerFetcher = (env: Env): typeof fetch => async (url, init) => worker.fetch(new Request(BASE + url, init), env)
 
 test('console script logs in with unavailable storage, navigates and renders empty data', async () => {
@@ -427,11 +427,113 @@ test('console filters, changes status, recovers from operation failure and confi
 	const filter = ui.node('panel').querySelectorAll('select')[0]
 	filter.value = 'root'; filter.onchange!()
 	assert.match(ui.node('panel').text, /显示 1 条/)
-	ui.node('panel').querySelectorAll('button').find((b) => b.textContent === '删除留言')!.onclick!()
-	await settle()
+	await ui.node('panel').querySelectorAll('button').find((b) => b.textContent === '删除留言')!.onclick!()
 	assert.match(ui.confirmations[0], /全部回复及相关点赞/)
 	assert.equal(await countRows(db, 'guestbook_messages'), 0)
 	assert.match(ui.node('panel').text, /还没有留言/)
+})
+
+test('the guestbook reply route posts as 博主 and the console refreshes the list', async () => {
+	const db = createStatsDatabase()
+	const root = await seedMessage(db, null, 'hello there')
+	const visitorReply = await seedMessage(db, root, 'visitor reply')
+	const env = createEnv({ db })
+	env.STATS_ACTOR_SECRET = 'actor-secret'
+
+	const missing = await worker.fetch(new Request(`${BASE}/api/admin/guestbook/reply`, {
+		method: 'POST',
+		body: JSON.stringify({ body: 'nope', parent_id: root }),
+		headers: { 'content-type': 'application/json' },
+	}), env)
+	assert.equal(missing.status, 401)
+
+	const wrongMethod = await getAdmin(env, '/api/admin/guestbook/reply')
+	assert.equal(wrongMethod.status, 405)
+
+	const empty = await postAdmin(env, '/api/admin/guestbook/reply', { body: '   ', parent_id: root })
+	assert.equal(empty.status, 400)
+	assert.equal(await responseCode(empty), 'invalid_message')
+
+	const noParent = await postAdmin(env, '/api/admin/guestbook/reply', { body: 'hi' })
+	assert.equal(noParent.status, 400)
+	assert.equal(await responseCode(noParent), 'invalid_body')
+
+	const orphan = await postAdmin(env, '/api/admin/guestbook/reply', { body: 'hi', parent_id: 404 })
+	assert.equal(orphan.status, 400)
+	assert.equal(await responseCode(orphan), 'invalid_parent')
+
+	const posted = await postAdmin(env, '/api/admin/guestbook/reply', { body: '  thanks for coming  ', parent_id: root })
+	assert.equal(posted.status, 200)
+	const created = await json(posted) as { ok: boolean, id: number }
+	assert.equal(created.ok, true)
+
+	const again = await postAdmin(env, '/api/admin/guestbook/reply', { body: 'and under the reply', parent_id: visitorReply })
+	assert.equal(again.status, 200)
+
+	const rows = await db.prepare(
+		'SELECT id, parent_id, body, actor_id, is_owner FROM guestbook_messages WHERE is_owner = 1 ORDER BY id ASC',
+	).all<{ id: number, parent_id: number, body: string, actor_id: string, is_owner: number }>()
+	assert.deepEqual(rows.results.map((row) => [row.parent_id, row.body, row.actor_id, row.is_owner]), [
+		[root, 'thanks for coming', 'guestbook-owner', 1],
+		[visitorReply, 'and under the reply', 'guestbook-owner', 1],
+	])
+	for (const row of rows.results) {
+		assert.equal(row.actor_id.includes(TOKEN), false)
+		assert.equal(row.actor_id.includes('actor-secret'), false)
+	}
+
+	const listed = await worker.fetch(new Request(`${BASE}/api/guestbook`, {
+		headers: { 'cf-connecting-ip': '203.0.113.8' },
+	}), env)
+	assert.equal(listed.status, 200)
+	const board = await json(listed) as {
+		messages: { handle: string, owner: boolean, replies: { handle: string, owner: boolean, body: string }[] }[]
+	}
+	assert.equal(board.messages.length, 1)
+	assert.equal(board.messages[0].handle, 'acto')
+	assert.equal(board.messages[0].owner, false)
+	assert.equal(board.messages[0].handle.includes('博主'), false)
+	assert.deepEqual(
+		board.messages[0].replies.map((reply) => [reply.body, reply.handle, reply.owner]),
+		[
+			['visitor reply', 'acto', false],
+			['thanks for coming', '博主', true],
+			['and under the reply', '博主', true],
+		],
+	)
+	assert.equal(JSON.stringify(board).includes('guestbook-owner'), false)
+	assert.equal(JSON.stringify(board).includes('匿名'), false)
+
+	const removed = await postAdmin(env, '/api/admin/guestbook/delete', { id: root })
+	assert.equal(removed.status, 200)
+	assert.equal(await countRows(db, 'guestbook_messages'), 0)
+
+	const fresh = createStatsDatabase()
+	await seedMessage(fresh, null, 'leave a note')
+	const consoleEnv = createEnv({ db: fresh })
+	const screen = consoleHarness(workerFetcher(consoleEnv))
+	await screen.login()
+	await screen.tab('留言管理')
+	assert.match(screen.node('panel').text, /回复/)
+	const open = screen.node('panel').querySelectorAll('button').find((button) => button.textContent === '回复')!
+	await open.onclick!()
+	const area = screen.node('panel').querySelectorAll('textarea')[0]
+	area.value = '   '
+	const send = screen.node('panel').querySelectorAll('button').find((button) => button.textContent === '发送回复')!
+	await send.onclick!()
+	assert.match(screen.node('status').textContent, /回复不能为空/)
+	assert.equal(await countRows(fresh, 'guestbook_messages'), 1)
+	area.value = 'see you on the board'
+	await send.onclick!()
+	await settle()
+	assert.match(screen.node('panel').text, /see you on the board/)
+	assert.match(screen.node('panel').text, /博主/)
+	const owner = await fresh.prepare(
+		'SELECT actor_id, is_owner, parent_id FROM guestbook_messages WHERE body = ?1',
+	).bind('see you on the board').first<{ actor_id: string, is_owner: number, parent_id: number }>()
+	assert.equal(owner?.actor_id, 'guestbook-owner')
+	assert.equal(owner?.is_owner, 1)
+	assert.equal(owner?.parent_id, 1)
 })
 
 test('late requests cannot overwrite a newer navigation; errors offer retry', async () => {

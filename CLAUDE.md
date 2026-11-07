@@ -72,17 +72,22 @@ buttons are disabled while processing, and stale responses cannot replace a newe
 `src/components/GuestbookBoard.astro`: an anonymous message board served by the same site Worker
 (`worker/guestbook-service.ts`, `worker/guestbook-store.ts`, D1 `hydblog-stats`) on the same-origin
 `/api/guestbook/*` paths, gated by `guestbook.enabled` in `site.config.mjs`. Messages are plain text,
-two levels deep (a top-level message plus its replies), with per-visitor likes and retraction of your
-own fresh messages; the board stays hidden when the API is unreachable.
+two levels deep for visitors (a top-level message plus its replies), with per-visitor likes and
+retraction of your own fresh messages; the board stays hidden when the API is unreachable. From
+`/admin` 留言管理, each message has a 回复 control. That posts `POST /api/admin/guestbook/reply`
+(`body`, `parent_id`, `is_owner = 1` from `worker/migrations/0005_guestbook_owner.sql`) under a fixed
+pseudonym, not the admin token or the caller's IP. Owner replies show on the public board as 博主,
+including when they answer a reply in the same thread. Visitor handles stay 4 characters.
 
 Identity and abuse control reuse the stats machinery: `worker/actor.ts` derives a weekly IP pseudonym
 from `STATS_ACTOR_SECRET` (without that secret every guestbook route answers 503
 `guestbook_unavailable`), `GUESTBOOK_RATE_LIMITER` throttles each visitor, and the store enforces a
-10 second cooldown plus per-minute and per-day caps. The actor hash never leaves the server — the API
-returns only `mine`, `liked`, and a 4-character `handle`.
+10 second cooldown plus per-minute and per-day caps. The actor hash never leaves the server — a
+visitor response carries `mine`, `liked`, `owner: false`, and a 4-character `handle`. Owner rows
+carry `owner: true` and `handle` 博主.
 
 ```sh
-npm run db:migrate:local   # applies worker/migrations, including 0002_guestbook.sql
+npm run db:migrate:local   # applies worker/migrations, including 0002_guestbook.sql and 0005_guestbook_owner.sql
 npm run dev:worker         # ./dist assets plus /api/stats/* and /api/guestbook/*
 npm run test:guestbook     # board tests; the worker tests run under npm run test:stats
 ```

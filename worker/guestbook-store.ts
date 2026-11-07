@@ -5,6 +5,7 @@ import {
 	MAX_POSTS_PER_MINUTE,
 	MAX_REPLIES_PER_THREAD,
 	MIN_SECONDS_BETWEEN_POSTS,
+	OWNER_ACTOR_ID,
 	RETRACT_WINDOW_SECONDS,
 	likeBody,
 	listBody,
@@ -25,15 +26,18 @@ type CountRow = { total: number }
 type ParentCountRow = { parent_id: number, total: number }
 type LikeCountRow = { message_id: number, total: number }
 
-const THREAD_PAGE_SELECT = `SELECT id, body, actor_id, created_at FROM guestbook_messages
+const THREAD_PAGE_SELECT = `SELECT id, body, actor_id, is_owner, created_at FROM guestbook_messages
 WHERE parent_id IS NULL ORDER BY id DESC LIMIT ?1`
-const THREAD_PAGE_BEFORE_SELECT = `SELECT id, body, actor_id, created_at FROM guestbook_messages
+const THREAD_PAGE_BEFORE_SELECT = `SELECT id, body, actor_id, is_owner, created_at FROM guestbook_messages
 WHERE parent_id IS NULL AND id < ?1 ORDER BY id DESC LIMIT ?2`
 const THREAD_TOTAL_SELECT = 'SELECT COUNT(*) AS total FROM guestbook_messages WHERE parent_id IS NULL'
-const MESSAGE_INSERT = `INSERT INTO guestbook_messages (parent_id, body, actor_id) VALUES (?1, ?2, ?3)
-RETURNING id, body, actor_id, created_at`
-const MESSAGE_LATEST_SELECT = `SELECT id, body, actor_id, created_at FROM guestbook_messages
+const MESSAGE_INSERT = `INSERT INTO guestbook_messages (parent_id, body, actor_id, is_owner) VALUES (?1, ?2, ?3, 0)
+RETURNING id, body, actor_id, is_owner, created_at`
+const OWNER_INSERT = `INSERT INTO guestbook_messages (parent_id, body, actor_id, is_owner) VALUES (?1, ?2, ?3, 1)
+RETURNING id, body, actor_id, is_owner, created_at`
+const MESSAGE_LATEST_SELECT = `SELECT id, body, actor_id, is_owner, created_at FROM guestbook_messages
 WHERE actor_id = ?1 AND parent_id IS ?2 ORDER BY id DESC LIMIT 1`
+const ANY_MESSAGE_SELECT = 'SELECT id FROM guestbook_messages WHERE id = ?1'
 const PARENT_SELECT = 'SELECT id FROM guestbook_messages WHERE id = ?1 AND parent_id IS NULL'
 const MESSAGE_SELECT = 'SELECT id, actor_id FROM guestbook_messages WHERE id = ?1'
 const LAST_POST_SELECT = `SELECT CAST(?2 - (strftime('%s', 'now') - strftime('%s', created_at)) AS INTEGER) AS wait
@@ -46,11 +50,14 @@ const LIKE_INSERT = 'INSERT INTO guestbook_likes (message_id, actor_id) VALUES (
 const LIKE_DELETE = 'DELETE FROM guestbook_likes WHERE message_id = ?1 AND actor_id = ?2'
 const FRESH_MESSAGE_SELECT = `SELECT 1 AS fresh FROM guestbook_messages
 WHERE id = ?1 AND actor_id = ?2 AND created_at > datetime('now', ?3)`
-const REPLY_LIKE_DELETE = `DELETE FROM guestbook_likes
-WHERE message_id IN (SELECT id FROM guestbook_messages WHERE parent_id = ?1)`
-const REPLY_DELETE = 'DELETE FROM guestbook_messages WHERE parent_id = ?1'
-const MESSAGE_LIKE_DELETE = 'DELETE FROM guestbook_likes WHERE message_id = ?1'
-const MESSAGE_DELETE = 'DELETE FROM guestbook_messages WHERE id = ?1'
+// Owner replies can hang off a reply, so removal walks the whole subtree. There are no foreign keys.
+const MESSAGE_TREE = `WITH RECURSIVE tree(id) AS (
+	SELECT ?1
+	UNION ALL
+	SELECT m.id FROM guestbook_messages m JOIN tree ON m.parent_id = tree.id
+)`
+const MESSAGE_TREE_LIKE_DELETE = `DELETE FROM guestbook_likes WHERE message_id IN (${MESSAGE_TREE} SELECT id FROM tree)`
+const MESSAGE_TREE_DELETE = `DELETE FROM guestbook_messages WHERE id IN (${MESSAGE_TREE} SELECT id FROM tree)`
 
 const MINUTE_WINDOW = '-60 seconds'
 const DAY_WINDOW = '-1 day'
@@ -64,14 +71,26 @@ function placeholders(count: number): string {
 }
 
 const REPLY_COUNT_SELECT = (count: number) =>
-	`SELECT parent_id, COUNT(*) AS total FROM guestbook_messages
-WHERE parent_id IN (${placeholders(count)}) GROUP BY parent_id`
+	`WITH RECURSIVE tree AS (
+	SELECT id, parent_id AS thread_id FROM guestbook_messages
+	WHERE parent_id IN (${placeholders(count)})
+	UNION ALL
+	SELECT m.id, tree.thread_id FROM guestbook_messages m JOIN tree ON m.parent_id = tree.id
+)
+SELECT thread_id AS parent_id, COUNT(*) AS total FROM tree GROUP BY thread_id`
 
 const REPLY_SELECT = (count: number) =>
-	`SELECT id, parent_id, body, actor_id, created_at FROM (
-	SELECT id, parent_id, body, actor_id, created_at,
-		ROW_NUMBER() OVER (PARTITION BY parent_id ORDER BY id DESC) AS position
+	`WITH RECURSIVE tree AS (
+	SELECT id, parent_id, body, actor_id, is_owner, created_at, parent_id AS thread_id
 	FROM guestbook_messages WHERE parent_id IN (${placeholders(count)})
+	UNION ALL
+	SELECT m.id, m.parent_id, m.body, m.actor_id, m.is_owner, m.created_at, tree.thread_id
+	FROM guestbook_messages m JOIN tree ON m.parent_id = tree.id
+)
+SELECT id, parent_id, body, actor_id, is_owner, created_at, thread_id FROM (
+	SELECT id, parent_id, body, actor_id, is_owner, created_at, thread_id,
+		ROW_NUMBER() OVER (PARTITION BY thread_id ORDER BY id DESC) AS position
+	FROM tree
 ) WHERE position <= ? ORDER BY id ASC`
 
 const LIKE_COUNT_SELECT = (count: number) =>
@@ -108,7 +127,7 @@ export async function readThread(
 			likes: likeCounts.get(row.id) ?? 0,
 			liked: liked.has(row.id),
 		})
-		const thread = repliesByThread.get(row.parent_id)
+		const thread = repliesByThread.get(row.thread_id)
 		if (thread === undefined) repliesByThread.set(row.parent_id, [reply])
 		else thread.push(reply)
 	}
@@ -148,6 +167,35 @@ export async function createMessage(
 	return messageBody(row, actorId, { likes: 0, liked: false, replyCount: 0, replies: [] })
 }
 
+/**
+ * Posts one owner reply under any existing message. The stored actor is {@link OWNER_ACTOR_ID},
+ * never the admin credential or the caller's IP, and the write does not use the visitor rate limit.
+ */
+export async function createOwnerReply(
+	db: D1Database,
+	parentId: number,
+	body: string,
+): Promise<GuestbookReply> {
+	if ((await db.prepare(ANY_MESSAGE_SELECT).bind(parentId).first()) === null) {
+		throw new GuestbookProblem('invalid_parent', 'parent message does not exist')
+	}
+	const inserted = await db
+		.prepare(OWNER_INSERT)
+		.bind(parentId, body, OWNER_ACTOR_ID)
+		.first<GuestbookRow>()
+	const row = inserted ?? (await db.prepare(MESSAGE_LATEST_SELECT).bind(OWNER_ACTOR_ID, parentId).first<GuestbookRow>())
+	if (row === null) throw new Error('message insert returned no row')
+	return replyBody(row, OWNER_ACTOR_ID, { likes: 0, liked: false })
+}
+
+/** Deletes one message, every reply under it, and the likes on that whole subtree. */
+export async function deleteMessageTree(db: D1Database, id: number): Promise<void> {
+	await db.batch([
+		db.prepare(MESSAGE_TREE_LIKE_DELETE).bind(id),
+		db.prepare(MESSAGE_TREE_DELETE).bind(id),
+	])
+}
+
 export async function toggleMessageLike(
 	db: D1Database,
 	actorId: string,
@@ -184,15 +232,7 @@ export async function removeMessage(
 			403,
 		)
 	}
-	// There are no foreign keys, so a top-level message takes its likes, its replies, and the
-	// likes on those replies with it. A reply has no children, which makes the first two
-	// deletes no-ops for it.
-	await db.batch([
-		db.prepare(REPLY_LIKE_DELETE).bind(id),
-		db.prepare(REPLY_DELETE).bind(id),
-		db.prepare(MESSAGE_LIKE_DELETE).bind(id),
-		db.prepare(MESSAGE_DELETE).bind(id),
-	])
+	await deleteMessageTree(db, id)
 	return removeBody(id)
 }
 

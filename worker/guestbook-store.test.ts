@@ -2,7 +2,8 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import type { D1Database } from './env.ts'
 import { GuestbookProblem, MIN_SECONDS_BETWEEN_POSTS } from './guestbook-service.ts'
-import { createMessage, readThread, removeMessage, toggleMessageLike } from './guestbook-store.ts'
+import { OWNER_ACTOR_ID, OWNER_HANDLE } from './guestbook-service.ts'
+import { createMessage, createOwnerReply, readThread, removeMessage, toggleMessageLike } from './guestbook-store.ts'
 import { createStatsDatabase } from './test/d1-sqlite.ts'
 
 const AUTHOR = 'actor-a'
@@ -72,6 +73,7 @@ test('a thread reports its reply without the reply becoming a thread', async () 
 		'id',
 		'body',
 		'handle',
+		'owner',
 		'mine',
 		'createdAt',
 		'likes',
@@ -79,7 +81,9 @@ test('a thread reports its reply without the reply becoming a thread', async () 
 		'replyCount',
 		'replies',
 	])
-	assert.deepEqual(Object.keys(reply), ['id', 'body', 'handle', 'mine', 'createdAt', 'likes', 'liked'])
+	assert.deepEqual(Object.keys(reply), ['id', 'body', 'handle', 'owner', 'mine', 'createdAt', 'likes', 'liked'])
+	assert.equal(thread.owner, false)
+	assert.equal(reply.owner, false)
 	assert.equal(thread.mine, true)
 	assert.equal(reply.mine, true)
 	// Only a top-level create reports the thread it starts.
@@ -307,4 +311,69 @@ test('the write policy is keyed by actor', async () => {
 	await assert.rejects(() => createMessage(db, AUTHOR, 'blocked', null), isProblem('rate_limited', 429))
 	assert.equal((await createMessage(db, OTHER, 'welcome', null)).body, 'welcome')
 	assert.equal(await countRows(db, 'guestbook_messages'), 4)
+})
+
+test('an owner reply is 博主 in the thread, including when it answers a reply', async () => {
+	const db = createStatsDatabase()
+	const thread = await post(db, AUTHOR, 'hello')
+	const visitor = await post(db, OTHER, 'nice one', thread.id)
+	const direct = await createOwnerReply(db, thread.id, 'glad you came')
+	const nested = await createOwnerReply(db, visitor.id, 'and this too')
+
+	assert.equal(direct.handle, OWNER_HANDLE)
+	assert.equal(direct.owner, true)
+	assert.equal(direct.mine, false)
+	assert.equal(nested.handle, OWNER_HANDLE)
+	assert.equal(JSON.stringify(direct).includes(OWNER_ACTOR_ID), false)
+
+	const stored = await db.prepare('SELECT actor_id, is_owner, parent_id FROM guestbook_messages WHERE id = ?1')
+		.bind(nested.id)
+		.first<{ actor_id: string, is_owner: number, parent_id: number }>()
+	assert.equal(stored?.actor_id, OWNER_ACTOR_ID)
+	assert.equal(stored?.is_owner, 1)
+	assert.equal(stored?.parent_id, visitor.id)
+
+	const page = await readThread(db, AUTHOR, FIRST_PAGE)
+	const replies = page.messages[0].replies
+	assert.equal(page.messages[0].replyCount, 3)
+	assert.deepEqual(replies.map((entry) => entry.handle), [handleOf(OTHER), OWNER_HANDLE, OWNER_HANDLE])
+	assert.deepEqual(replies.map((entry) => entry.owner), [false, true, true])
+	assert.equal(replies.filter((entry) => entry.owner).every((entry) => entry.mine === false), true)
+	assert.equal(page.messages[0].handle.length, 4)
+	assert.equal(page.messages[0].owner, false)
+
+	await assert.rejects(() => removeMessage(db, AUTHOR, direct.id), isProblem('not_author', 403))
+	assert.deepEqual(await toggleMessageLike(db, AUTHOR, direct.id, true), { id: direct.id, likes: 1, liked: true })
+})
+
+function handleOf(actorId: string): string {
+	return actorId.slice(0, 4)
+}
+
+test('removing a reply also removes an owner reply hanging off it', async () => {
+	const db = createStatsDatabase()
+	const thread = await createMessage(db, AUTHOR, 'thread', null)
+	const reply = await createMessage(db, OTHER, 'reply', thread.id)
+	await createOwnerReply(db, reply.id, 'owner note')
+	await toggleMessageLike(db, AUTHOR, reply.id, true)
+
+	assert.deepEqual(await removeMessage(db, OTHER, reply.id), { id: reply.id, removed: true })
+	assert.equal(await countRows(db, 'guestbook_messages'), 1)
+	assert.equal(await countRows(db, 'guestbook_likes'), 0)
+	const page = await readThread(db, AUTHOR, FIRST_PAGE)
+	assert.equal(page.messages[0].replyCount, 0)
+})
+
+test('owner replies do not consume the visitor write quota', async () => {
+	const db = createStatsDatabase()
+	const thread = await post(db, AUTHOR, 'thread')
+	await createOwnerReply(db, thread.id, 'one')
+	await createOwnerReply(db, thread.id, 'two')
+	assert.equal((await createMessage(db, AUTHOR, 'still allowed', null)).body, 'still allowed')
+})
+
+test('an owner reply needs a message that exists', async () => {
+	const db = createStatsDatabase()
+	await assert.rejects(() => createOwnerReply(db, 404, 'nobody home'), isProblem('invalid_parent', 400))
+	assert.equal(await countRows(db, 'guestbook_messages'), 0)
 })

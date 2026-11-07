@@ -225,6 +225,7 @@ export const zhCN: UiCopy = {
 		likeAction: '点赞',
 		unlikeAction: '取消点赞',
 		guest: (handle) => `匿名访客 ${handle}`,
+		owner: '博主',
 		mine: '我',
 		retract: '撤回',
 		retracted: '留言已撤回。',

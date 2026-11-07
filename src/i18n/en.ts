@@ -228,6 +228,7 @@ export const en: UiCopy = {
 		likeAction: 'Like',
 		unlikeAction: 'Remove like',
 		guest: (handle) => `Guest ${handle}`,
+		owner: '博主',
 		mine: 'You',
 		retract: 'Retract',
 		retracted: 'Message retracted.',

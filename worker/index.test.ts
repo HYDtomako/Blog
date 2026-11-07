@@ -100,6 +100,7 @@ type GuestbookReplyJson = {
 	id: number
 	body: string
 	handle: string
+	owner: boolean
 	mine: boolean
 	createdAt: string
 	likes: number
@@ -477,6 +478,7 @@ test('the guestbook happy path posts, replies, lists, likes, and removes', async
 		'id',
 		'body',
 		'handle',
+		'owner',
 		'mine',
 		'createdAt',
 		'likes',
@@ -484,6 +486,7 @@ test('the guestbook happy path posts, replies, lists, likes, and removes', async
 		'replyCount',
 		'replies',
 	])
+	assert.equal(thread.owner, false)
 	assert.equal(thread.body, 'first post')
 	assert.equal(thread.mine, true)
 	assert.equal(thread.likes, 0)
@@ -500,7 +503,8 @@ test('the guestbook happy path posts, replies, lists, likes, and removes', async
 	assert.equal(replied.status, 201)
 	assert.equal(replied.headers.get('cache-control'), 'no-store')
 	const reply = await guestbookJson(replied)
-	assert.deepEqual(Object.keys(reply), ['id', 'body', 'handle', 'mine', 'createdAt', 'likes', 'liked'])
+	assert.deepEqual(Object.keys(reply), ['id', 'body', 'handle', 'owner', 'mine', 'createdAt', 'likes', 'liked'])
+	assert.equal(reply.owner, false)
 	assert.equal(reply.mine, true)
 
 	const listedResponse = await readGuestbook(env)
@@ -556,6 +560,10 @@ test('guestbook reads and writes reject malformed ids and messages', async () =>
 	const badParent = await postGuestbook(env, GUESTBOOK_URL, { body: 'hello', parentId: 404 })
 	assert.equal(badParent.status, 400)
 	assert.equal(await errorCode(badParent), 'invalid_parent')
+
+	const ownerFlag = await postGuestbook(env, GUESTBOOK_URL, { body: 'hello', is_owner: 1 })
+	assert.equal(ownerFlag.status, 400)
+	assert.equal(await errorCode(ownerFlag), 'invalid_body')
 
 	const badId = await postGuestbook(env, GUESTBOOK_LIKE_URL, { id: 0, liked: true })
 	assert.equal(badId.status, 400)

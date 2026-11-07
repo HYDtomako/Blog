@@ -229,6 +229,8 @@ export type UiCopy = {
 		likeAction: string;
 		unlikeAction: string;
 		guest: (handle: string) => string;
+		/** Blog-owner replies. The public board always shows this label, including in English. */
+		owner: string;
 		mine: string;
 		retract: string;
 		retracted: string;

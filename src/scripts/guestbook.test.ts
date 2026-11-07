@@ -217,6 +217,7 @@ const TEST_LABELS: GuestbookLabels = {
 	justNow: 'Just now',
 	counterTemplate: '__USED__ / __MAX__',
 	guestTemplate: 'Guest __HANDLE__',
+	owner: '博主',
 	replyingToTemplate: 'Replying to __HANDLE__',
 	replyCountTemplate: '__COUNT__ replies',
 	showingLatestTemplate: 'latest __COUNT__',
@@ -360,6 +361,7 @@ function message(overrides: Partial<GuestbookMessage> = {}): GuestbookMessage {
 		id: 5,
 		body: 'hello there',
 		handle: 'a3f9',
+		owner: false,
 		mine: false,
 		createdAt: ago(125),
 		likes: 2,
@@ -396,6 +398,7 @@ test('readGuestbookConfig reads the hooks and merges label overrides', () => {
 	const merged = readGuestbookConfig(partial as unknown as HTMLElement);
 	assert.equal(merged?.labels.empty, 'only this one');
 	assert.equal(merged?.labels.guestTemplate, 'Guest __HANDLE__');
+	assert.equal(merged?.labels.owner, '博主');
 	assert.equal(merged?.locale, 'en');
 	assert.equal(merged?.labels.errors.invalid_message, 'That message did not look right.');
 
@@ -436,6 +439,7 @@ test('parseThread keeps the contract shape and drops malformed entries', () => {
 	assert.equal(thread.messages[0].replyCount, 3);
 	assert.equal(thread.messages[0].replies.length, 1);
 	assert.equal(thread.messages[0].replies[0].handle, 'b1c2');
+	assert.equal(thread.messages[0].replies[0].owner, false);
 	assert.equal(thread.nextBefore, 8);
 	assert.equal(thread.total, 12);
 
@@ -645,6 +649,32 @@ test('createMessageRow builds plain-text rows with the shipped hooks', () => {
 	assert.notEqual(fresh.row.querySelector('[data-guestbook-retract]'), null);
 	assert.equal(fresh.hint.hidden, true);
 	assert.equal(fresh.replies.getAttribute('aria-label'), null);
+});
+
+test('owner replies render as 博主 and never as a guest handle', () => {
+	const board = buildBoard();
+	const rendered = createMessageRow(
+		board.doc,
+		message({
+			handle: '博主',
+			owner: true,
+			mine: true,
+			createdAt: ago(5),
+			replies: [message({ id: 6, body: 'thanks', handle: '博主', owner: true, mine: true, createdAt: ago(1) })],
+		}),
+		rowContext(),
+	);
+
+	assert.equal(rendered.row.className, 'gb-item gb-owner');
+	assert.equal(rendered.row.querySelector('.gb-handle')?.textContent, '博主');
+	assert.equal(rendered.row.querySelector('.gb-handle')?.textContent?.includes('Guest'), false);
+	assert.equal(rendered.row.querySelector('.gb-handle')?.textContent?.includes('匿名'), false);
+	assert.equal(rendered.row.querySelector('[data-guestbook-retract]'), null);
+
+	const reply = rendered.replyRows.get(6);
+	assert.equal(reply?.className, 'gb-reply-item gb-owner');
+	assert.equal(reply?.querySelector('.gb-handle')?.textContent, '博主');
+	assert.equal(reply?.querySelector('[data-guestbook-retract]'), null);
 });
 
 test('createMessageRow wires the row callbacks to the actions', () => {

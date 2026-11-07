@@ -1,0 +1,1 @@
+ALTER TABLE guestbook_messages ADD COLUMN is_owner INTEGER NOT NULL DEFAULT 0;
