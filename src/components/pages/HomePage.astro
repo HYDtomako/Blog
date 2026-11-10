@@ -26,7 +26,7 @@ const featuredNotes = notes.slice(0, 4);
 
 const openSourceEntries = (await getCollection('projects'))
 	.filter((entry) => entryLocale(entry.id) === locale && entry.data.category === 'oss')
-	.sort((a, b) => a.data.sortRank - b.data.sortRank || a.data.title.localeCompare(b.data.title, locale))
+	.sort((a, b) => b.data.stars - a.data.stars || a.data.sortRank - b.data.sortRank || a.data.title.localeCompare(b.data.title, locale))
 	.slice(0, 3)
 	.map(({ data }) => ({
 		meta: data.tags[0] ?? '',
