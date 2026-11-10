@@ -177,7 +177,7 @@ const structuredData = [
                 <div class="repo-card-foot">
                   <span class="repo-card-tags">{data.tags.slice(0, 3).join(' · ')}</span>
                   <span class="repo-card-meta">
-                    <RepoStars stars={data.stars} label={UI.projects.starsAria(data.stars)} />
+                    <RepoStars stars={data.stars} label={UI.projects.starsAria(data.stars)} filled />
                     <span class="repo-card-sep" aria-hidden="true">·</span>
                     <span class="repo-card-status">{statusLabels[data.status]}</span>
                   </span>
