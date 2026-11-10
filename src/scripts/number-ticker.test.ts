@@ -3,7 +3,7 @@ import test from 'node:test';
 import { armNumberTicker, displayedTicker, formatTicker, stepUnitSpring } from './number-ticker.ts';
 
 test('the unit spring climbs from 0 and settles at 1', () => {
-	let state = { value: 0, velocity: 0 };
+	let state = { value: 0, velocity: 0, settled: false };
 	let previous = 0;
 	for (let i = 0; i < 280; i += 1) {
 		state = stepUnitSpring(state, 1 / 60);
