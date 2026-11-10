@@ -4,6 +4,7 @@ import { getCollection } from 'astro:content';
 import GitHubActivity from '../GitHubActivity.astro';
 import ScrollWaterBall from '../ScrollWaterBall.astro';
 import Icon from '../Icon.astro';
+import RepoStars from '../RepoStars.astro';
 import { breadcrumbJsonLd, collectionPageJsonLd, entryLocale, getPublicProfile } from '../../lib/public-data';
 import { withBase } from '../../lib/paths';
 import { DEFAULT_LOCALE, localeFromPath, localizedHref, localizedSitePath } from '../../lib/locale';
@@ -176,10 +177,7 @@ const structuredData = [
                 <div class="repo-card-foot">
                   <span class="repo-card-tags">{data.tags.slice(0, 3).join(' · ')}</span>
                   <span class="repo-card-meta">
-                    <span class="repo-card-stars" aria-label={UI.projects.starsAria(data.stars)}>
-                      <Icon name="star" size={13} />
-                      {data.stars}
-                    </span>
+                    <RepoStars stars={data.stars} label={UI.projects.starsAria(data.stars)} filled />
                     <span class="repo-card-sep" aria-hidden="true">·</span>
                     <span class="repo-card-status">{statusLabels[data.status]}</span>
                   </span>
@@ -391,12 +389,6 @@ const structuredData = [
     align-items: center;
     gap: 6px;
     flex: none;
-  }
-  .repo-card-stars {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    color: var(--muted);
   }
   .repo-card-sep {
     color: var(--line);

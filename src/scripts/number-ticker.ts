@@ -8,14 +8,14 @@
 export const TICKER_STIFFNESS = 100;
 export const TICKER_DAMPING = 60;
 
-export type SpringState = { value: number; velocity: number };
+export type SpringState = { value: number; velocity: number; settled: boolean };
 
 export function stepUnitSpring(
 	state: SpringState,
 	dt: number,
 	stiffness = TICKER_STIFFNESS,
 	damping = TICKER_DAMPING,
-): SpringState & { settled: boolean } {
+): SpringState {
 	const target = 1;
 	const force = -stiffness * (state.value - target);
 	const velocity = state.velocity + (force - damping * state.velocity) * dt;
@@ -61,7 +61,7 @@ function runTicker(node: HTMLElement, target: number, locale: string) {
 		paint(node, target, locale);
 		return;
 	}
-	let state: SpringState = { value: 0, velocity: 0 };
+	let state: SpringState = { value: 0, velocity: 0, settled: false };
 	let last = performance.now();
 	// The Magic UI spring (damping 60, stiffness 100) is applied on a 0→1
 	// progress and played at 2× so a large total finishes in about two seconds.

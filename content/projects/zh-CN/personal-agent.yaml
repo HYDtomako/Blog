@@ -1,0 +1,12 @@
+title: personal-agent
+description: 住在你电脑里的个人 AI agent：本地网页对话，能查资料、记事、定任务，也能真的改文件、跑命令
+slug: personal-agent
+status: active
+stars: 1
+url: https://github.com/HYDtomako/personal-agent
+repository: https://github.com/HYDtomako/personal-agent
+tags: [Agent, TypeScript]
+category: oss
+featured: false
+sortRank: 19
+role: 作者

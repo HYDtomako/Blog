@@ -1,4 +1,6 @@
 ---
+import RepoStars from './RepoStars.astro';
+
 interface Entry {
 	meta: string;
 	title: string;
@@ -6,6 +8,8 @@ interface Entry {
 	pill?: string;
 	href?: string;
 	external?: boolean;
+	stars?: number;
+	starsLabel?: string;
 }
 
 interface Props {
@@ -26,6 +30,11 @@ const { entries } = Astro.props;
 						<div class="entry-excerpt">{entry.excerpt}</div>
 					</div>
 					{entry.pill && <div class="entry-pillar">{entry.pill}</div>}
+					{typeof entry.stars === 'number' && (
+						<div class="entry-stars">
+							<RepoStars stars={entry.stars} label={entry.starsLabel ?? String(entry.stars)} filled />
+						</div>
+					)}
 				</>
 			);
 			return entry.href ? (
@@ -47,5 +56,13 @@ const { entries } = Astro.props;
 <style>
 	.entry-static:hover .entry-title {
 		text-decoration: none;
+	}
+	.entry-stars {
+		padding-top: 5px;
+	}
+	@media (max-width: 680px) {
+		.entry-stars {
+			padding-top: 0;
+		}
 	}
 </style>
