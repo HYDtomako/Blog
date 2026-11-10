@@ -1,0 +1,33 @@
+---
+import Icon from './Icon.astro';
+
+interface Props {
+	stars: number;
+	label: string;
+	filled?: boolean;
+}
+
+const { stars, label, filled = false } = Astro.props;
+---
+
+<span class="repo-card-stars" aria-label={label}>
+	<Icon name="star" size={13} class={filled ? 'repo-card-star-filled' : undefined} />
+	{stars}
+</span>
+
+<style>
+	.repo-card-stars {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		color: var(--muted);
+		font-family: var(--mono);
+		font-size: 12px;
+		white-space: nowrap;
+	}
+	.repo-card-stars :global(.repo-card-star-filled) {
+		color: #f5c518;
+		fill: #f5c518;
+		stroke: #f5c518;
+	}
+</style>

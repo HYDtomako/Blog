@@ -34,6 +34,8 @@ const openSourceEntries = (await getCollection('projects'))
 		excerpt: data.description,
 		href: data.url ?? data.repository,
 		external: true,
+		stars: data.stars,
+		starsLabel: UI.projects.starsAria(data.stars),
 	}));
 
 const publicProfile = await getPublicProfile(locale);
