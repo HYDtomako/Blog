@@ -127,12 +127,13 @@ const defaults = {
 		},
 		en: {
 			description:
-				'HYD is an agent-ready personal site for Astro + Starlight.',
+				'HYD\'s personal site: public articles, projects, and a self-introduction. The same content is there for people to read, for search engines to index, and for AI agents to read.',
 			persona: 'HYD',
 			wordmark: 'HYD Personal Blog',
 			alternateNames: ['HYD'],
 			homeHeading: 'HYD',
 			homeTitle: 'HYD — Personal site',
+			homeLede: 'Publish articles, projects, and a self-intro once, so both people and agents can read them.',
 			writingLede: 'Long-form pieces written over time, drawing on more than one angle — your thoughts are welcome.',
 			askChips: [
 				{ label: 'Who is this?', query: 'Who is the author?' },
