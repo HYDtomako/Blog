@@ -2,7 +2,7 @@ title: personal-agent
 description: A personal AI agent that lives on your computer — local web chat that can look things up, take notes, set tasks, and actually edit files and run commands.
 slug: personal-agent
 status: active
-stars: 2
+stars: 3
 url: https://github.com/HYDtomako/personal-agent
 repository: https://github.com/HYDtomako/personal-agent
 tags: [Agent, TypeScript]
