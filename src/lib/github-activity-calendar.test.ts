@@ -29,6 +29,46 @@ function range(start: string, length: number): GitHubActivityDay[] {
 	return Array.from({ length }, (_, index) => day(addDays(start, index), index === 3 ? 2 : 0, index === 3 ? 1 : 0));
 }
 
+function utcMonth(date: string): number {
+	return new Date(`${date}T00:00:00Z`).getUTCMonth();
+}
+
+function firstDayOfWeek(cells: Array<GitHubActivityDay | null>, week: number): GitHubActivityDay | null {
+	return cells.slice(week * 7, week * 7 + 7).find((cell) => cell !== null) ?? null;
+}
+
+/**
+ * Labels come from the week columns. Week 0 stays blank, and a later week is
+ * labeled only when its first day's UTC month changes.
+ */
+function labeledMonths(days: GitHubActivityDay[], locale: string): string[] {
+	const calendar = buildContributionCalendar(days, locale);
+	assert.equal(calendar.monthLabels.length, calendar.weekCount);
+	assert.equal(calendar.monthLabels[0], '');
+	const opening = firstDayOfWeek(calendar.cells, 0);
+	assert.ok(opening);
+	let previousMonth = utcMonth(opening.date);
+	const labeled: string[] = [];
+	for (let week = 1; week < calendar.weekCount; week += 1) {
+		const firstDay = firstDayOfWeek(calendar.cells, week);
+		const label = calendar.monthLabels[week] ?? '';
+		if (!firstDay) {
+			assert.equal(label, '');
+			continue;
+		}
+		const month = utcMonth(firstDay.date);
+		if (month === previousMonth) {
+			assert.equal(label, '');
+			continue;
+		}
+		assert.equal(month, (previousMonth + 1) % 12);
+		assert.equal(label, formatActivityMonth(firstDay.date, locale));
+		labeled.push(label);
+		previousMonth = month;
+	}
+	return labeled;
+}
+
 test('calendar pads a Sunday-start week and leaves the first month unlabeled', () => {
 	assert.equal(new Date('2025-10-26T00:00:00Z').getUTCDay(), 0);
 	const calendar = buildContributionCalendar(range('2025-10-26', 14), 'en');
@@ -64,15 +104,29 @@ test('checked-in contribution snapshot still lays out as a year of weeks', async
 	const calendar = buildContributionCalendar(raw.days, 'zh-CN');
 	assert.equal(calendar.cells.length, calendar.weekCount * 7);
 	assert.ok(calendar.weekCount >= 52);
-	assert.equal(calendar.monthLabels.length, calendar.weekCount);
-	assert.equal(calendar.monthLabels[0], '');
-	assert.equal(calendar.monthLabels.filter(Boolean)[0], '11月');
-	assert.equal(calendar.monthLabels.filter(Boolean).at(-1), '10月');
+	const labeled = labeledMonths(raw.days, 'zh-CN');
+	const labeledEn = labeledMonths(raw.days, 'en');
+	assert.ok(labeled.length >= 11 && labeled.length <= 13);
+	assert.equal(labeledEn.length, labeled.length);
 	const rendered = calendar.cells.filter((cell): cell is GitHubActivityDay => cell !== null);
 	assert.deepEqual(
 		rendered.map((cell) => cell.date),
 		raw.days.map((cell) => cell.date),
 	);
+});
+
+test('month labels follow the contribution window instead of a hard-coded month', () => {
+	const windows = ['2024-03-10', '2024-08-11', '2025-12-07'];
+	const firstLabels = windows.map((start) => {
+		const labeled = labeledMonths(range(start, 370), 'zh-CN');
+		assert.ok(labeled.length >= 11 && labeled.length <= 13);
+		assert.notEqual(labeled[0], labeled.at(-1));
+		return labeled[0];
+	});
+	assert.equal(new Set(firstLabels).size, windows.length);
+
+	const firstLabelsEn = windows.map((start) => labeledMonths(range(start, 370), 'en')[0]);
+	assert.equal(new Set(firstLabelsEn).size, windows.length);
 });
 
 test('dates format in the active locale', () => {

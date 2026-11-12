@@ -4,7 +4,7 @@ export interface ContributionCalendar {
 	/** Column-major cells: each week is seven entries, Sunday through Saturday. */
 	cells: Array<GitHubActivityDay | null>;
 	weekCount: number;
-	/** One label per week column. The first week stays blank, matching a nov→oct axis. */
+	/** One label per week column. Week 0 stays blank; a later week is labeled when its first day's UTC month changes. */
 	monthLabels: string[];
 }
 
