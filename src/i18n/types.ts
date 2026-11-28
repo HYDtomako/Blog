@@ -139,6 +139,11 @@ export type UiCopy = {
 		projectShotAlt: (title: string) => string;
 		courseCoverAltTitle: (title: string) => string;
 	};
+	tags: {
+		heading: string;
+		writingCount: (name: string, n: number) => string;
+		notesCount: (name: string, n: number) => string;
+	};
 	topics: {
 		label: string;
 		allHeading: string;

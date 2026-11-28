@@ -48,6 +48,47 @@ export function slicePage<T>(items: readonly T[], pageNumber: number, pageSize: 
 	return items.slice(start, start + size);
 }
 
+/** Same slug rules as the topic directory, so a tag keeps one stable path. */
+export function tagSlug(tag: string, locale: string): string {
+	return tag
+		.normalize('NFKC')
+		.trim()
+		.toLocaleLowerCase(locale)
+		.replace(/\+/g, '-plus-')
+		.replace(/#/g, '-sharp-')
+		.replace(/\./g, '-dot-')
+		.replace(/[^\p{Letter}\p{Number}]+/gu, '-')
+		.replace(/^-+|-+$/g, '');
+}
+
+export interface CollectionTag {
+	name: string;
+	slug: string;
+	count: number;
+}
+
+type TaggedEntry = { data: { tags?: readonly string[] | null } };
+
+/** Unique tags that actually appear on this collection, in locale name order. */
+export function collectionTags(entries: readonly TaggedEntry[], locale: string): CollectionTag[] {
+	const tags = new Map<string, CollectionTag>();
+	for (const entry of entries) {
+		for (const name of entry.data.tags ?? []) {
+			const slug = tagSlug(name, locale);
+			if (!slug) continue;
+			const existing = tags.get(slug);
+			if (existing) existing.count += 1;
+			else tags.set(slug, { name, slug, count: 1 });
+		}
+	}
+	return [...tags.values()].sort((a, b) => a.name.localeCompare(b.name, locale) || a.slug.localeCompare(b.slug));
+}
+
+/** Keeps the incoming order, which is newest-first for articles and notes. */
+export function entriesWithTag<T extends TaggedEntry>(entries: readonly T[], slug: string, locale: string): T[] {
+	return entries.filter((entry) => (entry.data.tags ?? []).some((tag) => tagSlug(tag, locale) === slug));
+}
+
 /** Page 1 lives on the collection index. Later pages use `/<collection>/page/N/`. */
 export function collectionPagePath(collection: ListCollection, pageNumber: number): string {
 	if (!Number.isInteger(pageNumber) || pageNumber <= 1) return `/${collection}/`;
@@ -60,6 +101,22 @@ export function collectionPageHref(
 	locale: string = DEFAULT_LOCALE,
 ): string {
 	return localizedHref(locale, collectionPagePath(collection, pageNumber));
+}
+
+/** Page 1 of a collection tag filter. Later pages use `/<collection>/tags/<slug>/page/N/`. */
+export function collectionTagPath(collection: ListCollection, slug: string, pageNumber = 1): string {
+	const base = `/${collection}/tags/${slug}/`;
+	if (!Number.isInteger(pageNumber) || pageNumber <= 1) return base;
+	return `/${collection}/tags/${slug}/page/${pageNumber}/`;
+}
+
+export function collectionTagHref(
+	collection: ListCollection,
+	slug: string,
+	pageNumber = 1,
+	locale: string = DEFAULT_LOCALE,
+): string {
+	return localizedHref(locale, collectionTagPath(collection, slug, pageNumber));
 }
 
 export interface PaginationControls {

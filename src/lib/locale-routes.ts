@@ -1,5 +1,5 @@
 import { getCollection } from 'astro:content';
-import { pageCount } from './list-pages';
+import { collectionTags, entriesWithTag, pageCount, type ListCollection } from './list-pages';
 import { DEFAULT_LOCALE, localePath, stripLocalePrefix } from './locale';
 import { entryLocale, topicSlug } from './public-data';
 import { SERIES_ORDER_BY_LOCALE } from './series.mjs';
@@ -12,6 +12,21 @@ const pathCache = new Map<string, Promise<Set<string>>>();
 /** Entry ids carry the locale prefix; switch targets are compared as logical paths. */
 function logicalPath(id: string) {
 	return stripLocalePrefix(`/${id}`);
+}
+
+function addCollectionTagPaths(
+	paths: Set<string>,
+	entries: Parameters<typeof collectionTags>[0],
+	collection: ListCollection,
+	locale: string,
+) {
+	for (const tag of collectionTags(entries, locale)) {
+		paths.add(`/${collection}/tags/${tag.slug}/`);
+		const matched = entriesWithTag(entries, tag.slug, locale).length;
+		for (let page = 2; page <= pageCount(matched); page += 1) {
+			paths.add(`/${collection}/tags/${tag.slug}/page/${page}/`);
+		}
+	}
 }
 
 async function computeLocalePaths(locale: string): Promise<Set<string>> {
@@ -32,6 +47,8 @@ async function computeLocalePaths(locale: string): Promise<Set<string>> {
 	for (let page = 2; page <= pageCount(notes.length); page += 1) {
 		paths.add(`/notes/page/${page}/`);
 	}
+	addCollectionTagPaths(paths, articles, 'writing', locale);
+	addCollectionTagPaths(paths, notes, 'notes', locale);
 	for (const series of SERIES_ORDER_BY_LOCALE[locale] ?? []) paths.add(`/writing/${series}/`);
 
 	if (locale !== DEFAULT_LOCALE) {

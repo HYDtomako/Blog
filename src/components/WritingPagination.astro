@@ -1,21 +1,23 @@
 ---
 import { getSiteCopy } from '../lib/site-copy';
-import { collectionPageHref, paginationControls, type ListCollection } from '../lib/list-pages';
+import { collectionPageHref, collectionTagHref, paginationControls, type ListCollection } from '../lib/list-pages';
 import { localeFromPath } from '../lib/locale';
 
 interface Props {
 	collection: ListCollection;
 	pageNumber: number;
 	pageCount: number;
+	tagSlug?: string;
 }
 
-const { collection, pageNumber, pageCount } = Astro.props;
+const { collection, pageNumber, pageCount, tagSlug } = Astro.props;
 const locale = localeFromPath(Astro.url.pathname);
 const UI = getSiteCopy(locale).ui;
 const controls = paginationControls(pageNumber, pageCount);
 const pageCrumb = collection === 'notes' ? UI.notes.pageCrumb : UI.writing.pageCrumb;
 const ariaLabel = collection === 'notes' ? UI.notes.paginationAria : UI.common.paginationAria;
-const href = (page: number) => collectionPageHref(collection, page, locale);
+const href = (page: number) =>
+	tagSlug ? collectionTagHref(collection, tagSlug, page, locale) : collectionPageHref(collection, page, locale);
 ---
 
 {

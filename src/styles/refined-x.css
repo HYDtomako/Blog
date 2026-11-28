@@ -898,8 +898,33 @@ h4 {
 .index-aside-link {
   margin: 2.75rem 0 0;
 }
+p.index-aside-link + .list-stage,
 p.index-aside-link + ol.post-list {
   margin-top: 1.75rem;
+}
+.tag-capsule {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 5px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 4%, var(--surface));
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: nowrap;
+  transition:
+    border-color var(--duration-fast) var(--ease-out-quart),
+    background var(--duration-fast) var(--ease-out-quart);
+}
+.tag-capsule:hover,
+.tag-capsule:focus-visible {
+  border-color: var(--ink);
+}
+.tag-capsule[aria-current="page"] {
+  border-color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 10%, var(--surface));
 }
 
 .btn {

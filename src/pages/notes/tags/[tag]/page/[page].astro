@@ -1,0 +1,13 @@
+---
+import CollectionFilterPage from '../../../../../components/pages/CollectionFilterPage.astro';
+import { collectionTagOverflowPaths } from '../../../../../lib/page-paths';
+import { DEFAULT_LOCALE } from '../../../../../lib/locale';
+
+export async function getStaticPaths() {
+	return collectionTagOverflowPaths('notes', DEFAULT_LOCALE);
+}
+
+const props = Astro.props;
+---
+
+<CollectionFilterPage collection="notes" {...props} />

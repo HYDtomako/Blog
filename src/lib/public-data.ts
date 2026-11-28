@@ -1,6 +1,6 @@
 import { getCollection, type CollectionEntry } from 'astro:content';
 import { siteConfig } from '../../site.config.mjs';
-import { compareNewest } from './list-pages';
+import { compareNewest, tagSlug } from './list-pages';
 import { absoluteUrlFromSite, sitePath } from './paths';
 import { DEFAULT_LOCALE, PREFIXED_LOCALES, localePath } from './locale';
 
@@ -27,15 +27,7 @@ export function docPath(entry: PublicDocEntry) {
 }
 
 export function topicSlug(tag: string, locale: string = DEFAULT_LOCALE) {
-	return tag
-		.normalize('NFKC')
-		.trim()
-		.toLocaleLowerCase(locale)
-		.replace(/\+/g, '-plus-')
-		.replace(/#/g, '-sharp-')
-		.replace(/\./g, '-dot-')
-		.replace(/[^\p{Letter}\p{Number}]+/gu, '-')
-		.replace(/^-+|-+$/g, '');
+	return tagSlug(tag, locale);
 }
 
 export async function getArticles(locale: string = DEFAULT_LOCALE) {

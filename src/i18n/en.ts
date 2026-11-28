@@ -143,6 +143,11 @@ export const en: UiCopy = {
 		projectShotAlt: (title) => `${title} screenshot`,
 		courseCoverAltTitle: (title) => `${title} course cover`,
 	},
+	tags: {
+		heading: 'Tags',
+		writingCount: (name, n) => `Tag ${name} · ${n} ${n === 1 ? 'article' : 'articles'}.`,
+		notesCount: (name, n) => `Tag ${name} · ${n} ${n === 1 ? 'note' : 'notes'}.`,
+	},
 	topics: {
 		label: 'Topics',
 		allHeading: 'All topics',

@@ -2,10 +2,11 @@
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import ArticleCards from '../ArticleCards.astro';
 import Icon from '../Icon.astro';
+import ListStage from '../ListStage.astro';
 import SeriesGrid from '../SeriesGrid.astro';
 import WritingPagination from '../WritingPagination.astro';
 import { seriesOrder } from '../../lib/articles';
-import { pageCount, slicePage } from '../../lib/list-pages';
+import { collectionTags, pageCount, slicePage } from '../../lib/list-pages';
 import { breadcrumbJsonLd, collectionPageJsonLd, docPath, getArticles } from '../../lib/public-data';
 import { localeFromPath, localizedHref, localizedSitePath } from '../../lib/locale';
 import { getSiteCopy } from '../../lib/site-copy';
@@ -19,6 +20,7 @@ const hasSeries = seriesOrder(locale).length > 0;
 
 const articlePageCount = pageCount(articles.length);
 const pageOneArticles = slicePage(articles, 1);
+const tags = collectionTags(articles, locale);
 const archiveSummary = [copy.brand.writingLede, UI.writing.articleCountSuffix(articles.length)].filter(Boolean).join(' ');
 
 const writingPath = localizedSitePath(locale, '/writing/');
@@ -70,8 +72,10 @@ const structuredData = [
           <a class="more-link" href={localizedHref(locale, '/topics/')}>{UI.writing.browseByTopic} <Icon name="arrow-right" size={14} /></a>
         </p>
 
-        <ArticleCards entries={pageOneArticles} />
-        <WritingPagination collection="writing" pageNumber={1} pageCount={articlePageCount} />
+        <ListStage collection="writing" tags={tags}>
+          <ArticleCards collection="writing" entries={pageOneArticles} />
+          <WritingPagination collection="writing" pageNumber={1} pageCount={articlePageCount} />
+        </ListStage>
       </>
     )}
   </div>

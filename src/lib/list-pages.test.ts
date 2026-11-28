@@ -7,7 +7,12 @@ import {
 	LIST_PAGE_SIZE,
 	collectionPageHref,
 	collectionPagePath,
+	collectionTagHref,
+	collectionTagPath,
+	collectionTags,
+	entriesWithTag,
 	listSummary,
+	tagSlug,
 	overflowPageRoutes,
 	pageCount,
 	paginationControls,
@@ -144,6 +149,58 @@ test('list summaries use description, then llmSummary, and never invent text', (
 	assert.equal(listSummary({}), '');
 });
 
+test('a collection tag wall lists real tags and filters that collection only', () => {
+	const writing = [
+		{ id: 'newer', data: { tags: ['Agent', 'Harness'] } },
+		{ id: 'older', data: { tags: ['Agent'] } },
+		{ id: 'other', data: { tags: ['笔记'] } },
+	];
+	const tags = collectionTags(writing, 'zh-CN');
+	const byName = Object.fromEntries(tags.map((tag) => [tag.name, tag.count]));
+	assert.deepEqual(byName, { Agent: 2, Harness: 1, 笔记: 1 });
+	assert.equal(tagSlug('Agent', 'en'), 'agent');
+	assert.deepEqual(
+		entriesWithTag(writing, 'agent', 'en').map((entry) => entry.id),
+		['newer', 'older'],
+	);
+	assert.deepEqual(entriesWithTag(writing, tagSlug('笔记', 'zh-CN'), 'zh-CN').map((entry) => entry.id), ['other']);
+});
+
+test('tag filters paginate like the collection index and stay quiet under seven matches', () => {
+	assert.equal(collectionTagPath('writing', 'agent', 1), '/writing/tags/agent/');
+	assert.equal(collectionTagPath('writing', 'agent', 2), '/writing/tags/agent/page/2/');
+	assert.equal(collectionTagPath('notes', 'agent', 1), '/notes/tags/agent/');
+	assert.equal(collectionTagHref('notes', 'agent', 2, 'en'), '/en/notes/tags/agent/page/2/');
+	assert.equal(collectionTagHref('writing', 'agent', 1, 'zh-CN'), '/writing/tags/agent/');
+
+	const seven = Array.from({ length: 7 }, (_, index) => index);
+	assert.equal(pageCount(seven.length), 1);
+	assert.deepEqual(overflowPageRoutes(seven), []);
+	assert.equal(paginationControls(1, pageCount(seven.length)).showNext, false);
+
+	const eight = Array.from({ length: 8 }, (_, index) => `post-${index}`);
+	assert.equal(overflowPageRoutes(eight)[0].page, '2');
+	assert.deepEqual(overflowPageRoutes(eight)[0].items, ['post-7']);
+	assert.equal(paginationControls(1, 2).showNext, true);
+	assert.equal(paginationControls(2, 2).showNext, false);
+});
+
+test('a temporary page size of 2 paginates a five-match tag filter onto page 2', () => {
+	const pageSize = 2;
+	const matches = ['newest', 'newer', 'new', 'mid', 'old'];
+	assert.equal(pageCount(matches.length, pageSize), 3);
+	assert.deepEqual(slicePage(matches, 1, pageSize), ['newest', 'newer']);
+	assert.deepEqual(slicePage(matches, 2, pageSize), ['new', 'mid']);
+	assert.deepEqual(slicePage(matches, 3, pageSize), ['old']);
+	assert.deepEqual(
+		overflowPageRoutes(matches, pageSize).map((route) => route.page),
+		['2', '3'],
+	);
+	assert.equal(paginationControls(1, pageCount(matches.length, pageSize)).showNext, true);
+	assert.equal(paginationControls(3, pageCount(matches.length, pageSize)).showNext, false);
+	assert.equal(paginationControls(3, pageCount(matches.length, pageSize)).showPrevious, true);
+});
+
 test('writing and notes pagination copy exists in Chinese and English', () => {
 	assert.equal(zhCN.common.prevPage, '← 上一页');
 	assert.equal(zhCN.common.nextPage, '下一页 →');
@@ -162,6 +219,11 @@ test('writing and notes pagination copy exists in Chinese and English', () => {
 	assert.equal(en.notes.paginationAria, 'Notes pagination');
 	assert.equal(en.notes.pageCrumb(2), 'Page 2');
 	assert.equal(en.notes.pageProgress(2, 3), 'Page 2 / 3');
+	assert.equal(zhCN.tags.heading, '标签');
+	assert.equal(en.tags.heading, 'Tags');
+	assert.equal(zhCN.tags.writingCount('Agent', 2), '标签 Agent · 共 2 篇。');
+	assert.equal(en.tags.notesCount('Agent', 1), 'Tag Agent · 1 note.');
+	assert.equal(en.tags.writingCount('Agent', 2), 'Tag Agent · 2 articles.');
 });
 
 test('the list template clamps summaries and only renders pagination controls that exist', () => {

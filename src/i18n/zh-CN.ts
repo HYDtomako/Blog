@@ -140,6 +140,11 @@ export const zhCN: UiCopy = {
 		projectShotAlt: (title) => `${title} 项目截图`,
 		courseCoverAltTitle: (title) => `${title} 课程封面`,
 	},
+	tags: {
+		heading: '标签',
+		writingCount: (name, n) => `标签 ${name} · 共 ${n} 篇。`,
+		notesCount: (name, n) => `标签 ${name} · 共 ${n} 篇。`,
+	},
 	topics: {
 		label: '主题',
 		allHeading: '全部主题',

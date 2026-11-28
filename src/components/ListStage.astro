@@ -1,0 +1,46 @@
+---
+import CollectionTagWall from './CollectionTagWall.astro';
+import type { CollectionTag, ListCollection } from '../lib/list-pages';
+
+interface Props {
+	collection: ListCollection;
+	tags: CollectionTag[];
+	activeSlug?: string;
+}
+
+const { collection, tags, activeSlug } = Astro.props;
+---
+
+<div class:list={['list-stage', tags.length === 0 && 'list-stage-solo']}>
+	<div class="list-stage-main">
+		<slot />
+	</div>
+	<CollectionTagWall collection={collection} tags={tags} activeSlug={activeSlug} />
+</div>
+
+<style>
+	.list-stage {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(12rem, 16rem);
+		gap: 28px 48px;
+		align-items: start;
+		margin-top: 2.75rem;
+	}
+	.list-stage-solo {
+		grid-template-columns: minmax(0, 46rem);
+	}
+	.list-stage-main :global(.post-list),
+	.list-stage-main :global(.list-pagination) {
+		max-width: none;
+		margin-top: 0;
+	}
+	.list-stage-main :global(.list-pagination) {
+		margin-top: 1.5rem;
+	}
+	@media (max-width: 960px) {
+		.list-stage {
+			grid-template-columns: 1fr;
+			gap: 28px;
+		}
+	}
+</style>

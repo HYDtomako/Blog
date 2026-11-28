@@ -1,0 +1,12 @@
+---
+import CollectionFilterPage from '../../../../components/pages/CollectionFilterPage.astro';
+import { collectionTagIndexPaths } from '../../../../lib/page-paths';
+
+export async function getStaticPaths() {
+	return collectionTagIndexPaths('writing', 'en');
+}
+
+const props = Astro.props;
+---
+
+<CollectionFilterPage collection="writing" {...props} />

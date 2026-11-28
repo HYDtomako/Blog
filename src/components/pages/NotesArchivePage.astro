@@ -1,8 +1,10 @@
 ---
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import ArticleCards from '../ArticleCards.astro';
+import ListStage from '../ListStage.astro';
 import WritingPagination from '../WritingPagination.astro';
-import type { PublicDocEntry } from '../../lib/public-data';
+import { collectionTags } from '../../lib/list-pages';
+import { getNotes, type PublicDocEntry } from '../../lib/public-data';
 import { localeFromPath, localizedHref } from '../../lib/locale';
 import { getSiteCopy } from '../../lib/site-copy';
 
@@ -17,6 +19,7 @@ const locale = localeFromPath(Astro.url.pathname);
 const UI = getSiteCopy(locale).ui;
 
 const { notes, pageNumber, pageCount, totalNotes } = Astro.props;
+const tags = collectionTags(await getNotes(locale), locale);
 const notesSummary = `${UI.notes.indexLede} ${UI.notes.articleCountSuffix(totalNotes)} · ${UI.notes.pageProgress(pageNumber, pageCount)}`;
 ---
 
@@ -38,7 +41,9 @@ const notesSummary = `${UI.notes.indexLede} ${UI.notes.articleCountSuffix(totalN
 		</div>
 		<h1 id="_top" class="display page-heading">{UI.notes.label}</h1>
 		<p class="lede page-lede">{notesSummary}</p>
-		<ArticleCards entries={notes} />
-		<WritingPagination collection="notes" pageNumber={pageNumber} pageCount={pageCount} />
+		<ListStage collection="notes" tags={tags}>
+			<ArticleCards collection="notes" entries={notes} />
+			<WritingPagination collection="notes" pageNumber={pageNumber} pageCount={pageCount} />
+		</ListStage>
 	</div>
 </StarlightPage>

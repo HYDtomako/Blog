@@ -1,5 +1,12 @@
 import { getSeriesEntries, seriesNumber, seriesOrder } from './articles';
-import { overflowPageRoutes } from './list-pages';
+import {
+	collectionTags,
+	entriesWithTag,
+	overflowPageRoutes,
+	pageCount,
+	slicePage,
+	type ListCollection,
+} from './list-pages';
 import { DEFAULT_LOCALE } from './locale';
 import { getAnswers, getArticles, getNotes, getTopics } from './public-data';
 
@@ -15,6 +22,50 @@ export async function articlePagePaths(locale: string = DEFAULT_LOCALE) {
 			totalArticles: page.total,
 		},
 	}));
+}
+
+async function collectionEntries(collection: ListCollection, locale: string) {
+	return collection === 'writing' ? getArticles(locale) : getNotes(locale);
+}
+
+/** Page 1 of each tag that appears in a locale's writing or notes collection. */
+export async function collectionTagIndexPaths(collection: ListCollection, locale: string = DEFAULT_LOCALE) {
+	const entries = await collectionEntries(collection, locale);
+	const tags = collectionTags(entries, locale);
+	return tags.map((tag) => {
+		const matched = entriesWithTag(entries, tag.slug, locale);
+		return {
+			params: { tag: tag.slug },
+			props: {
+				tag,
+				tags,
+				entries: slicePage(matched, 1),
+				pageNumber: 1,
+				pageCount: pageCount(matched.length),
+				total: matched.length,
+			},
+		};
+	});
+}
+
+/** Pages 2…n of a collection tag filter. Empty when the tag has at most one page. */
+export async function collectionTagOverflowPaths(collection: ListCollection, locale: string = DEFAULT_LOCALE) {
+	const entries = await collectionEntries(collection, locale);
+	const tags = collectionTags(entries, locale);
+	return tags.flatMap((tag) => {
+		const matched = entriesWithTag(entries, tag.slug, locale);
+		return overflowPageRoutes(matched).map((page) => ({
+			params: { tag: tag.slug, page: page.page },
+			props: {
+				tag,
+				tags: tags,
+				entries: page.items,
+				pageNumber: page.pageNumber,
+				pageCount: page.pageCount,
+				total: page.total,
+			},
+		}));
+	});
 }
 
 /** Archive pages 2…n of a locale's notes feed. */

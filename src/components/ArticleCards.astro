@@ -2,16 +2,17 @@
 import type { CollectionEntry } from 'astro:content';
 import Icon from './Icon.astro';
 import { estimateReadingMinutes, formatArticleDate } from '../lib/articles';
-import { listSummary } from '../lib/list-pages';
+import { collectionTagHref, listSummary, tagSlug, type ListCollection } from '../lib/list-pages';
 import { localeFromPath } from '../lib/locale';
 import { withBase } from '../lib/paths';
 import { getSiteCopy } from '../lib/site-copy';
 
 interface Props {
 	entries: CollectionEntry<'docs'>[];
+	collection: ListCollection;
 }
 
-const { entries } = Astro.props;
+const { entries, collection } = Astro.props;
 const locale = localeFromPath(Astro.url.pathname);
 const UI = getSiteCopy(locale).ui;
 ---
@@ -22,27 +23,31 @@ const UI = getSiteCopy(locale).ui;
 			const summary = listSummary(entry.data);
 			const tags = entry.data.tags ?? [];
 			return (
-				<li>
-					<a class="post-card" href={withBase(`/${entry.id}/`)}>
-						<div class="post-card-main">
-							<time class="post-card-date" datetime={entry.data.pubDate?.toISOString().slice(0, 10)}>
-								{formatArticleDate(entry.data.pubDate!)}
-							</time>
-							<div class="post-card-title">{entry.data.title || entry.id}</div>
-							{summary && <p class="post-card-excerpt">{summary}</p>}
-							<div class="post-card-read">
-								<Icon name="clock" size={14} />
-								{UI.common.readingMinutes(estimateReadingMinutes(entry.body?.length ?? 0))}
-							</div>
+				<li class="post-card">
+					<a class="post-card-main" href={withBase(`/${entry.id}/`)}>
+						<time class="post-card-date" datetime={entry.data.pubDate?.toISOString().slice(0, 10)}>
+							{formatArticleDate(entry.data.pubDate!)}
+						</time>
+						<div class="post-card-title">{entry.data.title || entry.id}</div>
+						{summary && <p class="post-card-excerpt">{summary}</p>}
+						<div class="post-card-read">
+							<Icon name="clock" size={14} />
+							{UI.common.readingMinutes(estimateReadingMinutes(entry.body?.length ?? 0))}
 						</div>
-						{tags.length > 0 && (
-							<div class="post-card-tags">
-								{tags.map((tag) => (
-									<span class="post-card-tag">{tag}</span>
-								))}
-							</div>
-						)}
 					</a>
+					{tags.length > 0 && (
+						<div class="post-card-tags">
+							{tags.map((tag) => {
+								const slug = tagSlug(tag, locale);
+								if (!slug) return null;
+								return (
+									<a class="tag-capsule" href={collectionTagHref(collection, slug, 1, locale)}>
+										{tag}
+									</a>
+								);
+							})}
+						</div>
+					)}
 				</li>
 			);
 		})
@@ -55,14 +60,14 @@ const UI = getSiteCopy(locale).ui;
 		display: flex;
 		flex-direction: column;
 		gap: 18px;
-		max-width: 46rem;
-		margin: 3.5rem 0 0;
+		margin: 0;
 		padding: 0;
 	}
 	.post-card {
 		display: flex;
-		align-items: flex-start;
-		gap: 28px;
+		flex-direction: column;
+		align-items: stretch;
+		gap: 14px;
 		padding: 22px 26px 20px;
 		border: 1px solid var(--line);
 		border-radius: var(--r-lg);
@@ -72,12 +77,12 @@ const UI = getSiteCopy(locale).ui;
 			background var(--duration-fast) var(--ease-out-quart);
 	}
 	.post-card:hover,
-	.post-card:focus-visible {
+	.post-card:focus-within {
 		border-color: var(--ink);
 		background: color-mix(in srgb, var(--ink) 3%, var(--surface));
 	}
 	.post-card-main {
-		flex: 1 1 auto;
+		display: block;
 		min-width: 0;
 	}
 	.post-card-date {
@@ -95,8 +100,8 @@ const UI = getSiteCopy(locale).ui;
 		color: var(--ink);
 		text-wrap: balance;
 	}
-	.post-card:hover .post-card-title,
-	.post-card:focus-visible .post-card-title {
+	.post-card-main:hover .post-card-title,
+	.post-card-main:focus-visible .post-card-title {
 		text-decoration: underline;
 		text-underline-offset: 0.18em;
 		text-decoration-thickness: 1px;
@@ -123,36 +128,13 @@ const UI = getSiteCopy(locale).ui;
 	}
 	.post-card-tags {
 		display: flex;
-		flex: 0 0 auto;
 		flex-wrap: wrap;
-		justify-content: flex-end;
-		align-content: flex-start;
 		gap: 8px;
-		max-width: 16rem;
 		margin: 0;
-		padding-top: 2px;
 	}
-	.post-card-tag {
-		padding: 2px 10px;
-		border: 1px solid var(--line);
-		border-radius: 999px;
-		font-size: 12px;
-		line-height: 1.45;
-		color: var(--muted);
-		white-space: nowrap;
-	}
-	@media (max-width: 860px) {
+	@media (max-width: 640px) {
 		.post-card {
-			flex-direction: column;
-			gap: 14px;
 			padding: 18px 18px 16px;
-		}
-		.post-card-tags {
-			flex: none;
-			width: 100%;
-			max-width: none;
-			justify-content: flex-start;
-			padding-top: 0;
 		}
 		.post-card-title {
 			font-size: 1.3rem;

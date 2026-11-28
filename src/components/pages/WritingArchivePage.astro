@@ -2,8 +2,10 @@
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import ArticleCards from '../ArticleCards.astro';
 import Icon from '../Icon.astro';
+import ListStage from '../ListStage.astro';
 import WritingPagination from '../WritingPagination.astro';
-import type { PublicDocEntry } from '../../lib/public-data';
+import { collectionTags } from '../../lib/list-pages';
+import { getArticles, type PublicDocEntry } from '../../lib/public-data';
 import { localeFromPath, localizedHref } from '../../lib/locale';
 import { getSiteCopy } from '../../lib/site-copy';
 
@@ -19,6 +21,7 @@ const copy = getSiteCopy(locale);
 const UI = copy.ui;
 
 const { articles, pageNumber, pageCount, totalArticles } = Astro.props;
+const tags = collectionTags(await getArticles(locale), locale);
 const archiveSummary = [copy.brand.writingLede, `${UI.writing.articleCountSuffix(totalArticles)} · ${UI.writing.pageProgress(pageNumber, pageCount)}`].filter(Boolean).join(' ');
 ---
 
@@ -47,8 +50,9 @@ const archiveSummary = [copy.brand.writingLede, `${UI.writing.articleCountSuffix
 			<a class="more-link" href={localizedHref(locale, '/topics/')}>{UI.writing.browseByTopic} <Icon name="arrow-right" size={14} /></a>
 		</p>
 
-		<ArticleCards entries={articles} />
-
-		<WritingPagination collection="writing" pageNumber={pageNumber} pageCount={pageCount} />
+		<ListStage collection="writing" tags={tags}>
+			<ArticleCards collection="writing" entries={articles} />
+			<WritingPagination collection="writing" pageNumber={pageNumber} pageCount={pageCount} />
+		</ListStage>
 	</div>
 </StarlightPage>

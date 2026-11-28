@@ -1,0 +1,87 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import ArticleCards from '../ArticleCards.astro';
+import ListStage from '../ListStage.astro';
+import WritingPagination from '../WritingPagination.astro';
+import type { CollectionTag, ListCollection } from '../../lib/list-pages';
+import type { PublicDocEntry } from '../../lib/public-data';
+import { breadcrumbJsonLd, collectionPageJsonLd, docPath } from '../../lib/public-data';
+import { localeFromPath, localizedHref, localizedSitePath } from '../../lib/locale';
+import { getSiteCopy } from '../../lib/site-copy';
+
+interface Props {
+	collection: ListCollection;
+	tag: CollectionTag;
+	tags: CollectionTag[];
+	entries: PublicDocEntry[];
+	pageNumber: number;
+	pageCount: number;
+	total: number;
+}
+
+const locale = localeFromPath(Astro.url.pathname);
+const copy = getSiteCopy(locale);
+const UI = copy.ui;
+
+const { collection, tag, tags, entries, pageNumber, pageCount, total } = Astro.props;
+const isNotes = collection === 'notes';
+const label = isNotes ? UI.notes.label : UI.writing.label;
+const homeCrumb = isNotes ? UI.notes.homeCrumb : UI.writing.homeCrumb;
+const lede = isNotes ? UI.notes.indexLede : copy.brand.writingLede;
+const pageCrumb = isNotes ? UI.notes.pageCrumb : UI.writing.pageCrumb;
+const pageProgress = isNotes ? UI.notes.pageProgress : UI.writing.pageProgress;
+const countLine = isNotes ? UI.tags.notesCount(tag.name, total) : UI.tags.writingCount(tag.name, total);
+const summary = pageNumber > 1 ? `${lede} ${countLine} · ${pageProgress(pageNumber, pageCount)}` : `${lede} ${countLine}`;
+const indexPath = localizedSitePath(locale, `/${collection}/`);
+const filterPath = localizedSitePath(locale, `/${collection}/tags/${tag.slug}/`);
+const structuredData = [
+	collectionPageJsonLd({
+		path: pageNumber > 1 ? localizedSitePath(locale, `/${collection}/tags/${tag.slug}/page/${pageNumber}/`) : filterPath,
+		name: `${label} · ${tag.name}`,
+		description: summary,
+		items: entries.map((entry) => ({ name: entry.data.title, url: docPath(entry) })),
+		locale,
+	}),
+	breadcrumbJsonLd([
+		{ name: homeCrumb, path: localizedSitePath(locale, '/') },
+		{ name: label, path: indexPath },
+		{ name: tag.name, path: filterPath },
+	]),
+];
+---
+
+<StarlightPage
+	frontmatter={{
+		title: pageNumber > 1 ? `${label}｜${tag.name}｜${pageCrumb(pageNumber)}` : `${label}｜${tag.name}`,
+		description: summary,
+		template: 'splash',
+		contentType: 'page',
+		slug: pageNumber > 1 ? `${collection}/tags/${tag.slug}/page/${pageNumber}` : `${collection}/tags/${tag.slug}`,
+		tags: [collection, 'tag', tag.slug],
+		llmSummary: summary,
+	}}
+>
+	{structuredData.map((value) => (
+		<script is:inline type="application/ld+json" set:html={JSON.stringify(value)} />
+	))}
+	<div class:list={['wrap', 'page', collection === 'writing' && 'page-writing']}>
+		<div class="crumbs">
+			<a href={localizedHref(locale, '/')}>{homeCrumb}</a><span class="sep">/</span>
+			<a href={localizedHref(locale, `/${collection}/`)}>{label}</a><span class="sep">/</span>
+			{pageNumber > 1 ? (
+				<>
+					<a href={localizedHref(locale, `/${collection}/tags/${tag.slug}/`)}>{tag.name}</a><span class="sep">/</span>
+					<span>{pageCrumb(pageNumber)}</span>
+				</>
+			) : (
+				<span>{tag.name}</span>
+			)}
+		</div>
+		<h1 id="_top" class="display page-heading">{label}</h1>
+		<p class="lede page-lede">{summary}</p>
+		<ListStage collection={collection} tags={tags} activeSlug={tag.slug}>
+			<ArticleCards collection={collection} entries={entries} />
+			<WritingPagination collection={collection} pageNumber={pageNumber} pageCount={pageCount} tagSlug={tag.slug} />
+		</ListStage>
+	</div>
+</StarlightPage>

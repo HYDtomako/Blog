@@ -1,0 +1,78 @@
+---
+import Icon from './Icon.astro';
+import { collectionTagHref, type CollectionTag, type ListCollection } from '../lib/list-pages';
+import { localeFromPath } from '../lib/locale';
+import { getSiteCopy } from '../lib/site-copy';
+
+interface Props {
+	collection: ListCollection;
+	tags: CollectionTag[];
+	activeSlug?: string;
+}
+
+const { collection, tags, activeSlug } = Astro.props;
+const locale = localeFromPath(Astro.url.pathname);
+const UI = getSiteCopy(locale).ui;
+---
+
+{
+	tags.length > 0 && (
+		<aside class="tag-wall" aria-labelledby="collection-tags-heading">
+			<h2 id="collection-tags-heading" class="tag-wall-title">
+				<Icon name="tag" size={20} />
+				<span>{UI.tags.heading}</span>
+			</h2>
+			<ul class="tag-wall-list">
+				{tags.map((tag) => (
+					<li>
+						<a
+							class="tag-capsule"
+							href={collectionTagHref(collection, tag.slug, 1, locale)}
+							aria-current={tag.slug === activeSlug ? 'page' : undefined}
+						>
+							{tag.name}
+						</a>
+					</li>
+				))}
+			</ul>
+		</aside>
+	)
+}
+
+<style>
+	.tag-wall {
+		position: sticky;
+		top: calc(var(--topbar-h) + 20px);
+	}
+	.tag-wall-title {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin: 0 0 16px;
+		font-family: var(--serif);
+		font-size: 1.35rem;
+		font-weight: 500;
+		line-height: 1.2;
+		color: var(--ink);
+	}
+	.tag-wall-title :global(svg) {
+		flex: none;
+	}
+	.tag-wall-list {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px 8px;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.tag-wall-list > li {
+		display: contents;
+	}
+	@media (max-width: 960px) {
+		.tag-wall {
+			position: static;
+			margin-top: 8px;
+		}
+	}
+</style>
