@@ -85,6 +85,12 @@ body {
   /* Span the whole document, not just one viewport, so long pages stay graded. */
   background-size: 100% 100%;
 }
+/* Writing and notes lists are long enough that a document-sized wash ends on
+   flat white at the footer. Keep the same canvas pinned to the viewport. */
+html[data-page-canvas='list'] body {
+  background-attachment: fixed;
+  background-size: 100% 100vh;
+}
 ::selection {
   background: var(--ink);
   color: var(--bg);
@@ -909,22 +915,22 @@ p.index-aside-link + ol.post-list {
   padding: 5px 12px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--ink) 4%, var(--surface));
-  color: var(--ink);
+  background: transparent;
+  color: var(--muted);
   font-size: 13px;
   line-height: 1.45;
   white-space: nowrap;
   transition:
+    color var(--duration-fast) var(--ease-out-quart),
     border-color var(--duration-fast) var(--ease-out-quart),
     background var(--duration-fast) var(--ease-out-quart);
 }
 .tag-capsule:hover,
-.tag-capsule:focus-visible {
-  border-color: var(--ink);
-}
+.tag-capsule:focus-visible,
 .tag-capsule[aria-current="page"] {
+  color: var(--ink);
   border-color: var(--ink);
-  background: color-mix(in srgb, var(--ink) 10%, var(--surface));
+  background: var(--bg-sunken);
 }
 
 .btn {

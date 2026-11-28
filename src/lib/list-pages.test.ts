@@ -234,6 +234,13 @@ test('the list template clamps summaries and only renders pagination controls th
 	assert.match(cards, /border:\s*1px solid var\(--line\)/);
 	assert.match(cards, /border-radius:\s*var\(--r-lg\)/);
 	assert.match(cards, /tags\.length > 0/);
+	const css = readFileSync(new URL('../styles/refined-x.css', import.meta.url), 'utf8');
+	const capsule = css.slice(css.indexOf('.tag-capsule {'), css.indexOf('.tag-capsule {') + 700);
+	assert.match(capsule, /color:\s*var\(--muted\)/);
+	assert.match(capsule, /background:\s*transparent/);
+	assert.match(css, /\.tag-capsule\[aria-current="page"\][\s\S]*?background:\s*var\(--bg-sunken\)/);
+	assert.doesNotMatch(capsule, /color-mix/);
+	assert.match(css, /html\[data-page-canvas='list'\] body\s*\{[^}]*background-attachment:\s*fixed/);
 	assert.match(pagination, /paginationControls\(/);
 	assert.match(pagination, /controls\.showNext/);
 	assert.match(pagination, /controls\.showPrevious/);

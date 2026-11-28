@@ -11,6 +11,10 @@ interface Props {
 const { collection, tags, activeSlug } = Astro.props;
 ---
 
+<script is:inline>
+	document.documentElement.dataset.pageCanvas = 'list';
+</script>
+
 <div class:list={['list-stage', tags.length === 0 && 'list-stage-solo']}>
 	<div class="list-stage-main">
 		<slot />
