@@ -169,6 +169,9 @@ test('the list template clamps summaries and only renders pagination controls th
 	const pagination = readFileSync(new URL('../components/WritingPagination.astro', import.meta.url), 'utf8');
 	assert.match(cards, /listSummary\(/);
 	assert.match(cards, /-webkit-line-clamp:\s*3/);
+	assert.match(cards, /border:\s*1px solid var\(--line\)/);
+	assert.match(cards, /border-radius:\s*var\(--r-lg\)/);
+	assert.match(cards, /tags\.length > 0/);
 	assert.match(pagination, /paginationControls\(/);
 	assert.match(pagination, /controls\.showNext/);
 	assert.match(pagination, /controls\.showPrevious/);

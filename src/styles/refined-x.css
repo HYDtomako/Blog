@@ -1003,7 +1003,7 @@ p.index-aside-link + ol.post-list {
   align-items: center;
   justify-content: flex-start;
   gap: 8px 12px;
-  max-width: 42rem;
+  max-width: 46rem;
   margin-top: 2.5rem;
   font-family: var(--mono);
   font-size: 13px;
