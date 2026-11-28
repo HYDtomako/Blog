@@ -232,6 +232,9 @@ test('the list template clamps summaries and only renders pagination controls th
 	assert.match(cards, /listSummary\(/);
 	assert.match(cards, /-webkit-line-clamp:\s*3/);
 	assert.match(cards, /border:\s*1px solid var\(--line\)/);
+	assert.match(cards, /background:\s*transparent/);
+	assert.match(cards, /color-mix\(in srgb, var\(--ink\) 3%, transparent\)/);
+	assert.doesNotMatch(cards, /background:\s*var\(--surface\)/);
 	assert.match(cards, /border-radius:\s*var\(--r-lg\)/);
 	assert.match(cards, /tags\.length > 0/);
 	const css = readFileSync(new URL('../styles/refined-x.css', import.meta.url), 'utf8');

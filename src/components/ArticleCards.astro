@@ -71,7 +71,7 @@ const UI = getSiteCopy(locale).ui;
 		padding: 22px 26px 20px;
 		border: 1px solid var(--line);
 		border-radius: var(--r-lg);
-		background: var(--surface);
+		background: transparent;
 		transition:
 			border-color var(--duration-fast) var(--ease-out-quart),
 			background var(--duration-fast) var(--ease-out-quart);
@@ -79,7 +79,7 @@ const UI = getSiteCopy(locale).ui;
 	.post-card:hover,
 	.post-card:focus-within {
 		border-color: var(--ink);
-		background: color-mix(in srgb, var(--ink) 3%, var(--surface));
+		background: color-mix(in srgb, var(--ink) 3%, transparent);
 	}
 	.post-card-main {
 		display: block;
@@ -95,7 +95,6 @@ const UI = getSiteCopy(locale).ui;
 		margin-top: 0.55rem;
 		font-family: var(--serif);
 		font-size: clamp(1.35rem, 2vw, 1.7rem);
-		font-weight: 500;
 		line-height: 1.3;
 		color: var(--ink);
 		text-wrap: balance;
