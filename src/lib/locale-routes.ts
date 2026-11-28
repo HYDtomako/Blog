@@ -1,5 +1,5 @@
 import { getCollection } from 'astro:content';
-import { ARTICLE_PAGE_SIZE } from './articles';
+import { pageCount } from './list-pages';
 import { DEFAULT_LOCALE, localePath, stripLocalePrefix } from './locale';
 import { entryLocale, topicSlug } from './public-data';
 import { SERIES_ORDER_BY_LOCALE } from './series.mjs';
@@ -22,11 +22,15 @@ async function computeLocalePaths(locale: string): Promise<Set<string>> {
 	for (const entry of own) paths.add(`${logicalPath(entry.id)}/`);
 
 	const articles = own.filter((entry) => entry.data.contentType === 'article');
+	const notes = own.filter((entry) => entry.data.contentType === 'note');
 	for (const article of articles) {
 		for (const tag of article.data.tags) paths.add(`/topics/${topicSlug(tag, locale)}/`);
 	}
-	for (let page = 2; page <= Math.ceil(articles.length / ARTICLE_PAGE_SIZE); page += 1) {
+	for (let page = 2; page <= pageCount(articles.length); page += 1) {
 		paths.add(`/writing/page/${page}/`);
+	}
+	for (let page = 2; page <= pageCount(notes.length); page += 1) {
+		paths.add(`/notes/page/${page}/`);
 	}
 	for (const series of SERIES_ORDER_BY_LOCALE[locale] ?? []) paths.add(`/writing/${series}/`);
 

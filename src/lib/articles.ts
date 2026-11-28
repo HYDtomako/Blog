@@ -1,9 +1,9 @@
 import { getCollection, type CollectionEntry } from 'astro:content';
-import { DEFAULT_LOCALE, localizedHref } from './locale';
+import { DEFAULT_LOCALE } from './locale';
+import { LIST_PAGE_SIZE, collectionPageHref, pageCount } from './list-pages';
 import { SERIES_IDS, seriesOrderFor, seriesTitle } from './series.mjs';
-import { sitePath, withBase } from './paths';
 
-export const ARTICLE_PAGE_SIZE = 10;
+export const ARTICLE_PAGE_SIZE = LIST_PAGE_SIZE;
 
 /** Series slugs in configured order for a locale. */
 export function seriesOrder(locale: string = DEFAULT_LOCALE) {
@@ -35,15 +35,12 @@ export function formatArticleDate(date: Date, withYear = true) {
 	return withYear ? `${y}-${m}-${d}` : `${m}-${d}`;
 }
 
-export function getArticlePageCount(total: number) {
-	return Math.ceil(total / ARTICLE_PAGE_SIZE);
+export function getArticlePageCount(total: number, pageSize = LIST_PAGE_SIZE) {
+	return pageCount(total, pageSize);
 }
 
 export function pageHref(pageNumber: number, locale: string = DEFAULT_LOCALE) {
-	return localizedHref(
-		locale,
-		pageNumber === 1 ? '/writing/' : sitePath(`/writing/page/${pageNumber}`),
-	);
+	return collectionPageHref('writing', pageNumber, locale);
 }
 
 /** Rough reading time from markdown body length (Chinese + code mixed). */

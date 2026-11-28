@@ -76,6 +76,9 @@ export const en: UiCopy = {
 		indexDescription: 'Short notes: study records, fragments from practice, and ideas.',
 		indexLede: 'Short records that do not need to become articles.',
 		articleCountSuffix: (n) => `${n} in total.`,
+		paginationAria: 'Notes pagination',
+		pageCrumb: (n) => `Page ${n}`,
+		pageProgress: (page, total) => `Page ${page} / ${total}`,
 	},
 	writing: {
 		label: 'Blog',

@@ -1,123 +1,109 @@
 ---
 import type { CollectionEntry } from 'astro:content';
 import Icon from './Icon.astro';
-import { estimateReadingMinutes, formatArticleDate, seriesName } from '../lib/articles';
+import { estimateReadingMinutes, formatArticleDate } from '../lib/articles';
+import { listSummary } from '../lib/list-pages';
 import { localeFromPath } from '../lib/locale';
 import { withBase } from '../lib/paths';
 import { getSiteCopy } from '../lib/site-copy';
 
 interface Props {
-	articles: CollectionEntry<'docs'>[];
+	entries: CollectionEntry<'docs'>[];
 }
 
-const { articles } = Astro.props;
+const { entries } = Astro.props;
 const locale = localeFromPath(Astro.url.pathname);
 const UI = getSiteCopy(locale).ui;
 ---
 
-<div class="post-list">
+<ol class="post-list">
 	{
-		articles.map((a) => (
-			<a class="post-card" href={withBase(`/${a.id}/`)}>
-				<div class="post-card-head">
-					<time class="post-card-date" datetime={a.data.pubDate?.toISOString().slice(0, 10)}>
-						{formatArticleDate(a.data.pubDate!)}
-					</time>
-					{a.data.series && <span class="post-card-series">{seriesName(a.data.series, locale)}</span>}
-				</div>
-				<div class="post-card-title">
-					<span>{a.data.title || a.id}</span>
-					<span class="post-card-arrow"><Icon name="arrow-right" size={16} /></span>
-				</div>
-				<p class="post-card-excerpt">{a.data.llmSummary || a.data.description || ''}</p>
-				<div class="post-card-foot">
-					<span class="post-card-read">
-						<Icon name="clock" size={14} />
-						{UI.common.readingMinutes(estimateReadingMinutes(a.body?.length ?? 0))}
-					</span>
-					{a.data.tags.length > 0 && (
-						<span class="post-card-tags">
-							{a.data.tags.map((tag) => <span class="post-card-tag">{tag}</span>)}
-						</span>
-					)}
-				</div>
-			</a>
-		))
+		entries.map((entry) => {
+			const summary = listSummary(entry.data);
+			const tags = entry.data.tags ?? [];
+			return (
+				<li>
+					<a class="post-card" href={withBase(`/${entry.id}/`)}>
+						<time class="post-card-date" datetime={entry.data.pubDate?.toISOString().slice(0, 10)}>
+							{formatArticleDate(entry.data.pubDate!)}
+						</time>
+						<div class="post-card-title">{entry.data.title || entry.id}</div>
+						{summary && <p class="post-card-excerpt">{summary}</p>}
+						<div class="post-card-read">
+							<Icon name="clock" size={14} />
+							{UI.common.readingMinutes(estimateReadingMinutes(entry.body?.length ?? 0))}
+						</div>
+						{tags.length > 0 && (
+							<div class="post-card-tags">
+								{tags.map((tag) => (
+									<span class="post-card-tag">{tag}</span>
+								))}
+							</div>
+						)}
+					</a>
+				</li>
+			);
+		})
 	}
-</div>
+</ol>
 
 <style>
 	.post-list {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr));
-		gap: 16px;
+		list-style: none;
+		max-width: 42rem;
+		margin: 3.5rem 0 0;
+		padding: 0;
 	}
 	.post-card {
 		display: block;
-		padding: 22px 26px 20px;
-		border: 1px solid var(--line);
-		border-radius: var(--r-lg);
-		transition:
-			border-color var(--duration-fast) var(--ease-out-quart),
-			background var(--duration-fast) var(--ease-out-quart);
+		padding: 2.35rem 0 2.6rem;
+		border-top: 1px solid var(--line-soft);
+		transition: padding-left var(--duration-mid) var(--ease-out-quart);
+	}
+	.post-list li:last-child .post-card {
+		border-bottom: 1px solid var(--line-soft);
 	}
 	.post-card:hover,
 	.post-card:focus-visible {
-		border-color: var(--ink);
-		background: color-mix(in srgb, var(--ink) 3%, transparent);
+		padding-left: 8px;
 	}
-	.post-card-head {
-		display: flex;
-		align-items: baseline;
-		justify-content: space-between;
-		gap: 16px;
+	.post-card-date {
 		font-family: var(--mono);
-		font-size: 12px;
+		font-size: 13px;
 		color: var(--faint);
-		letter-spacing: 0.02em;
+		letter-spacing: 0.04em;
 	}
 	.post-card-title {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 16px;
-		margin-top: 10px;
+		margin-top: 0.55rem;
 		font-family: var(--serif);
-		font-size: 20px;
-		line-height: 1.35;
+		font-size: clamp(1.45rem, 2vw, 1.85rem);
+		font-weight: 500;
+		line-height: 1.3;
 		color: var(--ink);
+		text-wrap: balance;
 	}
-	.post-card-arrow {
-		display: inline-flex;
-		flex: none;
-		color: var(--faint);
-		transition:
-			transform var(--duration-mid) var(--ease-out-quart),
-			color var(--duration-fast) var(--ease-out-quart);
-	}
-	.post-card:hover .post-card-arrow,
-	.post-card:focus-visible .post-card-arrow {
-		color: var(--ink);
-		transform: translateX(4px);
+	.post-card:hover .post-card-title,
+	.post-card:focus-visible .post-card-title {
+		text-decoration: underline;
+		text-underline-offset: 0.18em;
+		text-decoration-thickness: 1px;
 	}
 	.post-card-excerpt {
-		margin: 8px 0 0;
-		font-size: 14px;
-		line-height: 1.65;
+		margin: 0.8rem 0 0;
+		font-size: 16px;
+		line-height: 1.75;
 		color: var(--muted);
 		text-wrap: pretty;
-	}
-	.post-card-foot {
-		display: flex;
-		flex-direction: column;
-		align-items: flex-start;
-		gap: 12px;
-		margin-top: 16px;
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 3;
+		overflow: hidden;
 	}
 	.post-card-read {
 		display: inline-flex;
 		align-items: center;
 		gap: 6px;
+		margin-top: 1.05rem;
 		font-family: var(--mono);
 		font-size: 12px;
 		color: var(--faint);
@@ -126,6 +112,7 @@ const UI = getSiteCopy(locale).ui;
 		display: flex;
 		flex-wrap: wrap;
 		gap: 8px;
+		margin-top: 0.85rem;
 	}
 	.post-card-tag {
 		padding: 2px 10px;
@@ -133,5 +120,13 @@ const UI = getSiteCopy(locale).ui;
 		border-radius: 999px;
 		font-size: 12px;
 		color: var(--muted);
+	}
+	@media (max-width: 640px) {
+		.post-card {
+			padding: 1.85rem 0 2rem;
+		}
+		.post-card-title {
+			font-size: 1.35rem;
+		}
 	}
 </style>

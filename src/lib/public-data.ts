@@ -1,5 +1,6 @@
 import { getCollection, type CollectionEntry } from 'astro:content';
 import { siteConfig } from '../../site.config.mjs';
+import { compareNewest } from './list-pages';
 import { absoluteUrlFromSite, sitePath } from './paths';
 import { DEFAULT_LOCALE, PREFIXED_LOCALES, localePath } from './locale';
 
@@ -41,14 +42,14 @@ export async function getArticles(locale: string = DEFAULT_LOCALE) {
 	return inLocale(
 		await getCollection('docs', ({ data }) => data.contentType === 'article'),
 		locale,
-	).sort((a, b) => b.data.pubDate!.valueOf() - a.data.pubDate!.valueOf());
+	).sort((a, b) => compareNewest(a.data.pubDate!, b.data.pubDate!));
 }
 
 export async function getNotes(locale: string = DEFAULT_LOCALE) {
 	return inLocale(
 		await getCollection('docs', ({ data }) => data.contentType === 'note'),
 		locale,
-	).sort((a, b) => b.data.pubDate!.valueOf() - a.data.pubDate!.valueOf());
+	).sort((a, b) => compareNewest(a.data.pubDate!, b.data.pubDate!));
 }
 
 export async function getAnswers(locale: string = DEFAULT_LOCALE) {

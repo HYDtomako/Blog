@@ -1,6 +1,8 @@
 ---
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import ArticleCards from '../ArticleCards.astro';
+import WritingPagination from '../WritingPagination.astro';
+import { pageCount, slicePage } from '../../lib/list-pages';
 import { breadcrumbJsonLd, collectionPageJsonLd, docPath, getNotes } from '../../lib/public-data';
 import { localeFromPath, localizedHref, localizedSitePath } from '../../lib/locale';
 import { getSiteCopy } from '../../lib/site-copy';
@@ -9,6 +11,8 @@ const locale = localeFromPath(Astro.url.pathname);
 const UI = getSiteCopy(locale).ui;
 
 const notes = await getNotes(locale);
+const notePageCount = pageCount(notes.length);
+const pageNotes = slicePage(notes, 1);
 const notesPath = localizedSitePath(locale, '/notes/');
 const notesSummary = `${UI.notes.indexLede} ${UI.notes.articleCountSuffix(notes.length)}`;
 const structuredData = [
@@ -16,7 +20,7 @@ const structuredData = [
 		path: notesPath,
 		name: UI.notes.label,
 		description: UI.notes.indexDescription,
-		items: notes.map((note) => ({ name: note.data.title, url: docPath(note) })),
+		items: pageNotes.map((note) => ({ name: note.data.title, url: docPath(note) })),
 		locale,
 	}),
 	breadcrumbJsonLd([
@@ -43,6 +47,11 @@ const structuredData = [
     <div class="crumbs"><a href={localizedHref(locale, '/')}>{UI.notes.homeCrumb}</a><span class="sep">/</span><span>{UI.notes.label}</span></div>
     <h1 id="_top" class="display page-heading">{UI.notes.label}</h1>
     <p class="lede page-lede">{notesSummary}</p>
-    <ArticleCards articles={notes} />
+    {notes.length > 0 && (
+      <>
+        <ArticleCards entries={pageNotes} />
+        <WritingPagination collection="notes" pageNumber={1} pageCount={notePageCount} />
+      </>
+    )}
   </div>
 </StarlightPage>

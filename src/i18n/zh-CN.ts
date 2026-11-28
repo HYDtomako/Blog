@@ -75,6 +75,9 @@ export const zhCN: UiCopy = {
 		indexDescription: '短篇随笔：学习记录、实践碎片与想法。',
 		indexLede: '不成篇章的短记录，随手写下。',
 		articleCountSuffix: (n) => `共 ${n} 篇。`,
+		paginationAria: '随笔分页',
+		pageCrumb: (n) => `第 ${n} 页`,
+		pageProgress: (page, total) => `第 ${page} / ${total} 页`,
 	},
 	writing: {
 		label: '博客',

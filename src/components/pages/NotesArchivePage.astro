@@ -1,0 +1,44 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import ArticleCards from '../ArticleCards.astro';
+import WritingPagination from '../WritingPagination.astro';
+import type { PublicDocEntry } from '../../lib/public-data';
+import { localeFromPath, localizedHref } from '../../lib/locale';
+import { getSiteCopy } from '../../lib/site-copy';
+
+interface Props {
+	notes: PublicDocEntry[];
+	pageNumber: number;
+	pageCount: number;
+	totalNotes: number;
+}
+
+const locale = localeFromPath(Astro.url.pathname);
+const UI = getSiteCopy(locale).ui;
+
+const { notes, pageNumber, pageCount, totalNotes } = Astro.props;
+const notesSummary = `${UI.notes.indexLede} ${UI.notes.articleCountSuffix(totalNotes)} · ${UI.notes.pageProgress(pageNumber, pageCount)}`;
+---
+
+<StarlightPage
+	frontmatter={{
+		title: `${UI.notes.label}｜${UI.notes.pageCrumb(pageNumber)}`,
+		description: notesSummary,
+		template: 'splash',
+		contentType: 'page',
+		slug: `notes/page/${pageNumber}`,
+		tags: ['notes', 'pagination'],
+		llmSummary: `${UI.notes.label} ${UI.notes.pageProgress(pageNumber, pageCount)} · ${UI.notes.articleCountSuffix(totalNotes)}`,
+	}}
+>
+	<div class="wrap page">
+		<div class="crumbs">
+			<a href={localizedHref(locale, '/')}>{UI.notes.homeCrumb}</a><span class="sep">/</span>
+			<a href={localizedHref(locale, '/notes/')}>{UI.notes.label}</a><span class="sep">/</span><span>{UI.notes.pageCrumb(pageNumber)}</span>
+		</div>
+		<h1 id="_top" class="display page-heading">{UI.notes.label}</h1>
+		<p class="lede page-lede">{notesSummary}</p>
+		<ArticleCards entries={notes} />
+		<WritingPagination collection="notes" pageNumber={pageNumber} pageCount={pageCount} />
+	</div>
+</StarlightPage>

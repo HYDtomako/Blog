@@ -43,13 +43,12 @@ const archiveSummary = [copy.brand.writingLede, `${UI.writing.articleCountSuffix
 			{archiveSummary}
 		</p>
 
-		<div class="section-head section-head-spaced" aria-labelledby="writing-archive-heading">
-			<h2 id="writing-archive-heading" class="section-title">{UI.writing.archiveHeading}</h2>
+		<p class="index-aside-link">
 			<a class="more-link" href={localizedHref(locale, '/topics/')}>{UI.writing.browseByTopic} <Icon name="arrow-right" size={14} /></a>
-		</div>
+		</p>
 
-		<ArticleCards articles={articles} />
+		<ArticleCards entries={articles} />
 
-		<WritingPagination pageNumber={pageNumber} pageCount={pageCount} />
+		<WritingPagination collection="writing" pageNumber={pageNumber} pageCount={pageCount} />
 	</div>
 </StarlightPage>

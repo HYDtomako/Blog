@@ -74,6 +74,9 @@ export type UiCopy = {
 		indexDescription: string;
 		indexLede: string;
 		articleCountSuffix: (n: number) => string;
+		paginationAria: string;
+		pageCrumb: (n: number) => string;
+		pageProgress: (page: number, total: number) => string;
 	};
 	writing: {
 		label: string;

@@ -1,40 +1,44 @@
 ---
 import { getSiteCopy } from '../lib/site-copy';
-import { pageHref } from '../lib/articles';
+import { collectionPageHref, paginationControls, type ListCollection } from '../lib/list-pages';
 import { localeFromPath } from '../lib/locale';
 
 interface Props {
+	collection: ListCollection;
 	pageNumber: number;
 	pageCount: number;
 }
 
-const { pageNumber, pageCount } = Astro.props;
+const { collection, pageNumber, pageCount } = Astro.props;
 const locale = localeFromPath(Astro.url.pathname);
-const copy = getSiteCopy(locale);
-const UI = copy.ui;
+const UI = getSiteCopy(locale).ui;
+const controls = paginationControls(pageNumber, pageCount);
+const pageCrumb = collection === 'notes' ? UI.notes.pageCrumb : UI.writing.pageCrumb;
+const ariaLabel = collection === 'notes' ? UI.notes.paginationAria : UI.common.paginationAria;
+const href = (page: number) => collectionPageHref(collection, page, locale);
 ---
 
 {
-	pageCount > 1 && (
-		<nav aria-label={UI.common.paginationAria} class="writing-pagination">
-			{pageNumber > 1 && (
-				<a class="writing-pagination-nav" href={pageHref(pageNumber - 1, locale)} rel="prev">
+	controls.visible && (
+		<nav aria-label={ariaLabel} class="list-pagination">
+			{controls.showPrevious && (
+				<a class="list-pagination-nav" href={href(pageNumber - 1)} rel="prev">
 					{UI.common.prevPage}
 				</a>
 			)}
-			{Array.from({ length: pageCount }, (_, i) => i + 1).map((n) =>
+			{controls.pages.map((n) =>
 				n === pageNumber ? (
-					<span class="writing-pagination-current" aria-current="page">
+					<span class="list-pagination-current" aria-current="page" aria-label={pageCrumb(n)}>
 						{n}
 					</span>
 				) : (
-					<a class="writing-pagination-link" href={pageHref(n, locale)}>
+					<a class="list-pagination-link" href={href(n)} aria-label={pageCrumb(n)}>
 						{n}
 					</a>
 				),
 			)}
-			{pageNumber < pageCount && (
-				<a class="writing-pagination-nav" href={pageHref(pageNumber + 1, locale)} rel="next">
+			{controls.showNext && (
+				<a class="list-pagination-nav" href={href(pageNumber + 1)} rel="next">
 					{UI.common.nextPage}
 				</a>
 			)}

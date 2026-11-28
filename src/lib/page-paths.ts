@@ -1,23 +1,34 @@
-import { ARTICLE_PAGE_SIZE, getArticlePageCount, getSeriesEntries, seriesNumber, seriesOrder } from './articles';
+import { getSeriesEntries, seriesNumber, seriesOrder } from './articles';
+import { overflowPageRoutes } from './list-pages';
 import { DEFAULT_LOCALE } from './locale';
-import { getAnswers, getArticles, getTopics } from './public-data';
+import { getAnswers, getArticles, getNotes, getTopics } from './public-data';
 
 /** Archive pages 2…n of a locale's article feed. */
 export async function articlePagePaths(locale: string = DEFAULT_LOCALE) {
 	const articles = await getArticles(locale);
-	const pageCount = getArticlePageCount(articles.length);
-	return Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) => {
-		const pageNumber = index + 2;
-		return {
-			params: { page: String(pageNumber) },
-			props: {
-				articles: articles.slice((pageNumber - 1) * ARTICLE_PAGE_SIZE, pageNumber * ARTICLE_PAGE_SIZE),
-				pageNumber,
-				pageCount,
-				totalArticles: articles.length,
-			},
-		};
-	});
+	return overflowPageRoutes(articles).map((page) => ({
+		params: { page: page.page },
+		props: {
+			articles: page.items,
+			pageNumber: page.pageNumber,
+			pageCount: page.pageCount,
+			totalArticles: page.total,
+		},
+	}));
+}
+
+/** Archive pages 2…n of a locale's notes feed. */
+export async function notePagePaths(locale: string = DEFAULT_LOCALE) {
+	const notes = await getNotes(locale);
+	return overflowPageRoutes(notes).map((page) => ({
+		params: { page: page.page },
+		props: {
+			notes: page.items,
+			pageNumber: page.pageNumber,
+			pageCount: page.pageCount,
+			totalNotes: page.total,
+		},
+	}));
 }
 
 /**

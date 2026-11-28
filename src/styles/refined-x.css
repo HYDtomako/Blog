@@ -895,21 +895,11 @@ h4 {
 .content-list-spaced {
   margin-top: 40px;
 }
-.archive-year {
-  margin-bottom: 20px;
+.index-aside-link {
+  margin: 2.75rem 0 0;
 }
-/* The year label stands alone: no rule underneath it. */
-.archive-year .archive-year-heading {
-  border-bottom: 0;
-}
-.archive-year-heading {
-  margin: 0;
-  padding: 18px 0 12px;
-  border-bottom: 1px solid var(--line);
-  font-size: 13px;
-  color: var(--ghost);
-  letter-spacing: 0.1em;
-  font-weight: 500;
+p.index-aside-link + ol.post-list {
+  margin-top: 1.75rem;
 }
 
 .btn {
@@ -1006,21 +996,20 @@ h4 {
   transform: rotate(180deg);
 }
 
-/* Writing pagination */
-.writing-pagination {
+/* Writing and notes pagination */
+.list-pagination {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 8px 12px;
-  margin-top: 56px;
-  padding-top: 32px;
-  border-top: 1px solid var(--line);
+  max-width: 42rem;
+  margin-top: 2.5rem;
   font-family: var(--mono);
   font-size: 13px;
 }
-.writing-pagination-nav,
-.writing-pagination-link {
+.list-pagination-nav,
+.list-pagination-link {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1033,12 +1022,12 @@ h4 {
     color var(--duration-fast) var(--ease-out-quart),
     background var(--duration-fast) var(--ease-out-quart);
 }
-.writing-pagination-nav:hover,
-.writing-pagination-link:hover {
+.list-pagination-nav:hover,
+.list-pagination-link:hover {
   color: var(--ink);
   background: var(--bg-sunken);
 }
-.writing-pagination-current {
+.list-pagination-current {
   display: inline-flex;
   align-items: center;
   justify-content: center;

@@ -1,0 +1,13 @@
+---
+import NotesArchivePage from '../../../components/pages/NotesArchivePage.astro';
+import { notePagePaths } from '../../../lib/page-paths';
+import { DEFAULT_LOCALE } from '../../../lib/locale';
+
+export async function getStaticPaths() {
+	return notePagePaths(DEFAULT_LOCALE);
+}
+
+const props = Astro.props;
+---
+
+<NotesArchivePage {...props} />
